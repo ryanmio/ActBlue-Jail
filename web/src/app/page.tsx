@@ -13,6 +13,8 @@ type SubmissionRow = {
   rawText: string | null;
 };
 
+type CaseDetail = { violations?: Array<{ code: string; title: string }> };
+
 export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -196,13 +198,13 @@ function useRecentCases(limit = 6) {
         const withIssues = await Promise.all(items.slice(0, limit).map(async (r) => {
           try {
             const detailUrl = `/api/cases/${r.id}`;
-            const data = await (async () => {
-              const cached = getCachedJson<any>(detailUrl);
+            const data: CaseDetail = await (async () => {
+              const cached = getCachedJson<CaseDetail>(detailUrl);
               if (cached) return cached;
               const resp = await fetch(detailUrl, { cache: "no-store" });
               const j = await resp.json();
               if (resp.ok) setCachedJson(detailUrl, j, 120_000);
-              return j;
+              return j as CaseDetail;
             })();
             const vios = Array.isArray(data.violations) ? data.violations as Array<{ code: string; title: string }> : [];
             const seen = new Set<string>();
