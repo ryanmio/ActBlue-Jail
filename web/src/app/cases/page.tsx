@@ -22,10 +22,14 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
-async function loadCases(page = 1, limit = 20): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
+async function loadCases(page = 1, limit = 20, q = ""): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
 {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases?page=${page}&limit=${limit}`, { cache: "no-store" });
+    const usp = new URLSearchParams();
+    usp.set("page", String(page));
+    usp.set("limit", String(limit));
+    if (q) usp.set("q", q);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases?${usp.toString()}`, { cache: "no-store" });
     if (!res.ok) return { items: [], page, limit, total: 0, hasMore: false, offset: 0 };
     const data = await res.json();
     const rows = (data.items || []) as Array<{
@@ -89,9 +93,11 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const sp: Record<string, string | string[] | undefined> = await (searchParams || Promise.resolve({}));
   const pageParam = Array.isArray(sp["page"]) ? sp["page"][0] : sp["page"];
   const limitParam = Array.isArray(sp["limit"]) ? sp["limit"][0] : sp["limit"];
+  const qParam = Array.isArray(sp["q"]) ? sp["q"][0] : sp["q"];
   const page = Number(pageParam) || 1;
   const pageSize = Number(limitParam) || 20;
-  const { items, total, limit, hasMore } = await loadCases(page, pageSize);
+  const q = (qParam || "").toString();
+  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q);
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
@@ -104,7 +110,20 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
         <section className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900">All cases</h1>
-            <div className="text-sm text-slate-600">{total} total</div>
+            <div className="flex items-center gap-4">
+              <form action="/cases" className="flex items-center gap-2" method="get">
+                <input type="hidden" name="page" value="1" />
+                <input type="hidden" name="limit" value={String(pageSize)} />
+                <input
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Search sender..."
+                  className="w-56 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                />
+                <button className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" type="submit">Search</button>
+              </form>
+              <div className="text-sm text-slate-600">{total} total</div>
+            </div>
           </div>
 
           {items.length === 0 ? (
@@ -147,7 +166,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                 ))}
               </div>
               <div className="mt-6 flex items-center justify-between">
-                <PaginationControls total={total} pageSize={limit} currentPage={page} hasMore={hasMore} />
+                <PaginationControls total={total} pageSize={limit} currentPage={page} hasMore={hasMore} q={q} />
               </div>
             </>
           )}
@@ -157,7 +176,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   );
 }
 
-function PaginationControls({ total, pageSize, currentPage, hasMore }: { total: number; pageSize: number; currentPage: number; hasMore: boolean }) {
+function PaginationControls({ total, pageSize, currentPage, hasMore, q }: { total: number; pageSize: number; currentPage: number; hasMore: boolean; q?: string }) {
   const base = "/cases";
   const prevPage = Math.max(1, currentPage - 1);
   const nextPage = currentPage + 1;
@@ -165,7 +184,7 @@ function PaginationControls({ total, pageSize, currentPage, hasMore }: { total: 
   return (
     <div className="flex items-center gap-3 text-sm">
       <Link
-        href={`${base}?page=${prevPage}&limit=${pageSize}`}
+        href={`${base}?page=${prevPage}&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
         className={`px-3 py-1.5 rounded-md border ${currentPage <= 1 ? "text-slate-400 border-slate-200 pointer-events-none" : "text-slate-800 border-slate-300 hover:bg-slate-50"}`}
         aria-disabled={currentPage <= 1}
       >
@@ -173,7 +192,7 @@ function PaginationControls({ total, pageSize, currentPage, hasMore }: { total: 
       </Link>
       <span className="text-slate-600">Page {currentPage} of {totalPages}</span>
       <Link
-        href={`${base}?page=${nextPage}&limit=${pageSize}`}
+        href={`${base}?page=${nextPage}&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
         className={`px-3 py-1.5 rounded-md border ${!hasMore ? "text-slate-400 border-slate-200 pointer-events-none" : "text-slate-800 border-slate-300 hover:bg-slate-50"}`}
         aria-disabled={!hasMore}
       >

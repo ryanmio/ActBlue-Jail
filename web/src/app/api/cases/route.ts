@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   const explicitOffset = Number(searchParams.get("offset"));
   const page = Math.max(Number(pageParam || 1) || 1, 1);
   const offset = Number.isFinite(explicitOffset) && explicitOffset >= 0 ? explicitOffset : (page - 1) * limit;
+  const q = (searchParams.get("q") || "").trim();
 
   try {
     const supabase = getSupabaseServer();
@@ -19,11 +20,17 @@ export async function GET(req: NextRequest) {
       raw_text: string | null;
     };
 
-    const { data, error, count } = await supabase
+    let builder = supabase
       .from("submissions")
       .select("id, created_at, sender_id, sender_name, raw_text", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order("created_at", { ascending: false });
+
+    if (q.length > 0) {
+      const sanitized = q.replace(/[%]/g, "").replace(/,/g, " ");
+      builder = builder.or(`sender_name.ilike.%${sanitized}%,sender_id.ilike.%${sanitized}%`);
+    }
+
+    const { data, error, count } = await builder.range(offset, offset + limit - 1);
     if (error) throw error;
     const rows = (data || []) as Row[];
     const items = rows.map((r) => ({
