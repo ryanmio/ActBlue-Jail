@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assertSupabaseBrowser } from "@/lib/supabase";
+import { cachedJsonFetch, getCachedJson, setCachedJson } from "@/lib/client-cache";
 
 type SubmissionRow = {
   id: string;
@@ -189,13 +190,20 @@ function useRecentCases(limit = 6) {
     setLoading(true);
     (async () => {
       try {
-        const res = await fetch(`/api/cases?limit=${limit}`, { cache: "no-store" });
-        const json = await res.json();
+        const listUrl = `/api/cases?limit=${limit}`;
+        const json = await cachedJsonFetch<{ items: Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null }> }>(listUrl, 120_000);
         const items = (json.items || []) as Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null }>;
         const withIssues = await Promise.all(items.slice(0, limit).map(async (r) => {
           try {
-            const resp = await fetch(`/api/cases/${r.id}`, { cache: "no-store" });
-            const data = await resp.json();
+            const detailUrl = `/api/cases/${r.id}`;
+            const data = await (async () => {
+              const cached = getCachedJson<any>(detailUrl);
+              if (cached) return cached;
+              const resp = await fetch(detailUrl, { cache: "no-store" });
+              const j = await resp.json();
+              if (resp.ok) setCachedJson(detailUrl, j, 120_000);
+              return j;
+            })();
             const vios = Array.isArray(data.violations) ? data.violations as Array<{ code: string; title: string }> : [];
             return { ...r, issues: vios.slice(0, 3).map(v => v.code) };
           } catch {
