@@ -181,7 +181,7 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
-type RecentCaseRow = SubmissionRow & { issues: string[] };
+type RecentCaseRow = SubmissionRow & { issues: Array<{ code: string; title: string }> };
 function useRecentCases(limit = 6) {
   const [rows, setRows] = useState<RecentCaseRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -205,9 +205,19 @@ function useRecentCases(limit = 6) {
               return j;
             })();
             const vios = Array.isArray(data.violations) ? data.violations as Array<{ code: string; title: string }> : [];
-            return { ...r, issues: vios.slice(0, 3).map(v => v.code) };
+            const seen = new Set<string>();
+            const top = [] as Array<{ code: string; title: string }>;
+            for (const v of vios) {
+              const c = typeof v.code === "string" ? v.code.trim() : "";
+              const t = typeof v.title === "string" ? v.title.trim() : c || "Violation";
+              if (!c || seen.has(c)) continue;
+              seen.add(c);
+              top.push({ code: c, title: t });
+              if (top.length >= 3) break;
+            }
+            return { ...r, issues: top };
           } catch {
-            return { ...r, issues: [] as string[] };
+            return { ...r, issues: [] as Array<{ code: string; title: string }> };
           }
         }));
         if (!cancelled) setRows(withIssues.map(r => ({
@@ -256,19 +266,27 @@ function RecentCases() {
           </div>
         )}
         {!loading && rows.map((r) => (
-          <div key={r.id} className="py-3 flex items-center justify-between gap-4">
+          <div key={r.id} className="py-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-medium truncate max-w-[50vw] text-slate-900">{r.senderName || r.senderId || "Unknown sender"}</div>
-              <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 flex-wrap">
-                {r.issues.length > 0 ? r.issues.map((code) => (
-                  <span key={code} className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">{code}</span>
-                )) : (
+              <div className="font-medium truncate max-w-[60vw] text-slate-900">{r.senderName || r.senderId || "Unknown sender"}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
+                {r.issues.length > 0 ? (
+                  r.issues.map((v, idx) => (
+                    <span
+                      key={`${v.code}-${idx}`}
+                      className="inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw]"
+                      title={v.title}
+                    >
+                      {v.title}
+                    </span>
+                  ))
+                ) : (
                   <span className="text-slate-500">No issues yet</span>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-xs text-slate-700 tabular-nums">{formatWhen(r.createdAt)}</div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-16 md:w-20 text-right text-xs text-slate-700 tabular-nums">{formatWhen(r.createdAt)}</div>
               <Link className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" href={`/cases/${r.id}`}>View</Link>
             </div>
           </div>
