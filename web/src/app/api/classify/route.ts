@@ -38,17 +38,16 @@ export async function POST(req: NextRequest) {
     signedUrl = signed?.signedUrl || null;
   }
 
-  const system = "You are a compliance assistant. Given OCR text and an optional image, identify potential ActBlue policy violations. Return strict JSON only.";
+  const taxonomy = `Use ONLY these codes:\nAB001 Misrepresentation/Impersonation; AB002 Direct-Benefit Claim; AB003 Missing Full Entity Name; AB004 Entity Clarity (Org vs Candidate); AB005 Branding/Form Clarity; AB006 PAC Disclosure Clarity; AB007 False/Unsubstantiated Claims; AB008 Unverified Matching Program.`;
+
+  const examples = `Example Input:\n"If we fall short of our goal, the Constitutional Amendment will be TRASHED."\nOutput:\n{"violations":[{"code":"AB007","title":"False/scare claim","rationale":"Implying fundraising goal determines constitutional outcome","evidence_span_indices":[0],"severity":3,"confidence":0.7}],"summary":"Uses misleading scare tactic","overall_confidence":0.7}`;
+
+  const system = `You are a compliance assistant. Identify potential policy violations in political fundraising SMS/email content. ${taxonomy}\nRules:\n- Output STRICT JSON only with keys: violations (array), summary (string), overall_confidence (0..1).\n- Each violation must include: code, title, rationale, evidence_span_indices (ints), severity (1-5), confidence (0..1).\n- Emit AT MOST ONE violation per code. If multiple findings map to the same code, merge into one entry and concatenate rationales; union evidence indices.\n- AB003 (Missing Full Entity Name) ONLY if the message does not include any full entity name (e.g., 'Let America Vote'). If any full name appears anywhere, do not return AB003 just because an abbreviation exists.\n- AB006 (PAC Disclosure Clarity) ONLY if the solicitation should be from a PAC but the text fails to indicate PAC anywhere and the form/link branding suggests a PAC; do not flag if the entity name is present and does not explicitly claim to be a PAC.\n- AB007/AB008: if multiple lines contribute, still return a single entry per code.\n- If none, return {"violations":[],"summary":"No clear violations.","overall_confidence":0.3}.`;
 
   type Message = { role: "system"|"user"; content: any };
   const messages: Message[] = [
     { role: "system", content: system },
-    {
-      role: "user",
-      content: [
-        { type: "text", text: `OCR text:\n${sub.raw_text || "(none)"}\n\nReturn JSON with fields: violations, summary, overall_confidence.` },
-      ],
-    },
+    { role: "user", content: [ { type: "text", text: `OCR text:\n${sub.raw_text || "(none)"}\n\n${examples}` } ] },
   ];
   if (signedUrl) {
     (messages[1].content as Array<{type:string; image_url?: any; text?: string}>).push({ type: "image_url", image_url: { url: signedUrl } });
@@ -69,18 +68,39 @@ export async function POST(req: NextRequest) {
 
   const content = (json as any)?.choices?.[0]?.message?.content?.trim() || "{}";
   let parsedOut: Record<string, unknown> = {};
-  try { parsedOut = JSON.parse(content); } catch {}
+  try { parsedOut = JSON.parse(content); } catch (e) {
+    console.error("classify_parse_error", { content });
+    parsedOut = { violations: [], summary: "Parse failed", overall_confidence: 0 } as any;
+  }
   const violations = Array.isArray((parsedOut as any).violations) ? (parsedOut as any).violations as Array<any> : [];
 
   if (violations.length > 0) {
-    const rows = violations.map((v: Record<string, unknown>) => ({
+    // Deduplicate by code: keep highest confidence, merge rationales and evidence
+    const byCode = new Map<string, any>();
+    for (const raw of violations) {
+      const code = String((raw as any).code ?? "UNKNOWN");
+      const title = String((raw as any).title ?? "Unspecified violation");
+      const rationale = String((raw as any).rationale ?? "");
+      const confidence = Number((raw as any).confidence ?? (parsedOut as any).overall_confidence ?? 0.5);
+      const severity = Math.max(1, Math.min(5, Number((raw as any).severity ?? 1)));
+      const evidence_spans = Array.isArray((raw as any).evidence_span_indices) ? (raw as any).evidence_span_indices : (raw as any).evidence_spans;
+      const existing = byCode.get(code);
+      if (!existing || confidence > existing.confidence) {
+        byCode.set(code, { code, title, rationale, confidence, severity, evidence_spans: Array.isArray(evidence_spans) ? evidence_spans.slice(0) : [] });
+      } else {
+        // merge
+        if (rationale) existing.rationale = existing.rationale ? `${existing.rationale}; ${rationale}` : rationale;
+        if (Array.isArray(evidence_spans)) existing.evidence_spans = [...(existing.evidence_spans || []), ...evidence_spans];
+      }
+    }
+    const rows = Array.from(byCode.values()).map((v) => ({
       submission_id: submissionId,
-      code: String(v.code ?? ""),
-      title: String(v.title ?? ""),
-      description: String((v as any).rationale ?? ""),
-      evidence_spans: (v as any).evidence_spans ?? null,
-      severity: Number((v as any).severity ?? 1),
-      confidence: Number((v as any).confidence ?? (parsedOut as any).overall_confidence ?? 0.5),
+      code: v.code,
+      title: v.title,
+      description: v.rationale,
+      evidence_spans: v.evidence_spans ?? null,
+      severity: v.severity,
+      confidence: v.confidence,
     }));
     await supabase.from("violations").insert(rows);
   }
