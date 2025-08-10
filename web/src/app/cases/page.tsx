@@ -6,6 +6,7 @@ type SubmissionRow = {
   senderId: string | null;
   senderName: string | null;
   rawText: string | null;
+  issues: string[];
 };
 
 function formatWhen(iso: string): string {
@@ -37,13 +38,28 @@ async function loadCases(): Promise<SubmissionRow[]> {
       raw_text?: string | null;
       rawText?: string | null;
     }>;
-    return rows.map((r) => ({
+    const base = rows.map((r) => ({
       id: r.id,
       createdAt: (r.created_at || r.createdAt || new Date(0).toISOString()) as string,
       senderId: r.sender_id || r.senderId || null,
       senderName: r.sender_name || r.senderName || null,
       rawText: r.raw_text || r.rawText || null,
+      issues: [] as string[],
     }));
+    const withIssues = await Promise.all(
+      base.map(async (row) => {
+        try {
+          const detailRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${row.id}`, { cache: "no-store" });
+          if (!detailRes.ok) return row;
+          const detail = await detailRes.json();
+          const vios = Array.isArray(detail.violations) ? (detail.violations as Array<{ code: string }>) : [];
+          return { ...row, issues: vios.slice(0, 3).map((v) => v.code) };
+        } catch {
+          return row;
+        }
+      })
+    );
+    return withIssues;
   } catch {
     return [];
   }
@@ -75,6 +91,17 @@ export default async function CasesPage() {
                   <div className="min-w-0">
                     <div className="font-medium text-slate-900 truncate max-w-[60vw]">
                       {it.senderName || it.senderId || "Unknown sender"}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 flex-wrap">
+                      {it.issues.length > 0 ? (
+                        it.issues.map((code) => (
+                          <span key={code} className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                            {code}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-slate-500">No issues yet</span>
+                      )}
                     </div>
                     <div className="mt-1 text-xs text-slate-600 truncate max-w-[70ch]">
                       {it.rawText || "(no text)"}
