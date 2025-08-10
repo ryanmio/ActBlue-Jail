@@ -36,11 +36,10 @@ export const env: AppEnv = EnvSchema.parse({
 
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL_VISION: process.env.OPENAI_MODEL_VISION,
-  OCRSPACE_API_KEY: process.env.OCRSPACE_API_KEY,
+  // Accept both OCRSPACE_API_KEY and OCRspace_API_KEY (user typo tolerance)
+  OCRSPACE_API_KEY: process.env.OCRSPACE_API_KEY ?? process.env["OCRspace_API_KEY"],
 
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   REPORT_TO_EMAIL: process.env.REPORT_TO_EMAIL,
-  // Accept both OCRSPACE_API_KEY and OCRspace_API_KEY (user typo tolerance)
-  OCRSPACE_API_KEY: process.env.OCRSPACE_API_KEY ?? (process.env as any).OCRspace_API_KEY,
 });
 

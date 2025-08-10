@@ -114,8 +114,15 @@ function readAsDataUrl(file: File): Promise<string> {
 async function runBrowserOcr(file: File): Promise<{ text: string; ms: number }> {
   const start = performance.now();
   // Dynamic import to keep initial bundle small
-  const mod = await import("tesseract.js");
-  const Tesseract: { recognize: (file: File, lang: string, opts: Record<string,string>) => Promise<{ data: { text?: string } }> } = (mod as any).default || (mod as any);
+  const mod: unknown = await import("tesseract.js");
+  type TesseractModule = {
+    recognize: (
+      file: File,
+      lang: string,
+      opts: Record<string, string>
+    ) => Promise<{ data: { text?: string } }>;
+  };
+  const Tesseract: TesseractModule = (mod as { default?: TesseractModule }).default || (mod as TesseractModule);
   const { data } = await Tesseract.recognize(
     file,
     "eng",

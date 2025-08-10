@@ -1,3 +1,4 @@
+import { LiveViolations } from "./client";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -62,14 +63,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           </div>
           <div>
             <div className="text-sm text-gray-700">Violations</div>
-            <ul className="list-disc list-inside text-sm">
-              {data.violations.map((v) => (
-                <li key={v.id}>
-                  <span className="font-medium">{v.code}</span>: {v.title} {v.confidence ? `(${v.confidence})` : ""}
-                </li>
-              ))}
-              {data.violations.length === 0 && <li className="text-gray-500">None yet</li>}
-            </ul>
+            <LiveViolations id={id} initialViolations={data.violations} initialStatus={item.processing_status ?? null} />
           </div>
         </div>
       </div>
