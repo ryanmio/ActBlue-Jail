@@ -4,6 +4,10 @@ import { getSupabaseServer } from "@/lib/supabase-server";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const limit = Math.min(Number(searchParams.get("limit")) || 20, 100);
+  const pageParam = searchParams.get("page");
+  const explicitOffset = Number(searchParams.get("offset"));
+  const page = Math.max(Number(pageParam || 1) || 1, 1);
+  const offset = Number.isFinite(explicitOffset) && explicitOffset >= 0 ? explicitOffset : (page - 1) * limit;
 
   try {
     const supabase = getSupabaseServer();
@@ -14,11 +18,12 @@ export async function GET(req: NextRequest) {
       sender_name: string | null;
       raw_text: string | null;
     };
-    const { data, error } = await supabase
+
+    const { data, error, count } = await supabase
       .from("submissions")
-      .select("id, created_at, sender_id, sender_name, raw_text")
+      .select("id, created_at, sender_id, sender_name, raw_text", { count: "exact" })
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
     if (error) throw error;
     const rows = (data || []) as Row[];
     const items = rows.map((r) => ({
@@ -28,10 +33,12 @@ export async function GET(req: NextRequest) {
       senderName: r.sender_name,
       rawText: r.raw_text,
     }));
-    return NextResponse.json({ items, nextCursor: null });
+    const total = typeof count === "number" ? count : items.length + offset; // fallback
+    const hasMore = offset + items.length < total;
+    return NextResponse.json({ items, total, limit, offset, page, hasMore });
   } catch (err) {
     console.error("/api/cases supabase error", err);
-    return NextResponse.json({ items: [], nextCursor: null, error: "unavailable" });
+    return NextResponse.json({ items: [], total: 0, limit, offset, page, hasMore: false, error: "unavailable" });
   }
 }
 
