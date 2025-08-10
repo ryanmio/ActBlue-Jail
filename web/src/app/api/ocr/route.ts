@@ -103,8 +103,9 @@ export async function POST(req: NextRequest) {
   // Fire-and-forget classify (absolute URL). Log failures.
   try {
     const base = env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const url = `${base}/api/classify`;
-    void fetch(url, {
+    const classifyUrl = `${base}/api/classify`;
+    const senderUrl = `${base}/api/sender`;
+    void fetch(classifyUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ submissionId }),
@@ -117,6 +118,21 @@ export async function POST(req: NextRequest) {
       })
       .catch((err) => {
         console.error("/api/ocr classify trigger error", err);
+      });
+
+    void fetch(senderUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ submissionId }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          console.error("/api/ocr sender trigger failed", res.status, text);
+        }
+      })
+      .catch((err) => {
+        console.error("/api/ocr sender trigger error", err);
       });
   } catch (err) {
     console.error("/api/ocr classify trigger setup error", err);

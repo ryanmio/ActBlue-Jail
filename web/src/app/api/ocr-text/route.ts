@@ -50,8 +50,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    console.log("/api/ocr-text:trigger_classify", { submissionId });
-    void fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/classify`, {
+    const base = process.env.NEXT_PUBLIC_SITE_URL || "";
+    console.log("/api/ocr-text:trigger_classify_and_sender", { submissionId });
+    void fetch(`${base}/api/classify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ submissionId }),
+    });
+    void fetch(`${base}/api/sender`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ submissionId }),

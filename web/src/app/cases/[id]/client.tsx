@@ -168,3 +168,48 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
     </div>
   );
 }
+
+type LiveSenderProps = {
+  id: string;
+  initialSenderName: string | null;
+  initialSenderId: string | null;
+};
+
+export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSenderProps) {
+  const [senderName, setSenderName] = useState<string | null>(initialSenderName);
+  const [senderId, setSenderId] = useState<string | null>(initialSenderId);
+
+  useEffect(() => {
+    if (senderName) return; // nothing to poll if we already have it
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const item = data.item as { sender_name: string | null; sender_id: string | null } | null;
+        if (!cancelled && item) {
+          if (item.sender_name) {
+            setSenderName(item.sender_name);
+            clearInterval(interval);
+          } else if (item.sender_id && !senderId) {
+            setSenderId(item.sender_id);
+          }
+        }
+      } catch {}
+    }, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [id, senderName, senderId]);
+
+  if (senderName) return <>{senderName}</>;
+  if (senderId) return <>{senderId}</>;
+  return (
+    <span className="inline-flex items-center gap-2 text-slate-700">
+      <span className="h-4 w-4 inline-block rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" aria-label="Loading" />
+      <span>Identifying sender…</span>
+    </span>
+  );
+}

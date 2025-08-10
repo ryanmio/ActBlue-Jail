@@ -1,4 +1,5 @@
-import { LiveViolations } from "./client";
+import Link from "next/link";
+import { LiveViolations, LiveSender } from "./client";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -24,9 +25,8 @@ type CaseData = {
   violations: Array<Violation>;
 };
 
-export default async function CaseDetailPage({ params }: { params: { id: string } | Promise<{ id: string }> }) {
-  const awaited = (params as any)?.then ? await (params as Promise<{ id: string }>) : (params as { id: string });
-  const { id } = awaited;
+export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}`, { cache: "no-store" });
   if (!res.ok) {
     return <main className="mx-auto max-w-5xl p-6">Not found</main>;
@@ -47,9 +47,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
         {/* Breadcrumb */}
         <nav className="text-sm text-slate-600 flex items-center gap-2 mb-8">
-          <a className="hover:text-slate-900 transition-colors" href="/">Home</a>
+          <Link className="hover:text-slate-900 transition-colors" href="/">Home</Link>
           <span className="text-slate-400">→</span>
-          <a className="hover:text-slate-900 transition-colors" href="/cases">Cases</a>
+          <Link className="hover:text-slate-900 transition-colors" href="/cases">Cases</Link>
           <span className="text-slate-400">→</span>
           <span className="text-slate-900 font-medium truncate">Case Details</span>
         </nav>
@@ -59,7 +59,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
               <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
-                {item.sender_name || item.sender_id || "Unknown Sender"}
+                <LiveSender id={id} initialSenderName={item.sender_name} initialSenderId={item.sender_id} />
               </h1>
               <p className="text-slate-600">
                 {createdAt ? `Submitted ${createdAt.toLocaleDateString()} at ${createdAt.toLocaleTimeString()}` : ""}

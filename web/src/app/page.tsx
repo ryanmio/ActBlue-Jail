@@ -145,10 +145,13 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
+type RecentCaseRow = SubmissionRow & { issues: string[] };
 function useRecentCases(limit = 6) {
-  const [rows, setRows] = useState<Array<SubmissionRow & { issues: string[] }>>([]);
+  const [rows, setRows] = useState<RecentCaseRow[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
         const res = await fetch(`/api/cases?limit=${limit}`, { cache: "no-store" });
@@ -172,15 +175,19 @@ function useRecentCases(limit = 6) {
           rawText: r.rawText,
           issues: r.issues,
         })));
-      } catch {}
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [limit]);
-  return rows;
+  return { rows, loading };
 }
 
 function RecentCases() {
-  const rows = useRecentCases(5);
+  const { rows, loading } = useRecentCases(5);
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
@@ -188,7 +195,24 @@ function RecentCases() {
         <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/cases">View all</Link>
       </div>
       <div className="divide-y">
-        {rows.map((r) => (
+        {loading && (
+          <div className="space-y-3 py-2">
+            {[...Array(3)].map((_, idx) => (
+              <div key={idx} className="animate-pulse py-3 flex items-center justify-between gap-4">
+                <div className="min-w-0 w-full">
+                  <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
+                  <div className="flex gap-2">
+                    <div className="h-4 bg-slate-200 rounded w-14" />
+                    <div className="h-4 bg-slate-200 rounded w-16" />
+                    <div className="h-4 bg-slate-200 rounded w-10" />
+                  </div>
+                </div>
+                <div className="h-6 bg-slate-200 rounded w-16 shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
+        {!loading && rows.map((r) => (
           <div key={r.id} className="py-3 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="font-medium truncate max-w-[50vw] text-slate-900">{r.senderName || r.senderId || "Unknown sender"}</div>
@@ -206,7 +230,7 @@ function RecentCases() {
             </div>
           </div>
         ))}
-        {rows.length === 0 && (
+        {!loading && rows.length === 0 && (
           <div className="py-8 text-center text-sm text-slate-700">No cases yet.</div>
         )}
       </div>
@@ -215,7 +239,7 @@ function RecentCases() {
 }
 
 function WorstOffenders() {
-  const rows = useRecentCases(50);
+  const { rows, loading } = useRecentCases(50);
   const offenders = useMemo(() => {
     const map = new Map<string, { name: string; count: number; latest: string }>();
     for (const r of rows) {
@@ -245,14 +269,23 @@ function WorstOffenders() {
             </tr>
           </thead>
           <tbody>
-            {offenders.map((o) => (
+            {loading && (
+              [...Array(3)].map((_, idx) => (
+                <tr key={idx} className="border-t animate-pulse">
+                  <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-48" /></td>
+                  <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-10" /></td>
+                  <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-24" /></td>
+                </tr>
+              ))
+            )}
+            {!loading && offenders.map((o) => (
               <tr key={o.name} className="border-t">
                 <td className="py-2 pr-4 text-slate-900">{o.name}</td>
                 <td className="py-2 pr-4 tabular-nums text-slate-900">{o.count}</td>
                 <td className="py-2 pr-4 text-slate-800">{formatWhen(o.latest)}</td>
               </tr>
             ))}
-            {offenders.length === 0 && (
+            {!loading && offenders.length === 0 && (
               <tr>
                 <td className="py-6 text-center text-slate-700" colSpan={3}>No offenders yet.</td>
               </tr>
