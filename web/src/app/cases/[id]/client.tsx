@@ -213,3 +213,50 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
     </span>
   );
 }
+
+type LiveSummaryProps = {
+  id: string;
+  initialSummary: string | null;
+  initialStatus: string | null | undefined;
+};
+
+export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryProps) {
+  const [summary, setSummary] = useState<string | null>(initialSummary);
+  const [status, setStatus] = useState<string | null | undefined>(initialStatus);
+
+  useEffect(() => {
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const item = data.item as { processing_status?: string | null } | null;
+        const vios = (data.violations ?? []) as Array<{ description?: string | null; severity?: number | null; confidence?: number | string | null }>;
+        const serverSummary: string | null | undefined = (data as { summary?: string | null }).summary;
+        if (!cancelled) {
+          setStatus(item?.processing_status ?? null);
+          if (serverSummary != null) {
+            setSummary(serverSummary);
+          } else {
+            const sorted = [...vios].sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)));
+            setSummary(sorted[0]?.description ?? null);
+          }
+          if (item?.processing_status === "done") {
+            clearInterval(interval);
+          }
+        }
+      } catch {}
+    }, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [id]);
+
+  return (
+    <p className="text-slate-700 text-base leading-relaxed">
+      {summary || "Analysis in progress..."}
+    </p>
+  );
+}

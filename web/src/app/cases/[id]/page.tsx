@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender } from "./client";
+import { LiveViolations, LiveSender, LiveSummary } from "./client";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -41,6 +41,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const topViolation = [...(data.violations || [])]
     .sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)))[0];
   const overallConfidence = item.ai_confidence == null ? null : Number(item.ai_confidence);
+  const summaryInitial = topViolation?.description || null;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -96,9 +97,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             {/* Summary */}
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-3">AI Analysis Summary</h2>
-              <p className="text-slate-700 text-base leading-relaxed">
-                {topViolation?.description || "Analysis in progress..."}
-              </p>
+              <LiveSummary id={id} initialSummary={summaryInitial} initialStatus={item.processing_status ?? null} />
             </div>
 
             {/* Violations */}
