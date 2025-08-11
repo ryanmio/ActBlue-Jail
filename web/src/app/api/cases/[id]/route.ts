@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
+type ViolationRow = {
+  severity?: number | string | null;
+  confidence?: number | string | null;
+  description?: string | null;
+};
+
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -24,9 +30,13 @@ export async function GET(
     if (vErr) throw vErr;
     // Compute a simple summary on the server for convenience: pick the highest severity/confidence description
     let summary: string | null = null;
-    const list = Array.isArray(vios) ? vios : [];
+    const list = (Array.isArray(vios) ? vios : []) as Array<ViolationRow>;
     if (list.length > 0) {
-      const sorted = [...list].sort((a: any, b: any) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)));
+      const sorted = [...list].sort(
+        (a, b) =>
+          Number(b.severity ?? 0) - Number(a.severity ?? 0) ||
+          (Number(b.confidence ?? 0) - Number(a.confidence ?? 0))
+      );
       summary = sorted[0]?.description ?? null;
     }
     return NextResponse.json({ item, violations: vios || [], summary });
