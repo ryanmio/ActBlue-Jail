@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LiveViolations, LiveSender, LiveSummary } from "./client";
+import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -37,7 +38,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const item = data.item;
   const imgRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null };
-  const createdAt = item.created_at ? new Date(item.created_at) : null;
+  const createdAtIso = item.created_at ?? null;
   const topViolation = [...(data.violations || [])]
     .sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)))[0];
   const overallConfidence = item.ai_confidence == null ? null : Number(item.ai_confidence);
@@ -63,7 +64,13 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                 <LiveSender id={id} initialSenderName={item.sender_name} initialSenderId={item.sender_id} />
               </h1>
               <p className="text-slate-600">
-                {createdAt ? `Submitted ${createdAt.toLocaleDateString()} at ${createdAt.toLocaleTimeString()}` : ""}
+                {createdAtIso ? (
+                  <>
+                    Submitted <LocalTime iso={createdAtIso} />
+                  </>
+                ) : (
+                  ""
+                )}
               </p>
             </div>
             {/* Status badges intentionally omitted for now; to be replaced with ActBlue response status later */}
