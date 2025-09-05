@@ -25,6 +25,9 @@ export async function GET(req: NextRequest) {
       .select("id, created_at, sender_id, sender_name, raw_text", { count: "exact" })
       .order("created_at", { ascending: false });
 
+    // Only show public cases
+    builder = builder.eq("public", true);
+
     if (q.length > 0) {
       const sanitized = q.replace(/[%]/g, "").replace(/,/g, " ");
       builder = builder.or(`sender_name.ilike.%${sanitized}%,sender_id.ilike.%${sanitized}%`);

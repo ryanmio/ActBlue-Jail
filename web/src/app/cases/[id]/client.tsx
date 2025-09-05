@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 
 type Props = {
   id: string;
@@ -260,3 +262,113 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
     </p>
   );
 }
+
+type RequestDeletionButtonProps = {
+  id: string;
+  disabled?: boolean;
+};
+
+export function RequestDeletionButton({ id, disabled }: RequestDeletionButtonProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/cases/${id}/request-deletion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to submit request");
+      }
+      setSubmitted(true);
+      setReason("");
+      setTimeout(() => router.replace("/"), 1200);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to submit request";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (submitted) {
+      router.replace("/");
+    } else {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors border ${disabled ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200"}`}
+        aria-label="Request deletion"
+      >
+        Request deletion
+      </button>
+
+      {open && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100]">
+          <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
+          <div className="absolute inset-0 overflow-y-auto">
+            <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Request deletion</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Tell us why this case should be removed. An admin will review requests before anything is deleted.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
+                    <textarea
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      rows={4}
+                      placeholder="Describe why this should be deleted..."
+                      className="w-full border rounded-xl p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
+                    />
+                  </div>
+                  {error && <div className="text-sm text-red-600">{error}</div>}
+                  {submitted && <div className="text-sm text-green-700">Thanks! Your request was submitted. This case is now hidden pending admin review.</div>}
+                </div>
+                <div className="mt-6 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700"
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onSubmit}
+                    className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+                    disabled={submitting || reason.trim().length === 0}
+                  >
+                    {submitting ? "Submitting…" : "Submit"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
