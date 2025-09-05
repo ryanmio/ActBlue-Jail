@@ -48,6 +48,18 @@ create table if not exists audit_log (
   created_at timestamptz default now()
 );
 
+-- Deletion Requests: allow anyone to request a case be deleted
+create table if not exists deletion_requests (
+  id uuid primary key default gen_random_uuid(),
+  submission_id uuid references submissions(id) on delete cascade,
+  reason text not null,
+  requester text, -- optional: email, ip hash, or name if provided
+  created_at timestamptz default now()
+);
+
+-- indexes for faster lookups
+create index if not exists deletion_requests_submission_idx on deletion_requests(submission_id);
+
 -- RLS (to enable in Supabase)
 -- alter table submissions enable row level security;
 -- create policy public_read_only on submissions for select using (public = true);

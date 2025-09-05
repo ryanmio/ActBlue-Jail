@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton } from "./client";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -39,6 +39,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const imgRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null };
   const createdAtIso = item.created_at ?? null;
+  const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
     .sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)))[0];
   const overallConfidence = item.ai_confidence == null ? null : Number(item.ai_confidence);
@@ -73,7 +74,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                 )}
               </p>
             </div>
-            {/* Status badges intentionally omitted for now; to be replaced with ActBlue response status later */}
+            <div className="flex items-center gap-3">
+              <RequestDeletionButton id={id} disabled={!isPublic} />
+            </div>
           </div>
         </div>
 
@@ -117,6 +120,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Extracted text full width */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+          {!isPublic && (
+            <div className="mb-4 p-3 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-900 text-sm">
+              This case is hidden pending deletion review.
+            </div>
+          )}
           <h2 className="text-xl font-semibold text-slate-900 mb-6">Message Content</h2>
           <div className="bg-slate-50 rounded-2xl p-6 max-h-[50vh] overflow-auto">
             <pre className="whitespace-pre-wrap text-slate-700 leading-relaxed font-mono text-sm">

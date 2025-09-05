@@ -59,3 +59,19 @@ export const auditLog = pgTable("audit_log", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+export const deletionRequests = pgTable(
+  "deletion_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    submissionId: uuid("submission_id").notNull(),
+    reason: text("reason").notNull(),
+    requester: text("requester"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => {
+    return {
+      submissionIdx: index("deletion_requests_submission_idx").on(table.submissionId),
+    };
+  }
+);
+
