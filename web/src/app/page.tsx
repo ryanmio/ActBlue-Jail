@@ -18,6 +18,7 @@ type CaseDetail = { violations?: Array<{ code: string; title: string }> };
 export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [stepIndex, setStepIndex] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onBrowseClick = useCallback(() => inputRef.current?.click(), []);
@@ -25,7 +26,8 @@ export default function Home() {
   const handleFile = useCallback(async (file: File) => {
     if (!file || isUploading) return;
     setIsUploading(true);
-    setStatus("Creating submission…");
+    setStatus("");
+    setStepIndex(0);
     try {
       const create = await fetch("/api/upload", {
         method: "POST",
@@ -39,7 +41,6 @@ export default function Home() {
         objectPath: string;
       };
 
-      setStatus("Uploading + OCR…");
       const supabase = assertSupabaseBrowser();
       const uploadPromise = supabase.storage.from(bucket).upload(objectPath, file, {
         upsert: false,
@@ -52,18 +53,23 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ submissionId, dataUrl }),
       });
-      const [{ error }, ocrResp] = await Promise.all([uploadPromise, ocrPromise]);
+
+      // Advance steps as each phase completes (keeps operations concurrent)
+      const { error } = await uploadPromise;
       if (error) throw error;
+      setStepIndex(1); // Uploading image -> Extracting text
+
+      const ocrResp = await ocrPromise;
       if (!ocrResp.ok) {
         const body = await ocrResp.text().catch(() => "");
         throw new Error(`/api/ocr failed ${ocrResp.status}: ${body}`);
       }
-      setStatus("Done – opening case…");
+      setStepIndex(2); // Extracting text -> Finishing up
       window.location.href = `/cases/${submissionId}`;
     } catch (e) {
       console.error(e);
       const message = e instanceof Error ? e.message : String(e);
-      setStatus(`Upload/OCR failed: ${message}`);
+      setStatus(`Processing failed: ${message}`);
       setIsUploading(false);
     }
   }, [isUploading]);
@@ -112,38 +118,79 @@ export default function Home() {
                 ? "border-slate-400 bg-white"
                 : "border-slate-300 bg-white/60 hover:border-slate-400 hover:bg-white"
             }`}
+            aria-busy={isUploading || undefined}
           >
-            <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
-              <svg
-                className="w-7 h-7 md:w-8 md:h-8"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-            </div>
-            <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
-            <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
-            <div className="mt-4 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-              By uploading, you confirm you have the right to share this content and accept the <Link
-                href="/about#terms"
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-                className="underline underline-offset-2 hover:text-slate-900"
-              >
-                Terms
-              </Link>.
-            </div>
+            {!isUploading && (
+              <>
+                <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
+                  <svg
+                    className="w-7 h-7 md:w-8 md:h-8"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
+                <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
+                <div className="mt-4 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                  By uploading, you confirm you have the right to share this content and accept the <Link
+                    href="/about#terms"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="underline underline-offset-2 hover:text-slate-900"
+                  >
+                    Terms
+                  </Link>.
+                </div>
+              </>
+            )}
+
+            {isUploading && (
+              <div className="max-w-md mx-auto">
+                <div className="text-xl md:text-2xl font-semibold text-slate-900 mb-6">Working on your upload…</div>
+                <ol className="flex items-center justify-between gap-2">
+                  {['Uploading image', 'Extracting text', 'Finishing up'].map((label, idx) => {
+                    const isDone = idx < stepIndex;
+                    const isCurrent = idx === stepIndex;
+                    return (
+                      <li key={label} className="flex-1 min-w-0">
+                        <div className="flex items-center">
+                          <div className={`flex items-center justify-center h-8 w-8 rounded-full border text-xs font-semibold shrink-0 ${
+                            isDone ? 'bg-slate-900 text-white border-slate-900' : isCurrent ? 'bg-white text-slate-900 border-slate-900' : 'bg-white text-slate-500 border-slate-300'
+                          }`} aria-current={isCurrent ? 'step' : undefined}>
+                            {isDone ? '✓' : idx + 1}
+                          </div>
+                          {idx < 2 && (
+                            <div className={`mx-2 h-[2px] flex-1 rounded ${isDone ? 'bg-slate-900' : 'bg-slate-200'}`} />
+                          )}
+                        </div>
+                        <div className={`mt-2 text-center text-xs ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`} aria-live={isCurrent ? 'polite' : undefined}>
+                          {label}
+                          {isCurrent && (
+                            <span className="ml-2 align-middle">
+                              <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" aria-label="Loading" />
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <div className="mt-6 text-xs text-slate-600">This usually takes a few seconds.</div>
+              </div>
+            )}
+
             <input ref={inputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={onInputChange} />
-            {status && (
+            {!isUploading && status && (
               <div className="mt-4 text-sm text-slate-800">{status}</div>
             )}
           </div>
