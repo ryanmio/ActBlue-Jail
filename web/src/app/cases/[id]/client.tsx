@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
@@ -35,7 +35,7 @@ export function LiveCaseText({ id, initialText, initialStatus }: Props) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [id]);
+  }, [id, initialStatus]);
 
   return (
     <div>
@@ -69,31 +69,49 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
   const [violations, setViolations] = useState<Array<Violation>>(initialViolations);
   const [status, setStatus] = useState<string | null | undefined>(initialStatus);
   const [overallConfidence, setOverallConfidence] = useState<number | null>(initialAiConfidence == null ? null : Number(initialAiConfidence));
+  const intervalRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const interval = setInterval(async () => {
+  const stopPolling = () => {
+    if (intervalRef.current != null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const startPolling = () => {
+    stopPolling();
+    intervalRef.current = window.setInterval(async () => {
       try {
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
         const item = data.item as { processing_status?: string | null; ai_confidence?: number | string | null };
         const vios = (data.violations ?? []) as Array<Violation>;
-        if (!cancelled) {
-          setViolations(vios);
-          setStatus(item?.processing_status ?? null);
-          const oc = item?.ai_confidence;
-          setOverallConfidence(oc == null ? null : Number(oc));
-          if (item?.processing_status === "done") {
-            clearInterval(interval);
-          }
+        setViolations(vios);
+        setStatus(item?.processing_status ?? null);
+        const oc = item?.ai_confidence;
+        setOverallConfidence(oc == null ? null : Number(oc));
+        if (item?.processing_status === "done") {
+          stopPolling();
         }
       } catch {}
     }, 2000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
+  };
+
+  useEffect(() => {
+    startPolling();
+    return () => stopPolling();
+  }, [id]);
+
+  useEffect(() => {
+    const onReclassify = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id?: string } | undefined;
+      if (!detail || detail.id !== id) return;
+      setStatus("classified");
+      startPolling();
     };
+    window.addEventListener("reclassify-started", onReclassify as EventListener);
+    return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
   }, [id]);
 
   if (status !== "done") {
@@ -254,7 +272,7 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
       cancelled = true;
       clearInterval(interval);
     };
-  }, [id]);
+  }, [id, initialStatus]);
 
   return (
     <p className="text-slate-700 text-base leading-relaxed">
@@ -428,6 +446,11 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
       // Also refresh local comments list
       await refreshComments();
       setTimeout(() => setToast(null), 2500);
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id } }));
+        } catch {}
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to add comment";
       setError(msg);
