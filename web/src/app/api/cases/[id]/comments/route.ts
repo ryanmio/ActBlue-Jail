@@ -34,18 +34,14 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   // mark in-progress so UI polls
   await supabase.from("submissions").update({ processing_status: "classified" }).eq("id", id);
 
-  // re-run classification including existing comments
-  const result = await runClassification(id, {
-    includeExistingComments: true,
-    replaceExisting: true,
-  });
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error, detail: (result as any).detail }, { status: result.status });
-  }
-  // audit
+  // audit now
   await supabase.from("audit_log").insert({ action: "reclassify", actor: "anonymous", submission_id: id, payload: { via: "comment", length: content.length } });
 
-  return NextResponse.json({ ok: true, ms: result.ms, violations: result.violations });
+  // Kick off reclassification asynchronously; return immediately
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+  runClassification(id, { includeExistingComments: true, replaceExisting: true });
+
+  return NextResponse.json({ ok: true, started: true });
 }
 
 

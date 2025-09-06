@@ -390,6 +390,8 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const router = useRouter();
 
   const remaining = 240 - content.length;
   const atLimit = comments.length >= 10;
@@ -420,7 +422,12 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
       }
       setContent("");
       setInfo("Comment added. Re-running AI with comments considered…");
+      setToast("AI is re-running with your comment");
+      // Refresh the page data to ensure latest server-side state is shown
+      router.refresh();
+      // Also refresh local comments list
       await refreshComments();
+      setTimeout(() => setToast(null), 2500);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to add comment";
       setError(msg);
@@ -431,6 +438,14 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      {toast && typeof window !== "undefined" && createPortal(
+        <div className="fixed top-4 right-4 z-[200]">
+          <div className="px-4 py-3 rounded-xl shadow-lg bg-slate-900 text-white text-sm">
+            {toast}
+          </div>
+        </div>,
+        document.body
+      )}
       <h2 className="text-xl font-semibold text-slate-900 mb-2">Comments</h2>
       <p className="text-sm text-slate-600 mb-4">Adding a comment will immediately re-run the AI policy analysis with all comments considered.</p>
 
