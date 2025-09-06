@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection } from "./client";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -21,9 +21,11 @@ type Violation = {
   confidence?: string | number | null;
 };
 
+type Comment = { id: string; content: string; created_at?: string | null };
 type CaseData = {
   item: CaseItem | null;
   violations: Array<Violation>;
+  comments?: Array<Comment>;
 };
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -132,6 +134,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             </pre>
           </div>
         </div>
+
+        {/* Comments */}
+        <CommentsSection id={id} initialComments={data.comments || []} />
       </div>
     </main>
   );

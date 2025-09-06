@@ -1,0 +1,51 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServer } from "@/lib/supabase-server";
+import { runClassification } from "@/server/ai/classify";
+
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: "service_key_missing" }, { status: 400 });
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: "openai_key_missing" }, { status: 400 });
+  }
+
+  const { id } = await context.params;
+  const body = await req.json().catch(() => null) as { content?: string } | null;
+  const content = (body?.content || "").trim();
+  if (!content) return NextResponse.json({ error: "empty_content" }, { status: 400 });
+  if (content.length > 240) return NextResponse.json({ error: "content_too_long" }, { status: 400 });
+
+  const supabase = getSupabaseServer();
+
+  // enforce per-submission cap of 10 comments
+  const { data: countRows } = await supabase
+    .from("comments")
+    .select("id", { count: "exact", head: true })
+    .eq("submission_id", id);
+  const count = (countRows as unknown as { length?: number } | null)?.length ?? 0; // supabase head+count leaves data null; be defensive
+  if (typeof count === "number" && count >= 10) {
+    return NextResponse.json({ error: "comments_limit_reached" }, { status: 429 });
+  }
+
+  const { error: insErr } = await supabase.from("comments").insert({ submission_id: id, content });
+  if (insErr) return NextResponse.json({ error: "insert_failed" }, { status: 500 });
+
+  // mark in-progress so UI polls
+  await supabase.from("submissions").update({ processing_status: "classified" }).eq("id", id);
+
+  // re-run classification including existing comments
+  const result = await runClassification(id, {
+    includeExistingComments: true,
+    replaceExisting: true,
+  });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error, detail: (result as any).detail }, { status: result.status });
+  }
+  // audit
+  await supabase.from("audit_log").insert({ action: "reclassify", actor: "anonymous", submission_id: id, payload: { via: "comment", length: content.length } });
+
+  return NextResponse.json({ ok: true, ms: result.ms, violations: result.violations });
+}
+
+

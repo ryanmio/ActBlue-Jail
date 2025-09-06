@@ -372,3 +372,113 @@ export function RequestDeletionButton({ id, disabled }: RequestDeletionButtonPro
   );
 }
 
+
+type Comment = {
+  id: string;
+  content: string;
+  created_at?: string | null;
+};
+
+type CommentsSectionProps = {
+  id: string;
+  initialComments: Array<Comment>;
+};
+
+export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
+  const [comments, setComments] = useState<Array<Comment>>(initialComments);
+  const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  const remaining = 240 - content.length;
+  const atLimit = comments.length >= 10;
+
+  const refreshComments = async () => {
+    try {
+      const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const rows = (data?.comments ?? []) as Array<Comment>;
+      setComments(rows);
+    } catch {}
+  };
+
+  const onSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/cases/${id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to add comment");
+      }
+      setContent("");
+      setInfo("Comment added. Re-running AI with comments considered…");
+      await refreshComments();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to add comment";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      <h2 className="text-xl font-semibold text-slate-900 mb-2">Comments</h2>
+      <p className="text-sm text-slate-600 mb-4">Adding a comment will immediately re-run the AI policy analysis with all comments considered.</p>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Add a comment</label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value.slice(0, 240))}
+            rows={3}
+            placeholder="e.g., I think this may violate the fake match policy…"
+            className="w-full border rounded-xl p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
+            maxLength={240}
+            disabled={submitting || atLimit}
+          />
+          <div className="mt-1 flex items-center justify-between text-xs">
+            <span className="text-slate-500">{remaining} characters left</span>
+            {atLimit && <span className="text-slate-600">Comment limit reached for this case (10)</span>}
+          </div>
+        </div>
+
+        {error && <div className="text-sm text-red-600">{error}</div>}
+        {info && <div className="text-sm text-slate-700">{info}</div>}
+
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+            disabled={submitting || content.trim().length === 0 || atLimit}
+          >
+            {submitting ? "Submitting…" : "Submit Comment"}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h3 className="text-sm font-semibold text-slate-800 mb-2">Existing comments</h3>
+        {comments.length === 0 ? (
+          <div className="text-sm text-slate-600">No comments yet.</div>
+        ) : (
+          <ul className="space-y-2">
+            {comments.map((c) => (
+              <li key={c.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-sm text-slate-800 whitespace-pre-wrap">{c.content}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
