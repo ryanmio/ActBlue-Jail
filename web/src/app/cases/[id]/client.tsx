@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
@@ -35,7 +35,7 @@ export function LiveCaseText({ id, initialText, initialStatus }: Props) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [id]);
+  }, [id, initialStatus]);
 
   return (
     <div>
@@ -69,31 +69,49 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
   const [violations, setViolations] = useState<Array<Violation>>(initialViolations);
   const [status, setStatus] = useState<string | null | undefined>(initialStatus);
   const [overallConfidence, setOverallConfidence] = useState<number | null>(initialAiConfidence == null ? null : Number(initialAiConfidence));
+  const intervalRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const interval = setInterval(async () => {
+  const stopPolling = () => {
+    if (intervalRef.current != null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const startPolling = () => {
+    stopPolling();
+    intervalRef.current = window.setInterval(async () => {
       try {
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
         const item = data.item as { processing_status?: string | null; ai_confidence?: number | string | null };
         const vios = (data.violations ?? []) as Array<Violation>;
-        if (!cancelled) {
-          setViolations(vios);
-          setStatus(item?.processing_status ?? null);
-          const oc = item?.ai_confidence;
-          setOverallConfidence(oc == null ? null : Number(oc));
-          if (item?.processing_status === "done") {
-            clearInterval(interval);
-          }
+        setViolations(vios);
+        setStatus(item?.processing_status ?? null);
+        const oc = item?.ai_confidence;
+        setOverallConfidence(oc == null ? null : Number(oc));
+        if (item?.processing_status === "done") {
+          stopPolling();
         }
       } catch {}
     }, 2000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
+  };
+
+  useEffect(() => {
+    startPolling();
+    return () => stopPolling();
+  }, [id]);
+
+  useEffect(() => {
+    const onReclassify = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id?: string } | undefined;
+      if (!detail || detail.id !== id) return;
+      setStatus("classified");
+      startPolling();
     };
+    window.addEventListener("reclassify-started", onReclassify as EventListener);
+    return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
   }, [id]);
 
   if (status !== "done") {
@@ -254,7 +272,7 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
       cancelled = true;
       clearInterval(interval);
     };
-  }, [id]);
+  }, [id, initialStatus]);
 
   return (
     <p className="text-slate-700 text-base leading-relaxed">
@@ -372,3 +390,133 @@ export function RequestDeletionButton({ id, disabled }: RequestDeletionButtonPro
   );
 }
 
+
+type Comment = {
+  id: string;
+  content: string;
+  created_at?: string | null;
+};
+
+type CommentsSectionProps = {
+  id: string;
+  initialComments: Array<Comment>;
+};
+
+export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
+  const [comments, setComments] = useState<Array<Comment>>(initialComments);
+  const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const router = useRouter();
+
+  const remaining = 240 - content.length;
+  const atLimit = comments.length >= 10;
+
+  const refreshComments = async () => {
+    try {
+      const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const rows = (data?.comments ?? []) as Array<Comment>;
+      setComments(rows);
+    } catch {}
+  };
+
+  const onSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/cases/${id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to add comment");
+      }
+      setContent("");
+      setInfo("Comment added. Re-running AI with comments considered…");
+      setToast("AI is re-running with your comment");
+      // Refresh the page data to ensure latest server-side state is shown
+      router.refresh();
+      // Also refresh local comments list
+      await refreshComments();
+      setTimeout(() => setToast(null), 2500);
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id } }));
+        } catch {}
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to add comment";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      {toast && typeof window !== "undefined" && createPortal(
+        <div className="fixed top-4 right-4 z-[200]">
+          <div className="px-4 py-3 rounded-xl shadow-lg bg-slate-900 text-white text-sm">
+            {toast}
+          </div>
+        </div>,
+        document.body
+      )}
+      <h2 className="text-xl font-semibold text-slate-900 mb-2">Comments</h2>
+      <p className="text-sm text-slate-600 mb-4">Adding a comment will immediately re-run the AI policy analysis with all comments considered.</p>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Add a comment</label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value.slice(0, 240))}
+            rows={3}
+            placeholder="e.g., I think this may violate the fake match policy…"
+            className="w-full border rounded-xl p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
+            maxLength={240}
+            disabled={submitting || atLimit}
+          />
+          <div className="mt-1 flex items-center justify-between text-xs">
+            <span className="text-slate-500">{remaining} characters left</span>
+            {atLimit && <span className="text-slate-600">Comment limit reached for this case (10)</span>}
+          </div>
+        </div>
+
+        {error && <div className="text-sm text-red-600">{error}</div>}
+        {info && <div className="text-sm text-slate-700">{info}</div>}
+
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+            disabled={submitting || content.trim().length === 0 || atLimit}
+          >
+            {submitting ? "Submitting…" : "Submit Comment"}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h3 className="text-sm font-semibold text-slate-800 mb-2">Existing comments</h3>
+        {comments.length === 0 ? (
+          <div className="text-sm text-slate-600">No comments yet.</div>
+        ) : (
+          <ul className="space-y-2">
+            {comments.map((c) => (
+              <li key={c.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-sm text-slate-800 whitespace-pre-wrap">{c.content}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

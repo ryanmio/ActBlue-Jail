@@ -28,6 +28,12 @@ export async function GET(
       .select("*")
       .eq("submission_id", id);
     if (vErr) throw vErr;
+    const { data: commentsRows } = await supabase
+      .from("comments")
+      .select("id, content, created_at")
+      .eq("submission_id", id)
+      .order("created_at", { ascending: true })
+      .limit(10);
     // Compute a simple summary on the server for convenience: pick the highest severity/confidence description
     let summary: string | null = null;
     const list = (Array.isArray(vios) ? vios : []) as Array<ViolationRow>;
@@ -39,9 +45,9 @@ export async function GET(
       );
       summary = sorted[0]?.description ?? null;
     }
-    return NextResponse.json({ item, violations: vios || [], summary });
+    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [] });
   } catch (err) {
     console.error("/api/cases/[id] supabase error", err);
-    return NextResponse.json({ item: null, violations: [] }, { status: 500 });
+    return NextResponse.json({ item: null, violations: [], comments: [] }, { status: 500 });
   }
 }

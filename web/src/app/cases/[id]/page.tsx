@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection } from "./client";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -21,9 +21,11 @@ type Violation = {
   confidence?: string | number | null;
 };
 
+type Comment = { id: string; content: string; created_at?: string | null };
 type CaseData = {
   item: CaseItem | null;
   violations: Array<Violation>;
+  comments?: Array<Comment>;
 };
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -118,20 +120,10 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
 
-        {/* Extracted text full width */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-          {!isPublic && (
-            <div className="mb-4 p-3 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-900 text-sm">
-              This case is hidden pending deletion review.
-            </div>
-          )}
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">Message Content</h2>
-          <div className="bg-slate-50 rounded-2xl p-6 max-h-[50vh] overflow-auto">
-            <pre className="whitespace-pre-wrap text-slate-700 leading-relaxed font-mono text-sm">
-              {item.raw_text || "Extracting text..."}
-            </pre>
-          </div>
-        </div>
+        {/* Extracted text hidden for now to bring comments up */}
+
+        {/* Comments */}
+        <CommentsSection id={id} initialComments={data.comments || []} />
       </div>
     </main>
   );
