@@ -244,6 +244,7 @@ type LiveSummaryProps = {
 export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryProps) {
   const [summary, setSummary] = useState<string | null>(initialSummary);
   const [status, setStatus] = useState<string | null | undefined>(initialStatus);
+  const [hasNoViolations, setHasNoViolations] = useState<boolean>(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -257,6 +258,7 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
         const serverSummary: string | null | undefined = (data as { summary?: string | null }).summary;
         if (!cancelled) {
           setStatus(item?.processing_status ?? null);
+          setHasNoViolations(Array.isArray(vios) && vios.length === 0);
           if (serverSummary != null) {
             setSummary(serverSummary);
           } else {
@@ -275,10 +277,9 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
     };
   }, [id, initialStatus]);
 
+  const textOut = status === "done" && hasNoViolations ? "No violations detected" : (summary || "Analysis in progress...");
   return (
-    <p className="text-slate-700 text-base leading-relaxed">
-      {summary || "Analysis in progress..."}
-    </p>
+    <p className="text-slate-700 text-base leading-relaxed">{textOut}</p>
   );
 }
 
