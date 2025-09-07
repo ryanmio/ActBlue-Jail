@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer } from "./client";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -91,8 +91,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
               <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
                 {imgData.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imgData.url} alt="Political message screenshot" className="w-full h-auto max-h-[360px] md:max-h-[400px] object-contain" />
+                  <EvidenceViewer src={imgData.url} alt="Political message screenshot" />
                 ) : (
                   <div className="p-8 text-center text-slate-500">
                     <div className="text-4xl mb-2">📱</div>

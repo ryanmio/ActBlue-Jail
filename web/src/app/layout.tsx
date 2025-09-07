@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { env } from "@/lib/env";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "photoswipe/style.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

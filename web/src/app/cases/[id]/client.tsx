@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { Gallery, Item } from "react-photoswipe-gallery";
 
 type Props = {
   id: string;
@@ -518,5 +519,45 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
         )}
       </div>
     </div>
+  );
+}
+
+type EvidenceViewerProps = {
+  src: string;
+  alt?: string;
+};
+
+export function EvidenceViewer({ src, alt = "Evidence screenshot" }: EvidenceViewerProps) {
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.src = src;
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  return (
+    <Gallery withCaption options={{ initialZoomLevel: 0.5 }}>
+      <Item
+        original={src}
+        thumbnail={src}
+        caption={alt}
+        width={dimensions?.width}
+        height={dimensions?.height}
+      >
+        {({ ref, open }) => (
+          <button type="button" onClick={open} className="block w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto max-h-[360px] md:max-h-[400px] object-contain" />
+          </button>
+        )}
+      </Item>
+    </Gallery>
   );
 }
