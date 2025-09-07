@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       return xmlResponse(`<Response></Response>`, 500);
     }
 
-    // Fire-and-forget classification + sender extraction only for fundraising
+    // For fundraising messages, fire-and-forget triggers using helper; classification runs sync in its route
     if (result.isFundraising) {
       triggerPipelines(result.id);
       console.log("/api/inbound-sms:triggered", { submissionId: result.id });
