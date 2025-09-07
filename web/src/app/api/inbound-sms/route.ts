@@ -46,15 +46,21 @@ export async function POST(req: NextRequest) {
       id: result.id || null,
       from: fromNumber || null,
       bodyLen: bodyText ? bodyText.length : 0,
+      isFundraising: result.isFundraising ?? null,
+      heuristic: result.heuristic || null,
     });
     if (!result.ok || !result.id) {
       console.error("/api/inbound-sms:ingest_failed", result);
       return xmlResponse(`<Response></Response>`, 500);
     }
 
-    // Fire-and-forget classification + sender extraction
-    triggerPipelines(result.id);
-    console.log("/api/inbound-sms:triggered", { submissionId: result.id });
+    // Fire-and-forget classification + sender extraction only for fundraising
+    if (result.isFundraising) {
+      triggerPipelines(result.id);
+      console.log("/api/inbound-sms:triggered", { submissionId: result.id });
+    } else {
+      console.log("/api/inbound-sms:skipped_triggers_non_fundraising", { submissionId: result.id });
+    }
 
     // Twilio compatible empty response
     return xmlResponse(`<Response></Response>`, 200);

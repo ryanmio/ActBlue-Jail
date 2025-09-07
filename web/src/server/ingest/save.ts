@@ -12,9 +12,11 @@ export type IngestResult = {
   ok: boolean;
   id?: string;
   error?: string;
+  isFundraising?: boolean;
+  heuristic?: { score: number; hits: string[] };
 };
 
-function computeHeuristicIsFundraising(text: string): boolean {
+function computeHeuristic(text: string): { isFundraising: boolean; score: number; hits: string[] } {
   const t = (text || "").toLowerCase();
   const positive = [
     "donate",
@@ -35,16 +37,23 @@ function computeHeuristicIsFundraising(text: string): boolean {
     "$20",
   ];
   let score = 0;
+  const hits: string[] = [];
   for (const kw of positive) {
-    if (t.includes(kw)) score += 1;
+    if (t.includes(kw)) {
+      score += 1;
+      hits.push(kw);
+    }
   }
-  return score >= 2 || (score >= 1 && /\$\d{1,3}/.test(t));
+  const hasDollar = /\$\d{1,4}/.test(t);
+  const isFundraising = score >= 2 || (score >= 1 && hasDollar);
+  return { isFundraising, score: score + (hasDollar ? 1 : 0), hits };
 }
 
 export async function ingestTextSubmission(params: IngestTextParams): Promise<IngestResult> {
   const supabase = getSupabaseServer();
   const imageUrl = params.imageUrlPlaceholder || "sms://no-image";
-  const isFundraising = computeHeuristicIsFundraising(params.text || "");
+  const heur = computeHeuristic(params.text || "");
+  const isFundraising = heur.isFundraising;
 
   const insertRow: Record<string, any> = {
     image_url: imageUrl,
@@ -67,7 +76,9 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   if (error) {
     return { ok: false, error: error.message };
   }
-  return { ok: true, id: (data as any)?.id };
+  const id = (data as any)?.id as string | undefined;
+  console.log("ingestTextSubmission:inserted", { id: id || null, isFundraising, score: heur.score, hits: heur.hits });
+  return { ok: true, id, isFundraising, heuristic: heur };
 }
 
 export function triggerPipelines(submissionId: string) {
