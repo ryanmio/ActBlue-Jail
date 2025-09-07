@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, unstable_after as after } from "next/server";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 
 // Twilio will POST with application/x-www-form-urlencoded by default
@@ -54,21 +54,34 @@ export async function POST(req: NextRequest) {
       return xmlResponse(`<Response></Response>`, 500);
     }
 
-    // For fundraising messages, await policy classifier (<= ~12s) to ensure status flips to done
+    // For fundraising messages, schedule classify + sender after responding (background)
     if (result.isFundraising) {
       const base = process.env.NEXT_PUBLIC_SITE_URL || "";
-      const classifyResp = await Promise.race([
-        fetch(`${base}/api/classify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ submissionId: result.id }),
-        }).then(async (r) => ({ status: r.status, text: await r.text().catch(() => "") })),
-        new Promise<{ status: number; text: string }>((resolve) => setTimeout(() => resolve({ status: 408, text: "timeout" }), 12000)),
-      ]);
-      console.log("/api/inbound-sms:classify_result", { submissionId: result.id, classifyResp });
-      // Fire-and-forget sender; non-blocking
-      triggerPipelines(result.id);
-      console.log("/api/inbound-sms:triggered_sender", { submissionId: result.id });
+      after(async () => {
+        try {
+          const cr = await fetch(`${base}/api/classify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ submissionId: result.id }),
+          });
+          const ctext = await cr.text().catch(() => "");
+          console.log("/api/inbound-sms:bg_classify", { submissionId: result.id, status: cr.status, body: ctext.slice(0, 200) });
+        } catch (e) {
+          console.error("/api/inbound-sms:bg_classify_error", String(e));
+        }
+        try {
+          const sr = await fetch(`${base}/api/sender`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ submissionId: result.id }),
+          });
+          const stext = await sr.text().catch(() => "");
+          console.log("/api/inbound-sms:bg_sender", { submissionId: result.id, status: sr.status, body: stext.slice(0, 200) });
+        } catch (e) {
+          console.error("/api/inbound-sms:bg_sender_error", String(e));
+        }
+      });
+      console.log("/api/inbound-sms:scheduled", { submissionId: result.id });
     } else {
       console.log("/api/inbound-sms:skipped_triggers_non_fundraising", { submissionId: result.id });
     }
