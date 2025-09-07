@@ -6,6 +6,10 @@ import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 export async function POST(req: NextRequest) {
   // Twilio expects a 200 with TwiML (or empty <Response/>)
   try {
+    console.log("/api/inbound-sms:start", {
+      ct: req.headers.get("content-type") || null,
+      twilioSig: req.headers.get("x-twilio-signature") || null,
+    });
     const contentType = req.headers.get("content-type") || "";
     let bodyText = "";
     let fromNumber = "";
@@ -26,6 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("/api/inbound-sms:error service_key_missing");
       return xmlResponse(`<Response></Response>`, 400);
     }
 
@@ -36,16 +41,25 @@ export async function POST(req: NextRequest) {
       messageType: "sms",
       imageUrlPlaceholder: "sms://no-image",
     });
+    console.log("/api/inbound-sms:ingested", {
+      ok: result.ok,
+      id: result.id || null,
+      from: fromNumber || null,
+      bodyLen: bodyText ? bodyText.length : 0,
+    });
     if (!result.ok || !result.id) {
+      console.error("/api/inbound-sms:ingest_failed", result);
       return xmlResponse(`<Response></Response>`, 500);
     }
 
     // Fire-and-forget classification + sender extraction
     triggerPipelines(result.id);
+    console.log("/api/inbound-sms:triggered", { submissionId: result.id });
 
     // Twilio compatible empty response
     return xmlResponse(`<Response></Response>`, 200);
-  } catch (_e) {
+  } catch (e) {
+    console.error("/api/inbound-sms:exception", e);
     return xmlResponse(`<Response></Response>`, 500);
   }
 }
