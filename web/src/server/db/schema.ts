@@ -21,6 +21,7 @@ export const submissions = pgTable(
     rawText: text("raw_text"),
     senderId: text("sender_id"),
     senderName: text("sender_name"),
+    isFundraising: boolean("is_fundraising"),
     links: jsonb("links").$type<Array<{ url: string; domain?: string }>>().default([]),
     redactLevel: text("redact_level").default("default"), // enum in SQL
     aiVersion: text("ai_version"),
