@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
-import { ingestTextSubmission } from "@/server/ingest/save";
+import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 
 // Twilio will POST with application/x-www-form-urlencoded by default
 export async function POST(req: NextRequest) {
@@ -54,35 +54,10 @@ export async function POST(req: NextRequest) {
       return xmlResponse(`<Response></Response>`, 500);
     }
 
-    // For fundraising messages, synchronously trigger classify/sender with a short timeout
+    // For fundraising messages, fire-and-forget triggers; classification runs synchronously inside its route
     if (result.isFundraising) {
-      const base = process.env.NEXT_PUBLIC_SITE_URL || "";
-      async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | { timeout: true }> {
-        return Promise.race([
-          p,
-          new Promise<{ timeout: true }>((resolve) => setTimeout(() => resolve({ timeout: true }), ms)),
-        ]);
-      }
-
-      const classifyPromise = fetch(`${base}/api/classify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionId: result.id }),
-      }).then(async (r) => ({ status: r.status, text: await r.text().catch(() => "") }))
-        .catch((e) => ({ status: 0, text: String(e) }));
-
-      const senderPromise = fetch(`${base}/api/sender`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionId: result.id }),
-      }).then(async (r) => ({ status: r.status, text: await r.text().catch(() => "") }))
-        .catch((e) => ({ status: 0, text: String(e) }));
-
-      const [classifyRes, senderRes] = await Promise.all([
-        withTimeout(classifyPromise, 14000),
-        withTimeout(senderPromise, 14000),
-      ]);
-      console.log("/api/inbound-sms:triggered", { submissionId: result.id, classifyRes, senderRes });
+      triggerPipelines(result.id);
+      console.log("/api/inbound-sms:triggered", { submissionId: result.id });
     } else {
       console.log("/api/inbound-sms:skipped_triggers_non_fundraising", { submissionId: result.id });
     }
