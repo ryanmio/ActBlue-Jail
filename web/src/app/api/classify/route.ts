@@ -26,19 +26,14 @@ export async function POST(req: NextRequest) {
   await supabase.from("submissions").update({ processing_status: "classified" }).eq("id", submissionId);
 
   console.log("/api/classify:running", { submissionId });
-  // Queue background classification and return immediately
-  setTimeout(() => {
-    runClassification(submissionId, { includeExistingComments: false, replaceExisting: true })
-      .then((res) => {
-        if (!res.ok) {
-          console.error("/api/classify:bg_failed", { submissionId, res });
-        } else {
-          console.log("/api/classify:bg_done", { submissionId, violations: res.violations, ms: res.ms });
-        }
-      })
-      .catch((e) => {
-        console.error("/api/classify:bg_exception", { submissionId, e: String(e) });
-      });
-  }, 0);
-  return NextResponse.json({ ok: true, queued: true });
+  const result = await runClassification(submissionId, {
+    includeExistingComments: false,
+    replaceExisting: true,
+  });
+  if (!result.ok) {
+    console.error("/api/classify:failed", { submissionId, result });
+    return NextResponse.json({ error: result.error, detail: (result as any).detail }, { status: result.status });
+  }
+  console.log("/api/classify:done", { submissionId, violations: result.violations, ms: result.ms });
+  return NextResponse.json({ ok: true, violations: result.violations, ms: result.ms });
 }

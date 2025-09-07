@@ -51,9 +51,10 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
     message_type: params.messageType,
     raw_text: params.text,
     sender_id: params.senderId || null,
-    processing_status: "ocr",
+    processing_status: isFundraising ? "ocr" : "done",
     ocr_method: params.messageType === "sms" ? "sms" : "text",
     is_fundraising: isFundraising,
+    public: isFundraising, // hide non-fundraising by default
   };
 
   const { data, error } = await supabase
