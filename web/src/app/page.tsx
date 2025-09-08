@@ -239,10 +239,11 @@ function useRecentCases(limit = 6) {
     setLoading(true);
     (async () => {
       try {
-        const listUrl = `/api/cases?limit=${limit}`;
+        const fetchLimit = Math.min(limit * 5, 100);
+        const listUrl = `/api/cases?limit=${fetchLimit}`;
         const json = await cachedJsonFetch<{ items: Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null }> }>(listUrl, 120_000);
         const items = (json.items || []) as Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null }>;
-        const withIssues = await Promise.all(items.slice(0, limit).map(async (r) => {
+        const withIssues = await Promise.all(items.map(async (r) => {
           try {
             const detailUrl = `/api/cases/${r.id}`;
             const data: CaseDetail = await (async () => {
@@ -269,7 +270,8 @@ function useRecentCases(limit = 6) {
             return { ...r, issues: [] as Array<{ code: string; title: string }> };
           }
         }));
-        if (!cancelled) setRows(withIssues.map(r => ({
+        const onlyWithIssues = withIssues.filter(r => r.issues.length > 0).slice(0, limit);
+        if (!cancelled) setRows(onlyWithIssues.map(r => ({
           id: r.id,
           createdAt: r.createdAt,
           senderId: r.senderId,
