@@ -573,17 +573,15 @@ type InboundSMSViewerProps = {
 export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSViewerProps) {
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-      <h2 className="text-xl font-semibold text-slate-900 mb-6">Inbound SMS</h2>
+      <h2 className="text-xl font-semibold text-slate-900 mb-6">SMS Report</h2>
       <div className="rounded-2xl border border-slate-100 overflow-hidden">
         <div className="bg-slate-50 px-4 py-3 flex items-center justify-between">
           <div className="text-sm text-slate-700">
-            <span className="font-semibold">From:</span> {fromNumber || "(unknown)"}
+            <span className="font-semibold">Reported by:</span> ActBlue Jail Bot
           </div>
-          {createdAt && (
-            <div className="text-xs text-slate-500">
-              <LocalTime iso={createdAt} />
-            </div>
-          )}
+          <div className="text-xs text-slate-500">
+            via {fromNumber || "(unknown number)"}
+          </div>
         </div>
         <div className="p-4">
           <div className="max-h-[400px] overflow-auto">
