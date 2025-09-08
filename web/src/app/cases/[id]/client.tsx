@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
+import LocalTime from "@/components/LocalTime";
 
 type Props = {
   id: string;
@@ -560,5 +561,40 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot" }: EvidenceVie
         )}
       </Item>
     </Gallery>
+  );
+}
+
+type InboundSMSViewerProps = {
+  rawText: string | null;
+  fromNumber: string | null;
+  createdAt?: string | null;
+};
+
+export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSViewerProps) {
+  return (
+    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      <h2 className="text-xl font-semibold text-slate-900 mb-6">Inbound SMS</h2>
+      <div className="rounded-2xl border border-slate-100 overflow-hidden">
+        <div className="bg-slate-50 px-4 py-3 flex items-center justify-between">
+          <div className="text-sm text-slate-700">
+            <span className="font-semibold">From:</span> {fromNumber || "(unknown)"}
+          </div>
+          {createdAt && (
+            <div className="text-xs text-slate-500">
+              <LocalTime iso={createdAt} />
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          <div className="max-h-[400px] overflow-auto">
+            <div className="bg-slate-100 text-slate-800 rounded-2xl p-4 inline-block shadow-inner">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                {rawText || "(no message body)"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

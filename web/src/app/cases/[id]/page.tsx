@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer, InboundSMSViewer } from "./client";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -10,6 +10,7 @@ type CaseItem = {
   processing_status?: string | null;
   created_at?: string | null;
   ai_confidence?: number | string | null;
+  message_type?: string | null;
 };
 
 type Violation = {
@@ -84,27 +85,29 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Main content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Screenshot column (1/3 on desktop) */}
+          {/* Left column */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
-              <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
-                {imgData.url ? (
-                  <EvidenceViewer src={imgData.url} alt="Political message screenshot" />
-                ) : (
-                  <div className="p-8 text-center text-slate-500">
-                    <div className="text-4xl mb-2">📱</div>
-                    <p>Screenshot loading...</p>
-                  </div>
-                )}
+            {item.message_type === "sms" ? (
+              <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} />
+            ) : (
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+                <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
+                <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
+                  {imgData.url ? (
+                    <EvidenceViewer src={imgData.url} alt="Political message screenshot" />
+                  ) : (
+                    <div className="p-8 text-center text-slate-500">
+                      <div className="text-4xl mb-2">📱</div>
+                      <p>Screenshot loading...</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right pane spans two columns */}
           <div className="lg:col-span-2 space-y-6">
-            
             {/* Summary */}
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-3">AI Analysis Summary</h2>
@@ -114,12 +117,10 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             {/* Violations */}
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-4">Policy Violations</h2>
-        <LiveViolations id={id} initialViolations={data.violations} initialStatus={item.processing_status ?? null} initialAiConfidence={item.ai_confidence ?? null} />
+              <LiveViolations id={id} initialViolations={data.violations} initialStatus={item.processing_status ?? null} initialAiConfidence={item.ai_confidence ?? null} />
             </div>
           </div>
         </div>
-
-        {/* Extracted text hidden for now to bring comments up */}
 
         {/* Comments */}
         <CommentsSection id={id} initialComments={data.comments || []} />
