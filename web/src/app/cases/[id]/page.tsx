@@ -40,7 +40,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
   const item = data.item;
   const imgRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/image-url`, { cache: "no-store" });
-  const imgData = imgRes.ok ? await imgRes.json() : { url: null };
+  const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
@@ -94,7 +94,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                 <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
                 <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
                   {imgData.url ? (
-                    <EvidenceViewer src={imgData.url} alt="Political message screenshot" />
+                    <EvidenceViewer src={imgData.url} alt="Political message screenshot" mime={imgData?.mime || null} />
                   ) : (
                     <div className="p-8 text-center text-slate-500">
                       <div className="text-4xl mb-2">📱</div>

@@ -36,8 +36,14 @@ export async function POST(req: NextRequest) {
   const parsed = parseSupabaseUrl(sub.image_url);
   if (parsed) {
     try {
-      const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
-      signedUrl = signed?.signedUrl || null;
+      const lowerPath = parsed.path.toLowerCase();
+      const isSupportedExt = [".png", ".jpg", ".jpeg", ".gif", ".webp"].some((ext) => lowerPath.endsWith(ext));
+      if (isSupportedExt) {
+        const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
+        signedUrl = signed?.signedUrl || null;
+      } else {
+        signedUrl = null;
+      }
     } catch (e) {
       console.warn("/api/sender failed to sign image", e);
     }

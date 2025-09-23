@@ -25,7 +25,22 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       .createSignedUrl(parsed.path, 3600);
     if (sErr) throw sErr;
 
-    return NextResponse.json({ url: signed?.signedUrl || null });
+    const url = signed?.signedUrl || null;
+    const lowerPath = parsed.path.toLowerCase();
+    const ext = lowerPath.endsWith('.png') ? 'png'
+      : lowerPath.endsWith('.jpg') ? 'jpg'
+      : lowerPath.endsWith('.jpeg') ? 'jpeg'
+      : lowerPath.endsWith('.gif') ? 'gif'
+      : lowerPath.endsWith('.webp') ? 'webp'
+      : lowerPath.endsWith('.pdf') ? 'pdf'
+      : '';
+    const mime = ext === 'png' ? 'image/png'
+      : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+      : ext === 'gif' ? 'image/gif'
+      : ext === 'webp' ? 'image/webp'
+      : ext === 'pdf' ? 'application/pdf'
+      : null;
+    return NextResponse.json({ url, mime, ext });
   } catch (e) {
     return NextResponse.json({ url: null, error: "unavailable" }, { status: 403 });
   }

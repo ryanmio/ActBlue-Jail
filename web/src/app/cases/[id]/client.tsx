@@ -527,40 +527,51 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
 type EvidenceViewerProps = {
   src: string;
   alt?: string;
+  mime?: string | null;
 };
 
-export function EvidenceViewer({ src, alt = "Evidence screenshot" }: EvidenceViewerProps) {
+export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }: EvidenceViewerProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const img = new Image();
-    img.onload = () => {
-      if (!cancelled) setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.src = src;
+    if (!mime || mime.startsWith("image/")) {
+      const img = new Image();
+      img.onload = () => {
+        if (!cancelled) setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.src = src;
+    }
     return () => {
       cancelled = true;
     };
   }, [src]);
 
   return (
-    <Gallery withCaption options={{ initialZoomLevel: 0.5 }}>
-      <Item
-        original={src}
-        thumbnail={src}
-        caption={alt}
-        width={dimensions?.width}
-        height={dimensions?.height}
-      >
-        {({ ref, open }) => (
-          <button type="button" onClick={open} className="block w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto max-h-[360px] md:max-h-[400px] object-contain" />
-          </button>
-        )}
-      </Item>
-    </Gallery>
+    <>
+      {mime === "application/pdf" ? (
+        <div className="w-full h-[360px] md:h-[400px] bg-white">
+          <iframe src={src} title={alt} className="w-full h-full" />
+        </div>
+      ) : (
+        <Gallery withCaption options={{ initialZoomLevel: 0.5 }}>
+          <Item
+            original={src}
+            thumbnail={src}
+            caption={alt}
+            width={dimensions?.width}
+            height={dimensions?.height}
+          >
+            {({ ref, open }) => (
+              <button type="button" onClick={open} className="block w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto max-h-[360px] md:max-h-[400px] object-contain" />
+              </button>
+            )}
+          </Item>
+        </Gallery>
+      )}
+    </>
   );
 }
 

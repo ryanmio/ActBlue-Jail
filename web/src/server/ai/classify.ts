@@ -29,12 +29,18 @@ export async function runClassification(submissionId: string, opts: RunClassific
   }
   const sub = items[0] as { id: string; image_url?: string | null; raw_text?: string | null };
 
-  // Prepare signed image URL if applicable
+  // Prepare signed image URL if applicable (and only if extension is supported by OpenAI image_url)
   let signedUrl: string | null = null;
   const parsed = parseSupabaseUrl(sub.image_url);
   if (parsed) {
-    const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
-    signedUrl = signed?.signedUrl || null;
+    const lowerPath = parsed.path.toLowerCase();
+    const isSupportedExt = [".png", ".jpg", ".jpeg", ".gif", ".webp"].some((ext) => lowerPath.endsWith(ext));
+    if (isSupportedExt) {
+      const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
+      signedUrl = signed?.signedUrl || null;
+    } else {
+      signedUrl = null;
+    }
   }
 
   // Build messages (shared across initial and reclassify)
