@@ -104,7 +104,7 @@ export function triggerPipelines(submissionId: string) {
     }).catch((e) => {
       console.error("triggerPipelines:sender_error", String(e));
     });
-  } catch (_e) {
+  } catch {
     // best-effort fire-and-forget
   }
 }

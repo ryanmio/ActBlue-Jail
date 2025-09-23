@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       } else {
         signedUrl = null;
       }
-    } catch (e) {
+    } catch {
       console.warn("/api/sender failed to sign image", e);
     }
   }

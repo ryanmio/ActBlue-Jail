@@ -80,7 +80,7 @@ export async function runSenderExtraction(submissionId: string) {
     } catch {
       parsedOut = { sender_name: null, sender_type: "unknown", confidence: 0.2, notes: "Parse failed" };
     }
-  } catch (_e) {
+  } catch {
     return { ok: false as const, status: 500, error: "openai_failed" as const };
   }
 
@@ -90,7 +90,7 @@ export async function runSenderExtraction(submissionId: string) {
       .from("submissions")
       .update({ sender_name: senderName })
       .eq("id", submissionId);
-  } catch (_e) {
+  } catch {
     // ignore update failures for sender
   }
   return { ok: true as const, status: 200 };
