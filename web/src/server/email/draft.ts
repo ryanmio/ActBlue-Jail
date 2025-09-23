@@ -4,6 +4,6 @@ export interface EmailDraftInput {
   violations: Array<{ code: string; title: string; description?: string|null }>;
 }
 
-export function createEmailDraft(_: EmailDraftInput): { subject: string; body: string } {
+export function createEmailDraft(_input: EmailDraftInput): { subject: string; body: string } {
   return { subject: "", body: "" };
 }

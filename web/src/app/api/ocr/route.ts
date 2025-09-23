@@ -96,9 +96,10 @@ export async function POST(req: NextRequest) {
       form.set("apikey", env.OCRSPACE_API_KEY as string);
       form.set("language", "eng");
       form.set("isOverlayRequired", "false");
-      // Convert Node Buffer to a Uint8Array view for Blob/File
-      const u8 = new Uint8Array(fileBuffer.buffer, fileBuffer.byteOffset, fileBuffer.byteLength);
-      const file = new File([u8], filename, { type: mimeType });
+      // Convert Node Buffer to a standalone ArrayBuffer to satisfy BlobPart typing
+      const ab = new ArrayBuffer(fileBuffer.byteLength);
+      new Uint8Array(ab).set(fileBuffer);
+      const file = new File([ab], filename, { type: mimeType });
       form.set("file", file);
       const attemptStart = Date.now();
       const resp = await fetch("https://api.ocr.space/parse/image", {
