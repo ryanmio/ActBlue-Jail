@@ -202,7 +202,7 @@ export default function Home() {
           <WorstOffenders />
         </div>
 
-        <footer className="text-xs text-slate-500 text-center pt-6">Not affiliated with ActBlue. Classifications indicate potential policy issues and may be incorrect.</footer>
+        {/* Footer moved to global layout */}
       </div>
     </main>
   );

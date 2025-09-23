@@ -13,11 +13,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         </div>
       </header>
       <div>{children}</div>
-      <footer className="border-t bg-white mt-12">
-        <div className="mx-auto max-w-6xl p-4 text-xs text-gray-500">
-          Not affiliated with ActBlue. Allegations only; see evidence in each case.
-        </div>
-      </footer>
     </div>
   );
 }
