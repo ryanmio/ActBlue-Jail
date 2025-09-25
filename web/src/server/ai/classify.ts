@@ -95,6 +95,8 @@ export async function runClassification(submissionId: string, opts: RunClassific
     });
     const json = await resp.json();
     if (!resp.ok) {
+      // ensure terminal error state to avoid stuck status
+      await supabase.from("submissions").update({ processing_status: "error" }).eq("id", submissionId);
       return { ok: false, status: 502, error: "openai_failed" as const, detail: json };
     }
     const content = (json as any)?.choices?.[0]?.message?.content?.trim() || "{}";
@@ -104,6 +106,8 @@ export async function runClassification(submissionId: string, opts: RunClassific
       parsedOut = { violations: [], summary: "Parse failed", overall_confidence: 0 } as any;
     }
   } catch (e) {
+    // ensure terminal error state to avoid stuck status
+    await supabase.from("submissions").update({ processing_status: "error" }).eq("id", submissionId);
     return { ok: false, status: 500, error: "openai_failed" as const };
   }
 
