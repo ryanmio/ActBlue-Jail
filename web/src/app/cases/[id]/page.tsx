@@ -89,17 +89,21 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           <div className="lg:col-span-1 space-y-6">
             {item.message_type === "sms" ? (
               <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} />
-            ) : (
+            ) : imgData.url ? (
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
                 <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
                 <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
-                  {imgData.url ? (
-                    <EvidenceViewer src={imgData.url} alt="Political message screenshot" mime={imgData?.mime || null} />
+                  <EvidenceViewer src={imgData.url} alt="Political message screenshot" mime={imgData?.mime || null} />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+                <h2 className="text-xl font-semibold text-slate-900 mb-4">Text Submission</h2>
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+                  {item.raw_text ? (
+                    <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{item.raw_text}</pre>
                   ) : (
-                    <div className="p-8 text-center text-slate-500">
-                      <div className="text-4xl mb-2">📱</div>
-                      <p>Screenshot loading...</p>
-                    </div>
+                    <div className="text-slate-600 text-sm">Text will appear once processing completes…</div>
                   )}
                 </div>
               </div>

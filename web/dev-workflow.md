@@ -2,7 +2,7 @@
 
 **Project**: https://vercel.com/ryanmios-projects/act-blue-jail
 **Production**: https://act-blue-jail.vercel.app (main branch)
-**Development**: https://dev-act-blue-jail.vercel.app (dev branch)
+**Development**: https://act-blue-jail-git-dev-ryanmios-projects.vercel.app (dev branch)
 
 ## Workflow Commands
 
@@ -22,7 +22,7 @@ git checkout dev
 git merge feature/feature-name
 git push origin dev
 ```
-**Dev URL**: https://dev-act-blue-jail.vercel.app
+**Dev URL**: https://act-blue-jail-git-dev-ryanmios-projects.vercel.app
 
 ### Deploy to Production
 ```bash
@@ -31,13 +31,3 @@ git merge dev
 git push origin main
 ```
 **Production URL**: https://act-blue-jail.vercel.app
-
-## Environment Setup
-- Copy `env.example` to `.env.local`
-- Configure environment variables in Vercel dashboard for production/preview
-- Use development Supabase project for dev/preview environments
-
-## Testing
-- Test locally: `npm run dev`
-- Preview deployments auto-create on branch push
-- Run `npm run lint` before commits
