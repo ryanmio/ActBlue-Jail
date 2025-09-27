@@ -595,6 +595,12 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
   const [lpUrl, setLpUrl] = useState<string | null>(landingImageUrl || null);
   const [lpLink, setLpLink] = useState<string | null>(landingLink || null);
   const router = useRouter();
+  useEffect(() => {
+    try {
+      // Diagnostics for prod
+      console.log("EvidenceTabs:init", { caseId, landingImageUrl, landingLink, landingStatus });
+    } catch {}
+  }, [caseId, landingImageUrl, landingLink, landingStatus]);
   const primaryLabel = messageType === "sms" ? "SMS" : (rawText && !screenshotUrl ? "Text" : "Screenshot");
   const hasLanding = true;
 

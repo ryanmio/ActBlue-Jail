@@ -43,7 +43,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const item = data.item;
   const imgRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
-  const landRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/landing-url`, { cache: "no-store" });
+  const landRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
   const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
