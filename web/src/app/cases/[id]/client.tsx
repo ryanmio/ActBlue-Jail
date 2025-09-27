@@ -718,35 +718,18 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
             />
           )}
           {lpLoading && (
-            <div className="flex items-center justify-center py-10">
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-slate-600">
               <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin" aria-label="Loading landing page" />
+              <span>{isScanning ? "Scanning landing page…" : "Loading landing page…"}</span>
             </div>
           )}
           {lpUrl && !lpLoading ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <Gallery withCaption options={{ initialZoomLevel: 0.5 }}>
-                <Item
-                  original={lpUrl}
-                  thumbnail={lpUrl}
-                  caption="Landing page screenshot"
-                  width="auto"
-                  height="auto"
-                >
-                  {({ ref, open }) => (
-                    <button type="button" onClick={open} className="block w-full">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>}
-                        src={lpUrl}
-                        alt="Landing page screenshot"
-                        className="w-full max-w-full rounded-xl border border-slate-200"
-                        style={{ maxHeight: "520px", objectFit: "contain" }}
-                      />
-                    </button>
-                  )}
-                </Item>
-              </Gallery>
+              <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[520px] border border-slate-100">
+                <div className="max-h-[520px] overflow-auto">
+                  <EvidenceViewer src={lpUrl} alt="Landing page screenshot" mime={"image/png"} />
+                </div>
+              </div>
               {lpLink && (
                 <div className="mt-2 text-xs">
                   <a href={lpLink} target="_blank" className="text-slate-700 underline truncate inline-block max-w-full" title={lpLink}>{lpLink.split("?")[0]}</a>
