@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer, InboundSMSViewer } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer, InboundSMSViewer, EvidenceTabs } from "./client";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -13,6 +13,7 @@ type CaseItem = {
   message_type?: string | null;
 };
 
+
 type Violation = {
   id: string;
   code: string;
@@ -21,6 +22,7 @@ type Violation = {
   severity?: number | null;
   confidence?: string | number | null;
 };
+
 
 type Comment = { id: string; content: string; created_at?: string | null };
 type CaseData = {
@@ -49,6 +51,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
     .sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)))[0];
   const overallConfidence = item.ai_confidence == null ? null : Number(item.ai_confidence);
   const summaryInitial = topViolation?.description || null;
+
+  // Expose caseId to client for scan action inside EvidenceTabs
+  if (typeof window !== "undefined") {
+    try { (window as any).__CASE_ID = id; } catch {}
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -89,44 +96,19 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left column */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Primary evidence (SMS view or uploaded screenshot) */}
             {item.message_type === "sms" ? (
               <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} />
             ) : (
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-                <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
-                {imgData.url ? (
-                  <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
-                    <EvidenceViewer src={imgData.url} alt="Political message screenshot" mime={imgData?.mime || null} />
-                  </div>
-                ) : (
-                  <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 text-sm text-slate-600">No uploaded screenshot for this case.</div>
-                )}
-              </div>
-            )}
-
-            {/* Landing page preview (renders whenever available) */}
-            {landData?.url && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-                <h2 className="text-xl font-semibold text-slate-900 mb-4">Landing Page</h2>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={landData.url} alt="Landing page screenshot" className="w-full h-auto rounded-xl border border-slate-200" />
-                {landData?.landingUrl && (() => {
-                  const full = String(landData.landingUrl);
-                  const short = full.split("?")[0];
-                  return (
-                    <div className="mt-2 text-xs">
-                      <a
-                        href={full}
-                        target="_blank"
-                        title={full}
-                        className="text-slate-700 underline truncate inline-block max-w-full align-top"
-                      >
-                        {short}
-                      </a>
-                    </div>
-                  );
-                })()}
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
+                <EvidenceTabs
+                  messageType={item.message_type}
+                  rawText={item.raw_text}
+                  screenshotUrl={imgData.url}
+                  screenshotMime={imgData?.mime || null}
+                  landingImageUrl={landData?.url || null}
+                  landingLink={landData?.landingUrl || null}
+                />
               </div>
             )}
           </div>

@@ -412,9 +412,6 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [showScan, setShowScan] = useState(false);
-  const [scanUrl, setScanUrl] = useState("");
-  const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
   const router = useRouter();
 
   const remaining = 240 - content.length;
@@ -465,44 +462,6 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
     }
   };
 
-  const onScanSubmit = async () => {
-    const u = scanUrl.trim();
-    if (!u) return;
-    setScanStatus("pending");
-    setError(null);
-    setInfo("Generating screenshot… This can take up to 15 seconds.");
-    try {
-      const res = await fetch(`/api/screenshot-actblue`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caseId: id, url: u }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "Screenshot failed");
-      }
-      setScanStatus("success");
-      setInfo("Screenshot saved. Re-running analysis with landing page context…");
-      setToast("Landing page scanned; AI will include it now");
-      setScanUrl("");
-      setShowScan(false);
-      router.refresh();
-      await refreshComments();
-      setTimeout(() => setToast(null), 2500);
-      if (typeof window !== "undefined") {
-        try {
-          window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id } }));
-        } catch {}
-      }
-    } catch (e: unknown) {
-      setScanStatus("failed");
-      const msg = e instanceof Error ? e.message : "Failed to capture";
-      setError(msg);
-    } finally {
-      // leave info text to show status until refreshed
-    }
-  };
-
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
       {toast && typeof window !== "undefined" && createPortal(
@@ -513,41 +472,8 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
         </div>,
         document.body
       )}
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-semibold text-slate-900">Comments</h2>
-        <button
-          type="button"
-          onClick={() => setShowScan((s) => !s)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors border bg-white text-slate-600 hover:bg-slate-50 border-slate-200"
-        >
-          {showScan ? "Cancel" : "Scan Landing Page"}
-        </button>
-      </div>
+      <h2 className="text-xl font-semibold text-slate-900 mb-2">Comments</h2>
       <p className="text-sm text-slate-600 mb-4">Adding a comment will immediately re-run the AI policy analysis with all comments considered.</p>
-
-      {showScan && (
-        <div className="mb-5 p-3 rounded-xl border bg-slate-50">
-          <label className="block text-sm font-medium text-slate-700 mb-1">ActBlue URL</label>
-          <input
-            type="url"
-            value={scanUrl}
-            onChange={(e) => setScanUrl(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") onScanSubmit(); }}
-            placeholder="https://secure.actblue.com/donate/..."
-            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
-          />
-          <div className="mt-2 flex items-center justify-end">
-            <button
-              type="button"
-              onClick={onScanSubmit}
-              disabled={scanStatus === "pending" || !scanUrl.trim()}
-              className="px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 text-sm"
-            >
-              {scanStatus === "pending" ? "Generating screenshot…" : "Capture Screenshot"}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="space-y-4">
         <div>
@@ -646,6 +572,136 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
         </Gallery>
       )}
     </>
+  );
+}
+
+type EvidenceTabsProps = {
+  messageType: string | null | undefined;
+  rawText: string | null | undefined;
+  screenshotUrl: string | null | undefined;
+  screenshotMime?: string | null | undefined;
+  landingImageUrl: string | null | undefined;
+  landingLink?: string | null | undefined;
+};
+
+export function EvidenceTabs({ messageType, rawText, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink }: EvidenceTabsProps) {
+  const [tab, setTab] = useState<"primary" | "landing">("primary");
+  const [scanUrl, setScanUrl] = useState("");
+  const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const router = useRouter();
+  const primaryLabel = messageType === "sms" ? "SMS" : (rawText && !screenshotUrl ? "Text" : "Screenshot");
+  const hasLanding = true;
+
+  const onScanSubmit = async (caseId: string) => {
+    const u = scanUrl.trim();
+    if (!u) return;
+    setScanStatus("pending");
+    setError(null);
+    setInfo("Generating screenshot… This can take up to 15 seconds.");
+    try {
+      const res = await fetch(`/api/screenshot-actblue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caseId, url: u }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Screenshot failed");
+      }
+      setScanStatus("success");
+      setInfo("Screenshot saved. Re-running analysis with landing page context…");
+      setScanUrl("");
+      router.refresh();
+      if (typeof window !== "undefined") {
+        try { window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id: caseId } })); } catch {}
+      }
+    } catch (e: unknown) {
+      setScanStatus("failed");
+      const msg = e instanceof Error ? e.message : "Failed to capture";
+      setError(msg);
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-4 inline-flex items-center gap-2 rounded-lg p-1 bg-slate-100">
+        <button
+          type="button"
+          onClick={() => setTab("primary")}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${tab === "primary" ? "bg-white text-slate-900 shadow" : "text-slate-700 hover:text-slate-900"}`}
+        >
+          {primaryLabel}
+        </button>
+        {hasLanding && (
+          <button
+            type="button"
+            onClick={() => setTab("landing")}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${tab === "landing" ? "bg-white text-slate-900 shadow" : "text-slate-700 hover:text-slate-900"}`}
+          >
+            Landing Page
+          </button>
+        )}
+      </div>
+
+      {tab === "primary" ? (
+        <>
+          {screenshotUrl ? (
+            <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
+              <EvidenceViewer src={screenshotUrl} alt="Message screenshot" mime={screenshotMime || null} />
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+              {rawText ? (
+                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{rawText}</pre>
+              ) : (
+                <div className="text-slate-600 text-sm">No primary evidence available.</div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {landingImageUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={landingImageUrl} alt="Landing page screenshot" className="w-full h-auto rounded-xl border border-slate-200" />
+              {landingLink && (
+                <div className="mt-2 text-xs">
+                  <a href={landingLink} target="_blank" className="text-slate-700 underline truncate inline-block max-w-full" title={landingLink}>{landingLink.split("?")[0]}</a>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-slate-600 text-sm">
+              <div className="mb-2">No landing page captured yet.</div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ActBlue URL</label>
+              <input
+                type="url"
+                value={scanUrl}
+                onChange={(e) => setScanUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") onScanSubmit((window as any)?.__CASE_ID || ""); }}
+                placeholder="https://secure.actblue.com/donate/..."
+                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
+              />
+              <div className="mt-2 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => onScanSubmit((window as any)?.__CASE_ID || "")}
+                  disabled={scanStatus === "pending" || !scanUrl.trim()}
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 text-sm"
+                >
+                  {scanStatus === "pending" ? "Generating screenshot…" : "Capture Screenshot"}
+                </button>
+              </div>
+              {error && <div className="mt-2 text-xs text-red-600">{error}</div>}
+              {info && <div className="mt-1 text-xs text-slate-700">{info}</div>}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
