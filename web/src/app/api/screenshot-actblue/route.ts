@@ -63,10 +63,11 @@ export async function POST(req: NextRequest) {
   });
 
   // Mark pending state immediately so UI can reflect
-  await supabase
+  const preUpd = await supabase
     .from("submissions")
     .update({ landing_url: url, landing_render_status: "pending" })
     .eq("id", caseId);
+  console.log("/api/screenshot-actblue:mark_pending", { error: (preUpd as any)?.error || null });
 
   // Upsert a single landing_page context comment (not shown in UI)
   try {
@@ -186,7 +187,7 @@ export async function POST(req: NextRequest) {
     if (upErr) throw upErr;
     const publicUrl = `supabase://${bucket}/${objectPath}`;
 
-    await supabase
+    const upd = await supabase
       .from("submissions")
       .update({
         landing_url: url,
@@ -195,7 +196,7 @@ export async function POST(req: NextRequest) {
         landing_render_status: "success",
       })
       .eq("id", caseId);
-    console.log("/api/screenshot-actblue:db_updated", { caseId });
+    console.log("/api/screenshot-actblue:db_updated", { caseId, error: (upd as any)?.error || null, publicUrl });
 
     // Update landing_page context with screenshot link via a second insert (still hidden in UI)
     try {
