@@ -583,14 +583,17 @@ type EvidenceTabsProps = {
   screenshotMime?: string | null | undefined;
   landingImageUrl: string | null | undefined;
   landingLink?: string | null | undefined;
+  landingStatus?: string | null | undefined;
 };
 
-export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink }: EvidenceTabsProps) {
+export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
   const [tab, setTab] = useState<"primary" | "landing">("primary");
   const [scanUrl, setScanUrl] = useState("");
   const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [lpUrl, setLpUrl] = useState<string | null>(landingImageUrl || null);
+  const [lpLink, setLpLink] = useState<string | null>(landingLink || null);
   const router = useRouter();
   const primaryLabel = messageType === "sms" ? "SMS" : (rawText && !screenshotUrl ? "Text" : "Screenshot");
   const hasLanding = true;
@@ -615,6 +618,19 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
       setInfo("Screenshot saved. Re-running analysis with landing page context…");
       setScanUrl("");
       router.refresh();
+      // try to refresh landing preview shortly after
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/cases/${caseId}/landing-url`, { cache: "no-store" });
+          if (res.ok) {
+            const d = await res.json();
+            if (d?.url) {
+              setLpUrl(d.url);
+              setLpLink(d.landingUrl || null);
+            }
+          }
+        } catch {}
+      }, 1000);
       if (typeof window !== "undefined") {
         try { window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id: caseId } })); } catch {}
       }
@@ -664,13 +680,17 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
         </>
       ) : (
         <>
-          {landingImageUrl ? (
+          {/* client-side poll when opening Landing tab and we don't yet have a URL */}
+          {!lpUrl && (landingStatus === "pending" || landingStatus === "success") && (
+            <LandingPoll caseId={caseId} onReady={(u, l) => { setLpUrl(u); setLpLink(l); }} />
+          )}
+          {lpUrl ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={landingImageUrl} alt="Landing page screenshot" className="w-full h-auto rounded-xl border border-slate-200" />
-              {landingLink && (
+              <img src={lpUrl} alt="Landing page screenshot" className="w-full h-auto rounded-xl border border-slate-200" />
+              {lpLink && (
                 <div className="mt-2 text-xs">
-                  <a href={landingLink} target="_blank" className="text-slate-700 underline truncate inline-block max-w-full" title={landingLink}>{landingLink.split("?")[0]}</a>
+                  <a href={lpLink} target="_blank" className="text-slate-700 underline truncate inline-block max-w-full" title={lpLink}>{lpLink.split("?")[0]}</a>
                 </div>
               )}
             </>
@@ -704,6 +724,29 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
       )}
     </div>
   );
+}
+
+function LandingPoll({ caseId, onReady }: { caseId: string; onReady: (url: string, link: string | null) => void }) {
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        for (let i = 0; i < 8; i++) {
+          const res = await fetch(`/api/cases/${caseId}/landing-url`, { cache: "no-store" });
+          if (!res.ok) break;
+          const d = await res.json();
+          if (d?.url) {
+            if (!cancelled) onReady(d.url as string, (d.landingUrl as string) || null);
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      } catch {}
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [caseId, onReady]);
+  return null;
 }
 
 type InboundSMSViewerProps = {

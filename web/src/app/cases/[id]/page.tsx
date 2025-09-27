@@ -104,6 +104,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                   screenshotMime={imgData?.mime || null}
                   landingImageUrl={landData?.url || null}
                   landingLink={landData?.landingUrl || null}
+                  landingStatus={landData?.status || null}
                 />
               </div>
             )}
