@@ -9,8 +9,8 @@ function parseSupabaseUrl(u: string | null | undefined) {
   return { bucket, path };
 }
 
-export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params;
+export async function GET(_req: NextRequest, context: any) {
+  const { id } = (await context.params) as { id: string };
   try {
     const supabase = getSupabaseServer();
     const { data: items, error } = await supabase.from("submissions").select("image_url").eq("id", id).limit(1);
@@ -41,7 +41,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       : ext === 'pdf' ? 'application/pdf'
       : null;
     return NextResponse.json({ url, mime, ext });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ url: null, error: "unavailable" }, { status: 403 });
   }
 }
