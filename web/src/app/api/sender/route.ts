@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
         confidence: typeof obj.confidence === "number" ? obj.confidence : 0.2,
         notes: typeof obj.notes === "string" ? obj.notes : undefined,
       };
-    } catch (_e) {
+    } catch {
       console.error("/api/sender parse_error content=", content);
       parsedOut = { sender_name: null, sender_type: "unknown", confidence: 0.2, notes: "Parse failed" };
     }

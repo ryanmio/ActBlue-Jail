@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 import { randomUUID } from "crypto";
+import { existsSync } from "fs";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import { env } from "@/lib/env";
 
@@ -35,13 +36,9 @@ function resolveLocalChromePath(): string | null {
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
     "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
   ];
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const fs = require("fs") as typeof import("fs");
-    for (const p of candidates) {
-      if (fs.existsSync(p)) return p;
-    }
-  } catch {}
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
   return null;
 }
 
@@ -129,6 +126,7 @@ export async function POST(req: NextRequest) {
       await page.setViewport({ width: 1280, height: 1200, deviceScaleFactor: 1 });
     } catch {}
     console.log("/api/screenshot-actblue:navigate", { url });
+    step = "navigate";
     await page.goto(url, { waitUntil: "load" });
     await page.waitForSelector("body", { timeout: 5000 });
     // Give dynamic form widgets a moment to hydrate and render
@@ -142,6 +140,7 @@ export async function POST(req: NextRequest) {
         } catch { return true; }
       }, { timeout: 6000 });
     } catch {}
+    step = "screenshot";
     const buf = (await page.screenshot({ fullPage: true, type: "png" })) as Buffer;
     console.log("/api/screenshot-actblue:screenshot_ok", { bytes: buf?.length || 0 });
     return buf;
@@ -170,6 +169,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Upload to Supabase Storage
+    step = "upload";
     const bucket = env.SUPABASE_BUCKET_SCREENSHOTS || "screenshots";
     const objectPath = `${caseId}-${randomUUID()}.png`;
     // Convert Node Buffer to ArrayBuffer for Supabase upload
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
       // @ts-expect-error createBucket is available with service role key
       await (supabase as any)._storage.createBucket(bucket, { public: false });
     } catch {}
-    const { data: upload, error: upErr } = await supabase.storage
+    const { error: upErr } = await supabase.storage
       .from(bucket)
       .upload(objectPath, ab as ArrayBuffer, {
         contentType: "image/png",
