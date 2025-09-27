@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+export const runtime = "nodejs";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 function parseSupabaseUrl(u: string | null | undefined) {
@@ -9,8 +10,8 @@ function parseSupabaseUrl(u: string | null | undefined) {
   return { bucket, path };
 }
 
-export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params;
+export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
   try {
     const supabase = getSupabaseAdmin();
     const { data: items, error } = await supabase
