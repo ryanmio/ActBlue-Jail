@@ -10,8 +10,8 @@ function parseSupabaseUrl(u: string | null | undefined) {
   return { bucket, path };
 }
 
-export async function GET(_req: NextRequest, context: any) {
-  const { id } = context.params as { id: string };
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
   try {
     const supabase = getSupabaseAdmin();
     console.log("/api/cases/[id]/landing-url:start", { id });
