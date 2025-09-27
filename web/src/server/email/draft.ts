@@ -5,5 +5,6 @@ export interface EmailDraftInput {
 }
 
 export function createEmailDraft(_input: EmailDraftInput): { subject: string; body: string } {
+  void _input;
   return { subject: "", body: "" };
 }

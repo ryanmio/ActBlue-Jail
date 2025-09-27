@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer, InboundSMSViewer, EvidenceTabs } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs } from "./client";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -49,13 +49,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
     .sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)))[0];
-  const overallConfidence = item.ai_confidence == null ? null : Number(item.ai_confidence);
   const summaryInitial = topViolation?.description || null;
-
-  // Expose caseId to client for scan action inside EvidenceTabs
-  if (typeof window !== "undefined") {
-    try { (window as any).__CASE_ID = id; } catch {}
-  }
+  
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -102,6 +97,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
                 <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
                 <EvidenceTabs
+                  caseId={id}
                   messageType={item.message_type}
                   rawText={item.raw_text}
                   screenshotUrl={imgData.url}

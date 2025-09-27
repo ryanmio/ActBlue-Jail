@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
@@ -73,14 +73,14 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
   const [overallConfidence, setOverallConfidence] = useState<number | null>(initialAiConfidence == null ? null : Number(initialAiConfidence));
   const intervalRef = useRef<number | null>(null);
 
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     if (intervalRef.current != null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  };
+  }, []);
 
-  const startPolling = () => {
+  const startPolling = useCallback(() => {
     stopPolling();
     intervalRef.current = window.setInterval(async () => {
       try {
@@ -98,12 +98,12 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
         }
       } catch {}
     }, 2000);
-  };
+  }, [id, stopPolling]);
 
   useEffect(() => {
     startPolling();
     return () => stopPolling();
-  }, [id]);
+  }, [id, startPolling, stopPolling]);
 
   useEffect(() => {
     const onReclassify = (e: Event) => {
@@ -114,7 +114,7 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
     };
     window.addEventListener("reclassify-started", onReclassify as EventListener);
     return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
-  }, [id]);
+  }, [id, startPolling]);
 
   if (status !== "done") {
     return (
@@ -545,7 +545,7 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [src, mime]);
 
   return (
     <>
@@ -576,6 +576,7 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
 }
 
 type EvidenceTabsProps = {
+  caseId: string;
   messageType: string | null | undefined;
   rawText: string | null | undefined;
   screenshotUrl: string | null | undefined;
@@ -584,7 +585,7 @@ type EvidenceTabsProps = {
   landingLink?: string | null | undefined;
 };
 
-export function EvidenceTabs({ messageType, rawText, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink }: EvidenceTabsProps) {
+export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink }: EvidenceTabsProps) {
   const [tab, setTab] = useState<"primary" | "landing">("primary");
   const [scanUrl, setScanUrl] = useState("");
   const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
@@ -681,14 +682,14 @@ export function EvidenceTabs({ messageType, rawText, screenshotUrl, screenshotMi
                 type="url"
                 value={scanUrl}
                 onChange={(e) => setScanUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") onScanSubmit((window as any)?.__CASE_ID || ""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") onScanSubmit(caseId); }}
                 placeholder="https://secure.actblue.com/donate/..."
                 className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
               />
               <div className="mt-2 flex items-center justify-end">
                 <button
                   type="button"
-                  onClick={() => onScanSubmit((window as any)?.__CASE_ID || "")}
+                  onClick={() => onScanSubmit(caseId)}
                   disabled={scanStatus === "pending" || !scanUrl.trim()}
                   className="px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 text-sm"
                 >
@@ -719,6 +720,9 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSV
         <div className="bg-slate-50 px-4 py-3">
           <div className="text-sm text-slate-700">
             <span className="font-semibold">From:</span> {fromNumber || "(unknown)"}
+            {createdAt && (
+              <span className="ml-3 text-slate-500">Received <LocalTime iso={createdAt} /></span>
+            )}
           </div>
         </div>
         <div className="p-4">

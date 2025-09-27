@@ -122,7 +122,7 @@ export async function runClassification(submissionId: string, opts: RunClassific
     } catch {
       parsedOut = { violations: [], summary: "Parse failed", overall_confidence: 0 } as any;
     }
-  } catch (e) {
+  } catch {
     // ensure terminal error state to avoid stuck status
     await supabase.from("submissions").update({ processing_status: "error" }).eq("id", submissionId);
     return { ok: false, status: 500, error: "openai_failed" as const };
