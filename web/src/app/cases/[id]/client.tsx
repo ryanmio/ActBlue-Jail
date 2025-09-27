@@ -566,7 +566,7 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
             {({ ref, open }) => (
               <button type="button" onClick={open} className="block w-full">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto max-h-[360px] md:max-h-[400px] object-contain" />
+                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto object-contain" />
               </button>
             )}
           </Item>
@@ -595,9 +595,11 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
   const [info, setInfo] = useState<string | null>(null);
   const [lpUrl, setLpUrl] = useState<string | null>(landingImageUrl || null);
   const [lpLink, setLpLink] = useState<string | null>(landingLink || null);
+  const [lpLoading, setLpLoading] = useState<boolean>(!landingImageUrl && (landingStatus === "pending" || landingStatus === "success"));
   const router = useRouter();
   useEffect(() => {
     if (!landingImageUrl) {
+      setLpLoading(true);
       void fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" })
         .then(async (res) => {
           if (!res.ok) return;
@@ -607,10 +609,14 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
             setLpLink((data.landingUrl as string) || null);
           }
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => setLpLoading(false));
+    } else {
+      setLpLoading(false);
     }
   }, [caseId, landingImageUrl, landingLink, landingStatus]);
-  const primaryLabel = messageType === "sms" ? "SMS" : (rawText && !screenshotUrl ? "Text" : "Screenshot");
+  const primaryLabel = messageType === "sms" ? "SMS" : "Submission";
+  const isScanning = scanStatus === "pending";
   const hasLanding = true;
 
   const onScanSubmit = async (caseId: string) => {
@@ -619,6 +625,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
     setScanStatus("pending");
     setError(null);
     setInfo("Generating screenshot… This can take up to 15 seconds.");
+    setLpLoading(true);
     try {
       const res = await fetch(`/api/screenshot-actblue`, {
         method: "POST",
@@ -645,6 +652,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
             }
           }
         } catch {}
+        setLpLoading(false);
       }, 1000);
       if (typeof window !== "undefined") {
         try { window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id: caseId } })); } catch {}
@@ -653,6 +661,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
       setScanStatus("failed");
       const msg = e instanceof Error ? e.message : "Failed to capture";
       setError(msg);
+      setLpLoading(false);
     }
   };
 
@@ -680,8 +689,10 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
       {tab === "primary" ? (
         <>
           {screenshotUrl ? (
-            <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
-              <EvidenceViewer src={screenshotUrl} alt="Message screenshot" mime={screenshotMime || null} />
+            <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[520px] border border-slate-100">
+              <div className="max-h-[520px] overflow-auto">
+                <EvidenceViewer src={screenshotUrl} alt="Message screenshot" mime={screenshotMime || null} />
+              </div>
             </div>
           ) : (
             <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
@@ -697,19 +708,52 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
         <>
           {/* client-side poll when opening Landing tab and we don't yet have a URL */}
           {!lpUrl && (landingStatus === "pending" || landingStatus === "success") && (
-            <LandingPoll caseId={caseId} onReady={(u, l) => { setLpUrl(u); setLpLink(l); }} />
+            <LandingPoll
+              caseId={caseId}
+              onReady={(u, l) => {
+                setLpUrl(u);
+                setLpLink(l);
+              }}
+              onFinish={() => setLpLoading(false)}
+            />
           )}
-          {lpUrl ? (
+          {lpLoading && (
+            <div className="flex items-center justify-center py-10">
+              <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin" aria-label="Loading landing page" />
+            </div>
+          )}
+          {lpUrl && !lpLoading ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={lpUrl} alt="Landing page screenshot" className="w-full h-auto rounded-xl border border-slate-200" />
+              <Gallery withCaption options={{ initialZoomLevel: 0.5 }}>
+                <Item
+                  original={lpUrl}
+                  thumbnail={lpUrl}
+                  caption="Landing page screenshot"
+                  width="auto"
+                  height="auto"
+                >
+                  {({ ref, open }) => (
+                    <button type="button" onClick={open} className="block w-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>}
+                        src={lpUrl}
+                        alt="Landing page screenshot"
+                        className="w-full max-w-full rounded-xl border border-slate-200"
+                        style={{ maxHeight: "520px", objectFit: "contain" }}
+                      />
+                    </button>
+                  )}
+                </Item>
+              </Gallery>
               {lpLink && (
                 <div className="mt-2 text-xs">
                   <a href={lpLink} target="_blank" className="text-slate-700 underline truncate inline-block max-w-full" title={lpLink}>{lpLink.split("?")[0]}</a>
                 </div>
               )}
             </>
-          ) : (
+          ) : (!lpLoading && (
             <div className="text-slate-600 text-sm">
               <div className="mb-2">No landing page captured yet.</div>
               <label className="block text-sm font-medium text-slate-700 mb-1">ActBlue URL</label>
@@ -721,27 +765,28 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
                 placeholder="https://secure.actblue.com/donate/..."
                 className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
               />
-              <div className="mt-2 flex items-center justify-end">
+              <div className="mt-2 flex items-center justify-end gap-2 text-xs text-slate-600">
+                {isScanning && <span className="inline-flex items-center gap-1 text-slate-600"><span className="w-3 h-3 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />Scanning…</span>}
                 <button
                   type="button"
                   onClick={() => onScanSubmit(caseId)}
-                  disabled={scanStatus === "pending" || !scanUrl.trim()}
+                  disabled={isScanning || !scanUrl.trim()}
                   className="px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 text-sm"
                 >
-                  {scanStatus === "pending" ? "Generating screenshot…" : "Capture Screenshot"}
+                  {isScanning ? "Scanning…" : "Capture Screenshot"}
                 </button>
               </div>
               {error && <div className="mt-2 text-xs text-red-600">{error}</div>}
               {info && <div className="mt-1 text-xs text-slate-700">{info}</div>}
             </div>
-          )}
+          ))}
         </>
       )}
     </div>
   );
 }
 
-function LandingPoll({ caseId, onReady }: { caseId: string; onReady: (url: string, link: string | null) => void }) {
+function LandingPoll({ caseId, onReady, onFinish }: { caseId: string; onReady: (url: string, link: string | null) => void; onFinish: () => void }) {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -752,15 +797,17 @@ function LandingPoll({ caseId, onReady }: { caseId: string; onReady: (url: strin
           const d = await res.json();
           if (d?.url) {
             if (!cancelled) onReady(d.url as string, (d.landingUrl as string) || null);
+            if (!cancelled) onFinish();
             return;
           }
           await new Promise((r) => setTimeout(r, 1000));
         }
+        if (!cancelled) onFinish();
       } catch {}
     };
     run();
     return () => { cancelled = true; };
-  }, [caseId, onReady]);
+  }, [caseId, onFinish, onReady]);
   return null;
 }
 
