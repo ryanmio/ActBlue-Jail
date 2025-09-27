@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { env } from "@/lib/env";
 
 function parseSupabaseUrl(u: string | null | undefined) {
   if (!u || !u.startsWith("supabase://")) return null;
@@ -14,7 +15,11 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   const { id } = await context.params;
   try {
     const supabase = getSupabaseAdmin();
-    console.log("/api/cases/[id]/landing-url:start", { id });
+    console.log("/api/cases/[id]/landing-url:start", {
+      id,
+      hasSupabaseUrl: !!env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceKey: !!env.SUPABASE_SERVICE_ROLE_KEY,
+    });
     const { data: items, error } = await supabase
       .from("submissions")
       .select("landing_screenshot_url, landing_url, landing_render_status")
