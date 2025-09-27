@@ -398,6 +398,7 @@ type Comment = {
   id: string;
   content: string;
   created_at?: string | null;
+  kind?: string | null;
 };
 
 type CommentsSectionProps = {
@@ -406,7 +407,7 @@ type CommentsSectionProps = {
 };
 
 export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
-  const [comments, setComments] = useState<Array<Comment>>(initialComments);
+  const [comments, setComments] = useState<Array<Comment>>(initialComments.filter((c) => (c.kind || "user") === "user"));
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -423,7 +424,7 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
       if (!res.ok) return;
       const data = await res.json();
       const rows = (data?.comments ?? []) as Array<Comment>;
-      setComments(rows);
+      setComments(rows.filter((c) => (c.kind || "user") === "user"));
     } catch {}
   };
 
