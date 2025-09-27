@@ -38,7 +38,6 @@ type CaseData = {
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const base = env.NEXT_PUBLIC_SITE_URL || "";
-  console.log("CaseDetailPage:fetch", { base, id });
   const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
   if (!res.ok) {
     return <main className="mx-auto max-w-5xl p-6">Not found</main>;

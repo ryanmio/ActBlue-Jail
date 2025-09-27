@@ -597,27 +597,18 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
   const [lpLink, setLpLink] = useState<string | null>(landingLink || null);
   const router = useRouter();
   useEffect(() => {
-    try {
-      // Diagnostics for prod
-      console.log("EvidenceTabs:init", { caseId, landingImageUrl, landingLink, landingStatus });
-      if (!landingImageUrl) {
-        console.log("EvidenceTabs:initial_fetch_missing", { caseId });
-        void fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" })
-          .then(async (res) => {
-            if (!res.ok) {
-              console.warn("EvidenceTabs:initial_fetch_failed", { caseId, status: res.status });
-              return;
-            }
-            const data = await res.json();
-            console.log("EvidenceTabs:initial_fetch_data", data);
-            if (data?.url) {
-              setLpUrl(data.url as string);
-              setLpLink((data.landingUrl as string) || null);
-            }
-          })
-          .catch((err) => console.error("EvidenceTabs:initial_fetch_error", err));
-      }
-    } catch {}
+    if (!landingImageUrl) {
+      void fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data?.url) {
+            setLpUrl(data.url as string);
+            setLpLink((data.landingUrl as string) || null);
+          }
+        })
+        .catch(() => undefined);
+    }
   }, [caseId, landingImageUrl, landingLink, landingStatus]);
   const primaryLabel = messageType === "sms" ? "SMS" : (rawText && !screenshotUrl ? "Text" : "Screenshot");
   const hasLanding = true;
@@ -763,7 +754,6 @@ function LandingPoll({ caseId, onReady }: { caseId: string; onReady: (url: strin
             if (!cancelled) onReady(d.url as string, (d.landingUrl as string) || null);
             return;
           }
-          if (!cancelled) console.log("LandingPoll:waiting", { attempt: i, raw: d });
           await new Promise((r) => setTimeout(r, 1000));
         }
       } catch {}

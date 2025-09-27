@@ -56,18 +56,11 @@ export async function POST(req: NextRequest) {
   if (!caseId || !url) return NextResponse.json({ error: "missing_args" }, { status: 400 });
   if (!isValidActBlueUrl(url)) return NextResponse.json({ error: "invalid_url" }, { status: 400 });
 
-  console.log("/api/screenshot-actblue:start", {
-    caseId,
-    url,
-    node: process.versions?.node,
-  });
-
   // Mark pending state immediately so UI can reflect
-  const preUpd = await supabase
+  await supabase
     .from("submissions")
     .update({ landing_url: url, landing_render_status: "pending" })
     .eq("id", caseId);
-  console.log("/api/screenshot-actblue:mark_pending", { error: (preUpd as any)?.error || null });
 
   // Upsert a single landing_page context comment (not shown in UI)
   try {
@@ -92,11 +85,6 @@ export async function POST(req: NextRequest) {
     for (const a of ["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu","--hide-scrollbars","--ignore-certificate-errors","--window-size=1280,2000"]) {
       if (!args.includes(a)) args.push(a);
     }
-    console.log("/api/screenshot-actblue:launching", {
-      headless: (chromium.headless as boolean) ?? true,
-      exe: executablePath || null,
-      argsCount: args.length,
-    });
     try {
       browser = await puppeteer.launch({
         args,
@@ -107,7 +95,6 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       // Retry using system Chrome if the downloaded chromium path is not executable
       const localExe = resolveLocalChromePath();
-      console.warn("/api/screenshot-actblue:launch_retry_local", { localExe, message: (e as Error)?.message });
       if (!localExe) throw e;
       browser = await puppeteer.launch({
         args,
@@ -126,7 +113,6 @@ export async function POST(req: NextRequest) {
     try {
       await page.setViewport({ width: 1280, height: 1200, deviceScaleFactor: 1 });
     } catch {}
-    console.log("/api/screenshot-actblue:navigate", { url });
     step = "navigate";
     await page.goto(url, { waitUntil: "load" });
     await page.waitForSelector("body", { timeout: 5000 });
@@ -143,7 +129,6 @@ export async function POST(req: NextRequest) {
     } catch {}
     step = "screenshot";
     const buf = (await page.screenshot({ fullPage: true, type: "png" })) as Buffer;
-    console.log("/api/screenshot-actblue:screenshot_ok", { bytes: buf?.length || 0 });
     return buf;
   }
   let step: "launch" | "navigate" | "screenshot" | "upload" | "unknown" = "launch";
@@ -154,10 +139,6 @@ export async function POST(req: NextRequest) {
     ]) as Buffer;
   } catch (e) {
     // Mark failure and return, but keep the comment we inserted earlier
-    console.error("/api/screenshot-actblue:error_pre_upload", {
-      message: (e as Error)?.message,
-      stack: (e as Error)?.stack,
-    });
     await supabase
       .from("submissions")
       .update({ landing_render_status: "failed", landing_rendered_at: new Date().toISOString() })
@@ -175,7 +156,6 @@ export async function POST(req: NextRequest) {
     const objectPath = `${caseId}-${randomUUID()}.png`;
     // Convert Node Buffer to ArrayBuffer for Supabase upload
     const ab = (screenshotBuf as Buffer).buffer.slice((screenshotBuf as Buffer).byteOffset, (screenshotBuf as Buffer).byteOffset + (screenshotBuf as Buffer).byteLength);
-    console.log("/api/screenshot-actblue:upload_start", { bucket, objectPath });
     // Assume bucket exists in Supabase project configuration
     const { error: upErr } = await supabase.storage
       .from(bucket)
@@ -187,7 +167,7 @@ export async function POST(req: NextRequest) {
     if (upErr) throw upErr;
     const publicUrl = `supabase://${bucket}/${objectPath}`;
 
-    const upd = await supabase
+    await supabase
       .from("submissions")
       .update({
         landing_url: url,
@@ -196,7 +176,6 @@ export async function POST(req: NextRequest) {
         landing_render_status: "success",
       })
       .eq("id", caseId);
-    console.log("/api/screenshot-actblue:db_updated", { caseId, error: (upd as any)?.error || null, publicUrl });
 
     // Update landing_page context with screenshot link via a second insert (still hidden in UI)
     try {
@@ -216,10 +195,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, screenshotUrl: publicUrl });
   } catch (e) {
-    console.error("/api/screenshot-actblue:error_upload", {
-      message: (e as Error)?.message,
-      stack: (e as Error)?.stack,
-    });
     await supabase
       .from("submissions")
       .update({ landing_render_status: "failed", landing_rendered_at: new Date().toISOString() })

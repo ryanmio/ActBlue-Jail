@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
-  console.log("/api/sender invoked");
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: "service_key_missing" }, { status: 400 });
   }
@@ -20,7 +19,6 @@ export async function POST(req: NextRequest) {
     .eq("id", submissionId)
     .limit(1);
   if (error || !items?.[0]) {
-    console.error("/api/sender submission not found or db error", error);
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   const sub = items[0] as { id: string; image_url: string | null; raw_text: string | null };
@@ -44,8 +42,8 @@ export async function POST(req: NextRequest) {
       } else {
         signedUrl = null;
       }
-    } catch (e) {
-      console.warn("/api/sender failed to sign image", e);
+    } catch {
+      signedUrl = null;
     }
   }
 
@@ -83,7 +81,6 @@ export async function POST(req: NextRequest) {
     });
     const json = await resp.json();
     if (!resp.ok) {
-      console.error("/api/sender openai failed", resp.status, json);
       return NextResponse.json({ error: "openai_failed", detail: json }, { status: 502 });
     }
     type OpenAIChatResponse = { choices?: Array<{ message?: { content?: string } }> };
@@ -98,27 +95,20 @@ export async function POST(req: NextRequest) {
         notes: typeof obj.notes === "string" ? obj.notes : undefined,
       };
     } catch {
-      console.error("/api/sender parse_error content=", content);
       parsedOut = { sender_name: null, sender_type: "unknown", confidence: 0.2, notes: "Parse failed" };
     }
-  } catch (e) {
-    console.error("/api/sender error calling openai", e);
+  } catch {
     return NextResponse.json({ error: "openai_failed" }, { status: 500 });
   }
 
   const senderName = parsedOut.sender_name && parsedOut.sender_name.trim().length > 0 ? parsedOut.sender_name.trim() : null;
 
   try {
-    const { error: updErr } = await supabase
+    await supabase
       .from("submissions")
       .update({ sender_name: senderName })
       .eq("id", submissionId);
-    if (updErr) {
-      console.error("/api/sender failed to update sender_name", updErr);
-    }
-  } catch (e) {
-    console.error("/api/sender exception updating db", e);
-  }
+  } catch {}
 
   return NextResponse.json({ ok: true, sender_name: senderName, model });
 }
