@@ -175,11 +175,7 @@ export async function POST(req: NextRequest) {
     // Convert Node Buffer to ArrayBuffer for Supabase upload
     const ab = (screenshotBuf as Buffer).buffer.slice((screenshotBuf as Buffer).byteOffset, (screenshotBuf as Buffer).byteOffset + (screenshotBuf as Buffer).byteLength);
     console.log("/api/screenshot-actblue:upload_start", { bucket, objectPath });
-    // Ensure bucket exists (no-op if it already does)
-    try {
-      // @ts-expect-error createBucket is available with service role key
-      await (supabase as any)._storage.createBucket(bucket, { public: false });
-    } catch {}
+    // Assume bucket exists in Supabase project configuration
     const { error: upErr } = await supabase.storage
       .from(bucket)
       .upload(objectPath, ab as ArrayBuffer, {
