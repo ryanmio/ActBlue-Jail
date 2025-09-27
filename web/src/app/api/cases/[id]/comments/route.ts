@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "comments_limit_reached" }, { status: 429 });
   }
 
-  const { error: insErr } = await supabase.from("comments").insert({ submission_id: id, content });
+  const { error: insErr } = await supabase.from("comments").insert({ submission_id: id, content, kind: "user" });
   if (insErr) return NextResponse.json({ error: "insert_failed" }, { status: 500 });
 
   // mark in-progress so UI polls

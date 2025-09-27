@@ -9,6 +9,7 @@ const EnvSchema = z.object({
 
   SUPABASE_BUCKET_INCOMING: z.string().default("incoming"),
   SUPABASE_BUCKET_REDACTED: z.string().default("redacted"),
+  SUPABASE_BUCKET_SCREENSHOTS: z.string().default("screenshots"),
 
   DATABASE_URL: z.string().optional(),
 
@@ -36,6 +37,7 @@ export const env: AppEnv = EnvSchema.parse({
 
   SUPABASE_BUCKET_INCOMING: process.env.SUPABASE_BUCKET_INCOMING,
   SUPABASE_BUCKET_REDACTED: process.env.SUPABASE_BUCKET_REDACTED,
+  SUPABASE_BUCKET_SCREENSHOTS: process.env.SUPABASE_BUCKET_SCREENSHOTS,
 
   DATABASE_URL: process.env.DATABASE_URL,
 

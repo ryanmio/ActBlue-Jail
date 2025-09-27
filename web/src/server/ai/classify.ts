@@ -63,8 +63,9 @@ export async function runClassification(submissionId: string, opts: RunClassific
     if (includeExisting) {
       const { data: rows } = await supabase
         .from("comments")
-        .select("content, created_at")
+        .select("content, created_at, kind")
         .eq("submission_id", submissionId)
+        .in("kind", ["user", "landing_page"]) 
         .order("created_at", { ascending: true })
         .limit(50);
       for (const r of rows || []) {
@@ -158,7 +159,13 @@ export async function runClassification(submissionId: string, opts: RunClassific
   const ms = Date.now() - start;
   await supabase
     .from("submissions")
-    .update({ processing_status: "done", classifier_ms: ms, ai_version: model, ai_confidence: (parsedOut as any).overall_confidence ?? null })
+    .update({
+      processing_status: "done",
+      classifier_ms: ms,
+      ai_version: model,
+      ai_confidence: (parsedOut as any).overall_confidence ?? null,
+      ai_summary: typeof (parsedOut as any).summary === "string" ? (parsedOut as any).summary : null,
+    })
     .eq("id", submissionId);
 
   return { ok: true as const, status: 200, violations: byCode.size, ms };
