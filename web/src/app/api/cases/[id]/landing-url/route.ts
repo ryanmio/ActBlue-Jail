@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 function parseSupabaseUrl(u: string | null | undefined) {
   if (!u || !u.startsWith("supabase://")) return null;
@@ -12,7 +12,7 @@ function parseSupabaseUrl(u: string | null | undefined) {
 export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   try {
-    const supabase = getSupabaseServer();
+    const supabase = getSupabaseAdmin();
     const { data: items, error } = await supabase
       .from("submissions")
       .select("landing_screenshot_url, landing_url, landing_render_status")

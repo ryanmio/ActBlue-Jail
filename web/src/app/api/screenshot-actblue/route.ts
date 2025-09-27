@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
-import { getSupabaseServer } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { env } from "@/lib/env";
 
 // Lazy import puppeteer deps to avoid edge bundling issues when route is untouched
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "service_key_missing" }, { status: 400 });
   }
 
-  const supabase = getSupabaseServer();
+  const supabase = getSupabaseAdmin();
   const json = (await req.json().catch(() => null)) as Body | null;
   const caseId = String(json?.caseId || "").trim();
   const url = String(json?.url || "").trim();
