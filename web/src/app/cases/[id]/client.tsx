@@ -686,8 +686,8 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
         </>
       ) : (
         <>
-          {/* client-side poll when opening Landing tab and we don't yet have a URL */}
-          {!lpUrl && (landingStatus === "pending" || landingStatus === "success") && (
+          {/* client-side poll when we don't yet have a URL (SSR may be stale) */}
+          {!lpUrl && (
             <LandingPoll caseId={caseId} onReady={(u, l) => { setLpUrl(u); setLpLink(l); }} />
           )}
           {lpUrl ? (
