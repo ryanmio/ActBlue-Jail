@@ -599,6 +599,23 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
     try {
       // Diagnostics for prod
       console.log("EvidenceTabs:init", { caseId, landingImageUrl, landingLink, landingStatus });
+      if (!landingImageUrl) {
+        console.log("EvidenceTabs:initial_fetch_missing", { caseId });
+        void fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" })
+          .then(async (res) => {
+            if (!res.ok) {
+              console.warn("EvidenceTabs:initial_fetch_failed", { caseId, status: res.status });
+              return;
+            }
+            const data = await res.json();
+            console.log("EvidenceTabs:initial_fetch_data", data);
+            if (data?.url) {
+              setLpUrl(data.url as string);
+              setLpLink((data.landingUrl as string) || null);
+            }
+          })
+          .catch((err) => console.error("EvidenceTabs:initial_fetch_error", err));
+      }
     } catch {}
   }, [caseId, landingImageUrl, landingLink, landingStatus]);
   const primaryLabel = messageType === "sms" ? "SMS" : (rawText && !screenshotUrl ? "Text" : "Screenshot");
@@ -627,7 +644,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
       // try to refresh landing preview shortly after
       setTimeout(async () => {
         try {
-          const res = await fetch(`/api/cases/${caseId}/landing-url`, { cache: "no-store" });
+          const res = await fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
           if (res.ok) {
             const d = await res.json();
             if (d?.url) {
@@ -686,8 +703,8 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
         </>
       ) : (
         <>
-          {/* client-side poll when we don't yet have a URL (SSR may be stale) */}
-          {!lpUrl && (
+          {/* client-side poll when opening Landing tab and we don't yet have a URL */}
+          {!lpUrl && (landingStatus === "pending" || landingStatus === "success") && (
             <LandingPoll caseId={caseId} onReady={(u, l) => { setLpUrl(u); setLpLink(l); }} />
           )}
           {lpUrl ? (
@@ -738,13 +755,14 @@ function LandingPoll({ caseId, onReady }: { caseId: string; onReady: (url: strin
     const run = async () => {
       try {
         for (let i = 0; i < 8; i++) {
-          const res = await fetch(`/api/cases/${caseId}/landing-url`, { cache: "no-store" });
+          const res = await fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
           if (!res.ok) break;
           const d = await res.json();
           if (d?.url) {
             if (!cancelled) onReady(d.url as string, (d.landingUrl as string) || null);
             return;
           }
+          if (!cancelled) console.log("LandingPoll:waiting", { attempt: i, raw: d });
           await new Promise((r) => setTimeout(r, 1000));
         }
       } catch {}
