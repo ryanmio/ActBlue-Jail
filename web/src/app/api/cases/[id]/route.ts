@@ -55,9 +55,10 @@ export async function GET(
     // Secondary signal for hasReport that does not rely on reports table access (RLS-safe)
     const { data: landingNotes } = await supabase
       .from("comments")
-      .select("id")
+      .select("id, content")
       .eq("submission_id", id)
       .eq("kind", "landing_page")
+      .ilike("content", "Report filed%")
       .limit(1);
     const { data: replyRows } = await supabase
       .from("report_replies")
