@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assertSupabaseBrowser } from "@/lib/supabase";
-import { cachedJsonFetch, getCachedJson, setCachedJson } from "@/lib/client-cache";
+import { cachedJsonFetch } from "@/lib/client-cache";
 
 type SubmissionRow = {
   id: string;
@@ -362,37 +362,14 @@ function useRecentCases(limit = 6) {
     setLoading(true);
     (async () => {
       try {
-        const fetchLimit = Math.min(limit * 5, 100);
-        const listUrl = `/api/cases?limit=${fetchLimit}`;
-        const json = await cachedJsonFetch<{ items: Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null }> }>(listUrl, 120_000);
-        const items = (json.items || []) as Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null }>;
-        const withIssues = await Promise.all(items.map(async (r) => {
-          try {
-            const detailUrl = `/api/cases/${r.id}`;
-            const data: CaseDetail = await (async () => {
-              const cached = getCachedJson<CaseDetail>(detailUrl);
-              if (cached) return cached;
-              const resp = await fetch(detailUrl, { cache: "no-store" });
-              const j = await resp.json();
-              if (resp.ok) setCachedJson(detailUrl, j, 120_000);
-              return j as CaseDetail;
-            })();
-            const vios = Array.isArray(data.violations) ? data.violations as Array<{ code: string; title: string }> : [];
-            const seen = new Set<string>();
-            const top = [] as Array<{ code: string; title: string }>;
-            for (const v of vios) {
-              const c = typeof v.code === "string" ? v.code.trim() : "";
-              const t = typeof v.title === "string" ? v.title.trim() : c || "Violation";
-              if (!c || seen.has(c)) continue;
-              seen.add(c);
-              top.push({ code: c, title: t });
-              if (top.length >= 3) break;
-            }
-            return { ...r, issues: top };
-          } catch {
-            return { ...r, issues: [] as Array<{ code: string; title: string }> };
-          }
-        }));
+        const fetchLimit = Math.min(limit * 3, 100);
+        const listUrl = `/api/cases?limit=${fetchLimit}&include=top_violations`;
+        const json = await cachedJsonFetch<{ items: Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null; issues?: Array<{ code: string; title: string }> }> }>(listUrl, 120_000);
+        const items = (json.items || []) as Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null; issues?: Array<{ code: string; title: string }> }>;
+        const withIssues = items.map((r) => {
+          const top = Array.isArray(r.issues) ? r.issues : [];
+          return { ...r, issues: top } as RecentCaseRow;
+        });
         const onlyWithIssues = withIssues.filter(r => r.issues.length > 0).slice(0, limit);
         if (!cancelled) setRows(onlyWithIssues.map(r => ({
           id: r.id,
