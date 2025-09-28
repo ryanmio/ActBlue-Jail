@@ -15,7 +15,16 @@ function extractIds(subject: string | null, body: string | null): { caseId: stri
 
 export async function POST(req: NextRequest) {
   const supabase = getSupabaseServer();
-  const payload = (await req.json().catch(() => null)) as any;
+  const payload = (await req.json().catch(() => null)) as {
+    FromFull?: { Email?: string };
+    From?: string;
+    Subject?: string;
+    TextBody?: string;
+    text?: string;
+    text_body?: string;
+    HtmlBody?: string;
+    html?: string;
+  } | null;
   if (!payload) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
   const fromEmail: string = payload.FromFull?.Email || payload.From || "";

@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
       html,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
-  } catch (e) {
+  } catch {
     // Save failed report for audit
     await supabase.from("reports").insert({
       case_id: sub.id,

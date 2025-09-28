@@ -398,10 +398,6 @@ function renderReportBody(body: string) {
     meta: findSection("Meta"),
   };
 
-  const extractLinks = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.match(urlRegex) || [];
-  };
 
   const landingUrl = sec.landing.join(" ").trim();
   const screenshotUrl = sec.screenshot.join(" ").trim();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
-import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { getSupabaseServer } from "@/lib/supabase-server";
 
 function parseSupabaseUrl(u: string | null | undefined) {
   if (!u || !u.startsWith("supabase://")) return null;
@@ -13,7 +13,7 @@ function parseSupabaseUrl(u: string | null | undefined) {
 export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseServer();
     const { data: items, error } = await supabase
       .from("submissions")
       .select("landing_screenshot_url, landing_url, landing_render_status")
@@ -37,7 +37,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     if (signErr) throw signErr;
     const url = signed?.signedUrl || null;
     return NextResponse.json({ url, landingUrl: row?.landing_url || null, status: row?.landing_render_status || null, mime: "image/png" });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ url: null, landingUrl: null, status: null, error: "unavailable" }, { status: 403 });
   }
 }
