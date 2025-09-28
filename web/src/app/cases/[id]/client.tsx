@@ -737,8 +737,8 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         </div>
         <span className="inline-flex items-center text-xs px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">AB Jail</span>
       </div>
-      <div className="mt-4 space-y-4">
-        <div>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="md:col-span-1">
           <label className="block text-sm font-medium text-slate-700 mb-1">Landing Page URL</label>
           <input
             type="url"
@@ -749,7 +749,19 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           />
           <div className="mt-1 text-xs text-slate-600">Required if not already captured.</div>
         </div>
-        <div>
+
+        <div className="md:col-span-1">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Optional CC Email</label>
+          <input
+            type="email"
+            value={ccEmail}
+            onChange={(e) => setCcEmail(e.target.value)}
+            placeholder="name@example.com"
+            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+          />
+        </div>
+
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
           <textarea
             value={note}
@@ -761,19 +773,11 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           />
           <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Optional CC Email</label>
-          <input
-            type="email"
-            value={ccEmail}
-            onChange={(e) => setCcEmail(e.target.value)}
-            placeholder="name@example.com"
-            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
-          />
-        </div>
-        {error && <div className="text-sm text-red-600">{error}</div>}
-        {info && <div className="text-sm text-green-700">{info}</div>}
-        <div className="flex items-center justify-end">
+
+        {error && <div className="text-sm text-red-600 md:col-span-2">{error}</div>}
+        {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
+
+        <div className="flex items-center justify-end md:col-span-2">
           <button
             type="button"
             onClick={onSubmit}
