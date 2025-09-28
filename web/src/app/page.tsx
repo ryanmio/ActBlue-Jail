@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assertSupabaseBrowser } from "@/lib/supabase";
 import { cachedJsonFetch } from "@/lib/client-cache";
+import Footer from "@/components/Footer";
 
 type SubmissionRow = {
   id: string;
@@ -327,7 +328,7 @@ export default function Home() {
           <WorstOffenders />
         </div>
 
-        {/* Footer moved to global layout */}
+        <Footer />
       </div>
     </main>
   );

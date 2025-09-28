@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
+import Footer from "@/components/Footer";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -149,6 +150,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Report history and replies */}
         <ReportThread id={id} />
+        <Footer />
       </div>
     </main>
   );

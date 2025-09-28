@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Footer from "@/components/Footer";
 
 type SubmissionRow = {
   id: string;
@@ -171,6 +172,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
             </>
           )}
         </section>
+        <Footer />
       </div>
     </main>
   );
