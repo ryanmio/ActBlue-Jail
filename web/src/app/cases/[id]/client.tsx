@@ -685,18 +685,13 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   );
 }
 
-type ReportCardProps = { id: string; existingLandingUrl?: string | null; hasReportInitially?: boolean };
-export function ReportingCard({ id, existingLandingUrl = null, hasReportInitially = false }: ReportCardProps) {
+type ReportCardProps = { id: string; existingLandingUrl?: string | null };
+export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps) {
   const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
   const [ccEmail, setCcEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [alreadyReported, setAlreadyReported] = useState<boolean>(hasReportInitially);
-
-  useEffect(() => {
-    setAlreadyReported(hasReportInitially);
-  }, [hasReportInitially]);
 
   const onSubmit = async () => {
     setSubmitting(true);
@@ -722,7 +717,7 @@ export function ReportingCard({ id, existingLandingUrl = null, hasReportInitiall
     }
   };
 
-  if (alreadyReported) return null;
+  // Visibility is fully controlled by the server (SSR) using hasReport; no client checks here
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">

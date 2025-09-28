@@ -52,13 +52,21 @@ export async function GET(
       .select("id, case_id, to_email, cc_email, subject, body, screenshot_url, landing_url, status, created_at")
       .eq("case_id", id)
       .order("created_at", { ascending: true });
+    // Secondary signal for hasReport that does not rely on reports table access (RLS-safe)
+    const { data: landingNotes } = await supabase
+      .from("comments")
+      .select("id")
+      .eq("submission_id", id)
+      .eq("kind", "landing_page")
+      .limit(1);
     const { data: replyRows } = await supabase
       .from("report_replies")
       .select("id, report_id, case_id, from_email, body_text, created_at")
       .eq("case_id", id)
       .order("created_at", { ascending: true });
 
-    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [], reports: reportRows || [], report_replies: replyRows || [] });
+    const hasReport = (Array.isArray(reportRows) && reportRows.length > 0) || (Array.isArray(landingNotes) && landingNotes.length > 0);
+    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [], reports: reportRows || [], report_replies: replyRows || [], hasReport });
   } catch (err) {
     console.error("/api/cases/[id] supabase error", err);
     return NextResponse.json({ item: null, violations: [], comments: [], reports: [], report_replies: [] }, { status: 500 });

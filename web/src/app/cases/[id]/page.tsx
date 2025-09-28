@@ -34,12 +34,12 @@ type CaseData = {
   violations: Array<Violation>;
   comments?: Array<Comment>;
   reports?: Array<{ id: string }>;
+  hasReport?: boolean;
 };
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const base = env.NEXT_PUBLIC_SITE_URL || "";
-  const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
+  const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
   if (!res.ok) {
     return <main className="mx-auto max-w-5xl p-6">Not found</main>;
   }
@@ -47,13 +47,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   if (!data.item) return <main className="mx-auto max-w-5xl p-6">Not found</main>;
 
   const item = data.item;
-  const imgRes = await fetch(`${base}/api/cases/${id}/image-url`, { cache: "no-store" });
+  const imgRes = await fetch(`/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
-  const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
+  const landRes = await fetch(`/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
   const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
-  type CaseApi = { reports?: Array<{ id: string }> };
-  const apiData = data as unknown as CaseApi;
-  const hasReport = Array.isArray(apiData.reports) && apiData.reports.length > 0;
+  const hasReport = (data as { hasReport?: boolean }).hasReport === true
+    || (Array.isArray(data.reports) && data.reports.length > 0);
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
@@ -140,7 +139,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Reporting */}
         {!hasReport && (
-          <ReportingCard id={id} existingLandingUrl={landData?.landingUrl || null} hasReportInitially={hasReport} />
+          <ReportingCard id={id} existingLandingUrl={landData?.landingUrl || null} />
         )}
 
         {/* Report history and replies */}
