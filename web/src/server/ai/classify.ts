@@ -21,13 +21,13 @@ export async function runClassification(submissionId: string, opts: RunClassific
   // Load submission
   const { data: items, error } = await supabase
     .from("submissions")
-    .select("id, image_url, raw_text")
+    .select("id, image_url, raw_text, landing_url, landing_screenshot_url")
     .eq("id", submissionId)
     .limit(1);
   if (error || !items?.[0]) {
     return { ok: false, status: 404, error: "not_found" as const };
   }
-  const sub = items[0] as { id: string; image_url?: string | null; raw_text?: string | null };
+  const sub = items[0] as { id: string; image_url?: string | null; raw_text?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null };
 
   // Prepare signed image URL if applicable (and only if extension is supported by OpenAI image_url)
   let signedUrl: string | null = null;
@@ -43,6 +43,18 @@ export async function runClassification(submissionId: string, opts: RunClassific
     }
   }
 
+  // Prepare landing page signed image if present
+  let landingSignedUrl: string | null = null;
+  const parsedLanding = parseSupabaseUrl((sub as any).landing_screenshot_url);
+  if (parsedLanding) {
+    const lowerPath = parsedLanding.path.toLowerCase();
+    const isSupportedExt = [".png", ".jpg", ".jpeg", ".gif", ".webp"].some((ext) => lowerPath.endsWith(ext));
+    if (isSupportedExt) {
+      const { data: signed } = await supabase.storage.from(parsedLanding.bucket).createSignedUrl(parsedLanding.path, 3600);
+      landingSignedUrl = signed?.signedUrl || null;
+    }
+  }
+
   // Build messages (shared across initial and reclassify)
   const system = `Role: Political Fundraising Compliance Assistant\n\nInstructions:\n- Accept OCR text and an optional screenshot image of the message. Use BOTH sources: read the text carefully and visually inspect the image when present.\n- Evaluate only for the provided 5 violation codes:\n  AB001: Misrepresentation/Impersonation\n  AB003: Missing Full Entity Name\n  AB004: Entity Clarity (Org vs Candidate)\n  AB007: False/Unsubstantiated Claims\n  AB008: Unverified Matching Program\n\n- Output STRICT JSON with these top-level keys, in order:\n  1. violations (array)\n  2. summary (string)\n  3. overall_confidence (float, 0–1 inclusive)\n- Each violation is returned as a single object with these keys: code (string), title (string), rationale (string), evidence_span_indices (array of integers), severity (int 1–5), confidence (float 0–1 inclusive).\n- Emit at most one violation object per code; if multiple findings, merge rationales and union indices for that code.\n\nSpecific rules and disambiguation:\n- AB001 (Misrepresentation/Impersonation):\n  - Use the screenshot image and body text as evidence. If the image prominently features candidate(s) who are unaffiliated with the sending entity and the text does not clearly state an affiliation to those candidates, RETURN AB001.\n  - Example pattern: image contains Amy Klobuchar, Jamie Raskin, Adam Schiff; text ends with an org name like \"Let America Vote\" without clarifying affiliation — RETURN AB001.\n  - Do NOT return AB001 when the sending entity is that candidate or an affiliated campaign/committee is clearly stated. Do not flag cases where the candidate IS affiliated or when a celebrity lends their likeness (e.g., Beto sending for Powered By People; Bradley Whitford sending for a PAC). Do not flag cases where a politician's image is used to represent the opposition or to attribute a quote or action to them.\n- AB003 (Missing Full Entity Name): Only flag when NO full entity name appears anywhere in the message. If any full entity name is present (e.g., \"Let America Vote\"), DO NOT return AB003.\n- AB007 (False/Unsubstantiated Claims):\n  - Flag only for bullshit gimmicks that trick donors, like fake voting records or insinuating expiration of non-existent memberships/subscriptions. Do NOT flag political rhetoric or news claims.\n\n- AB008 (Unverified Matching Program):\n  - Use when the message advertises a matching program (e.g., \"500% match\").\n  - Rationale text should clearly state that political committees almost never run genuine donor matching programs, and that such claims are highly improbable and misleading to donors.\n  - Do NOT say \"unsupported\" or \"not documented,\" since we cannot know whether documentation exists.\n  - Use direct phrasing such as:\n    \"This solicitation advertises a ‘500%-MATCH.’ Political committees almost never run genuine donor matching programs, making this claim highly improbable and misleading to donors.\"\n- AB007 & AB008: Merge contributing lines into one object per code.\n\n- All confidence values must be floats (0–1).\n- evidence_span_indices must point to text spans; if the evidence is image-only, use an empty array and explain in the rationale (e.g., \"image shows unaffiliated candidates\").\n- If the message is malformed or incomplete, return: {\"violations\": [], \"summary\": \"Input message is malformed or incomplete.\", \"overall_confidence\": 0.1}\n- If no policy violations are found, return: {\"violations\": [], \"summary\": \"No clear violations.\", \"overall_confidence\": 0.3}\n\nOutput Format:\n- Output JSON only—no commentary or markdown.\n- Structure: { \"violations\": [ ... ], \"summary\": \"...\", \"overall_confidence\": ... }\n- Maintain the exact specified ordering of top-level keys and the strict schema.`;
 
@@ -54,6 +66,10 @@ export async function runClassification(submissionId: string, opts: RunClassific
   if (signedUrl) {
     (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>).push({ type: "image_url", image_url: { url: signedUrl } });
   }
+  if (landingSignedUrl) {
+    (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>).push({ type: "text", text: `Landing page URL: ${sub.landing_url || "(unknown)"}` });
+    (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>).push({ type: "image_url", image_url: { url: landingSignedUrl } });
+  }
 
   // Gather reviewer comments as additional context when requested
   const includeExisting = !!opts.includeExistingComments;
@@ -63,8 +79,9 @@ export async function runClassification(submissionId: string, opts: RunClassific
     if (includeExisting) {
       const { data: rows } = await supabase
         .from("comments")
-        .select("content, created_at")
+        .select("content, created_at, kind")
         .eq("submission_id", submissionId)
+        .in("kind", ["user", "landing_page"]) 
         .order("created_at", { ascending: true })
         .limit(50);
       for (const r of rows || []) {
@@ -76,7 +93,7 @@ export async function runClassification(submissionId: string, opts: RunClassific
       if (c && typeof c === "string") commentsList.push(c);
     }
     if (commentsList.length > 0) {
-      const preface = "Additional reviewer comments that should be considered:";
+      const preface = "Additional reviewer comments and landing page context that should be considered:";
       const bulletList = commentsList.map((c) => `- ${c}`).join("\n");
       messages.push({ role: "user", content: [ { type: "text", text: `${preface}\n${bulletList}` } ] });
     }
@@ -95,6 +112,8 @@ export async function runClassification(submissionId: string, opts: RunClassific
     });
     const json = await resp.json();
     if (!resp.ok) {
+      // ensure terminal error state to avoid stuck status
+      await supabase.from("submissions").update({ processing_status: "error" }).eq("id", submissionId);
       return { ok: false, status: 502, error: "openai_failed" as const, detail: json };
     }
     const content = (json as any)?.choices?.[0]?.message?.content?.trim() || "{}";
@@ -103,7 +122,9 @@ export async function runClassification(submissionId: string, opts: RunClassific
     } catch {
       parsedOut = { violations: [], summary: "Parse failed", overall_confidence: 0 } as any;
     }
-  } catch (e) {
+  } catch {
+    // ensure terminal error state to avoid stuck status
+    await supabase.from("submissions").update({ processing_status: "error" }).eq("id", submissionId);
     return { ok: false, status: 500, error: "openai_failed" as const };
   }
 
@@ -154,7 +175,13 @@ export async function runClassification(submissionId: string, opts: RunClassific
   const ms = Date.now() - start;
   await supabase
     .from("submissions")
-    .update({ processing_status: "done", classifier_ms: ms, ai_version: model, ai_confidence: (parsedOut as any).overall_confidence ?? null })
+    .update({
+      processing_status: "done",
+      classifier_ms: ms,
+      ai_version: model,
+      ai_confidence: (parsedOut as any).overall_confidence ?? null,
+      ai_summary: typeof (parsedOut as any).summary === "string" ? (parsedOut as any).summary : null,
+    })
     .eq("id", submissionId);
 
   return { ok: true as const, status: 200, violations: byCode.size, ms };

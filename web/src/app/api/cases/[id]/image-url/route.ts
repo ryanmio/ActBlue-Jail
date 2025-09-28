@@ -41,7 +41,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       : ext === 'pdf' ? 'application/pdf'
       : null;
     return NextResponse.json({ url, mime, ext });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ url: null, error: "unavailable" }, { status: 403 });
   }
 }

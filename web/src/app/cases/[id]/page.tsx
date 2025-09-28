@@ -1,5 +1,9 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer, InboundSMSViewer } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs } from "./client";
+import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
   id: string;
@@ -13,6 +17,7 @@ type CaseItem = {
   message_type?: string | null;
 };
 
+
 type Violation = {
   id: string;
   code: string;
@@ -21,6 +26,7 @@ type Violation = {
   severity?: number | null;
   confidence?: string | number | null;
 };
+
 
 type Comment = { id: string; content: string; created_at?: string | null };
 type CaseData = {
@@ -31,7 +37,8 @@ type CaseData = {
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}`, { cache: "no-store" });
+  const base = env.NEXT_PUBLIC_SITE_URL || "";
+  const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
   if (!res.ok) {
     return <main className="mx-auto max-w-5xl p-6">Not found</main>;
   }
@@ -39,14 +46,16 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   if (!data.item) return <main className="mx-auto max-w-5xl p-6">Not found</main>;
 
   const item = data.item;
-  const imgRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/image-url`, { cache: "no-store" });
+  const imgRes = await fetch(`${base}/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
+  const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
+  const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
     .sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)))[0];
-  const overallConfidence = item.ai_confidence == null ? null : Number(item.ai_confidence);
   const summaryInitial = topViolation?.description || null;
+  
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -91,17 +100,17 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} />
             ) : (
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-                <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
-                <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
-                  {imgData.url ? (
-                    <EvidenceViewer src={imgData.url} alt="Political message screenshot" mime={imgData?.mime || null} />
-                  ) : (
-                    <div className="p-8 text-center text-slate-500">
-                      <div className="text-4xl mb-2">📱</div>
-                      <p>Screenshot loading...</p>
-                    </div>
-                  )}
-                </div>
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
+                <EvidenceTabs
+                  caseId={id}
+                  messageType={item.message_type}
+                  rawText={item.raw_text}
+                  screenshotUrl={imgData.url}
+                  screenshotMime={imgData?.mime || null}
+                  landingImageUrl={landData?.url || null}
+                  landingLink={landData?.landingUrl || null}
+                  landingStatus={landData?.status || null}
+                />
               </div>
             )}
           </div>

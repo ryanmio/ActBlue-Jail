@@ -30,14 +30,15 @@ export async function GET(
     if (vErr) throw vErr;
     const { data: commentsRows } = await supabase
       .from("comments")
-      .select("id, content, created_at")
+      .select("id, content, created_at, kind")
       .eq("submission_id", id)
+      .eq("kind", "user")
       .order("created_at", { ascending: true })
       .limit(10);
-    // Compute a simple summary on the server for convenience: pick the highest severity/confidence description
-    let summary: string | null = null;
+    // Prefer stored AI summary; fall back to top violation rationale
+    let summary: string | null = (item as unknown as { ai_summary?: string | null }).ai_summary ?? null;
     const list = (Array.isArray(vios) ? vios : []) as Array<ViolationRow>;
-    if (list.length > 0) {
+    if (!summary && list.length > 0) {
       const sorted = [...list].sort(
         (a, b) =>
           Number(b.severity ?? 0) - Number(a.severity ?? 0) ||

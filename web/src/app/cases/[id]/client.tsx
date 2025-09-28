@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
+import ReviewAnimation from "@/components/review-animation";
 
 type Props = {
   id: string;
@@ -73,14 +74,14 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
   const [overallConfidence, setOverallConfidence] = useState<number | null>(initialAiConfidence == null ? null : Number(initialAiConfidence));
   const intervalRef = useRef<number | null>(null);
 
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     if (intervalRef.current != null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  };
+  }, []);
 
-  const startPolling = () => {
+  const startPolling = useCallback(() => {
     stopPolling();
     intervalRef.current = window.setInterval(async () => {
       try {
@@ -98,12 +99,12 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
         }
       } catch {}
     }, 2000);
-  };
+  }, [id, stopPolling]);
 
   useEffect(() => {
     startPolling();
     return () => stopPolling();
-  }, [id]);
+  }, [id, startPolling, stopPolling]);
 
   useEffect(() => {
     const onReclassify = (e: Event) => {
@@ -114,13 +115,13 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
     };
     window.addEventListener("reclassify-started", onReclassify as EventListener);
     return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
-  }, [id]);
+  }, [id, startPolling]);
 
   if (status !== "done") {
     return (
-      <div className="flex items-center gap-2 text-xs text-gray-500">
-        <span className="h-4 w-4 inline-block rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" aria-label="Loading" />
-        <span>Classifying… this will update automatically.</span>
+      <div className="space-y-4">
+       
+        <ReviewAnimation />
       </div>
     );
   }
@@ -398,6 +399,7 @@ type Comment = {
   id: string;
   content: string;
   created_at?: string | null;
+  kind?: string | null;
 };
 
 type CommentsSectionProps = {
@@ -406,7 +408,7 @@ type CommentsSectionProps = {
 };
 
 export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
-  const [comments, setComments] = useState<Array<Comment>>(initialComments);
+  const [comments, setComments] = useState<Array<Comment>>(initialComments.filter((c) => (c.kind || "user") === "user"));
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -423,7 +425,7 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
       if (!res.ok) return;
       const data = await res.json();
       const rows = (data?.comments ?? []) as Array<Comment>;
-      setComments(rows);
+      setComments(rows.filter((c) => (c.kind || "user") === "user"));
     } catch {}
   };
 
@@ -545,7 +547,7 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [src, mime]);
 
   return (
     <>
@@ -565,7 +567,7 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
             {({ ref, open }) => (
               <button type="button" onClick={open} className="block w-full">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto max-h-[360px] md:max-h-[400px] object-contain" />
+                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto object-contain" />
               </button>
             )}
           </Item>
@@ -573,6 +575,224 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
       )}
     </>
   );
+}
+
+type EvidenceTabsProps = {
+  caseId: string;
+  messageType: string | null | undefined;
+  rawText: string | null | undefined;
+  screenshotUrl: string | null | undefined;
+  screenshotMime?: string | null | undefined;
+  landingImageUrl: string | null | undefined;
+  landingLink?: string | null | undefined;
+  landingStatus?: string | null | undefined;
+};
+
+export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
+  const [tab, setTab] = useState<"primary" | "landing">("primary");
+  const [scanUrl, setScanUrl] = useState("");
+  const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [lpUrl, setLpUrl] = useState<string | null>(landingImageUrl || null);
+  const [lpLink, setLpLink] = useState<string | null>(landingLink || null);
+  const [lpLoading, setLpLoading] = useState<boolean>(!landingImageUrl && (landingStatus === "pending" || landingStatus === "success"));
+  const router = useRouter();
+  useEffect(() => {
+    if (!landingImageUrl) {
+      setLpLoading(true);
+      void fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data?.url) {
+            setLpUrl(data.url as string);
+            setLpLink((data.landingUrl as string) || null);
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => setLpLoading(false));
+    } else {
+      setLpLoading(false);
+    }
+  }, [caseId, landingImageUrl, landingLink, landingStatus]);
+  const primaryLabel = messageType === "sms" ? "SMS" : "Submission";
+  const isScanning = scanStatus === "pending";
+  const hasLanding = true;
+
+  const onScanSubmit = async (caseId: string) => {
+    const u = scanUrl.trim();
+    if (!u) return;
+    setScanStatus("pending");
+    setError(null);
+    setInfo("Generating screenshot… This can take up to 15 seconds.");
+    setLpLoading(true);
+    try {
+      const res = await fetch(`/api/screenshot-actblue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caseId, url: u }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Screenshot failed");
+      }
+      setScanStatus("success");
+      setInfo("Screenshot saved. Re-running analysis with landing page context…");
+      setScanUrl("");
+      router.refresh();
+      // try to refresh landing preview shortly after
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
+          if (res.ok) {
+            const d = await res.json();
+            if (d?.url) {
+              setLpUrl(d.url);
+              setLpLink(d.landingUrl || null);
+            }
+          }
+        } catch {}
+        setLpLoading(false);
+      }, 1000);
+      if (typeof window !== "undefined") {
+        try { window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id: caseId } })); } catch {}
+      }
+    } catch (e: unknown) {
+      setScanStatus("failed");
+      const msg = e instanceof Error ? e.message : "Failed to capture";
+      setError(msg);
+      setLpLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-4 inline-flex items-center gap-2 rounded-lg p-1 bg-slate-100">
+        <button
+          type="button"
+          onClick={() => setTab("primary")}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${tab === "primary" ? "bg-white text-slate-900 shadow" : "text-slate-700 hover:text-slate-900"}`}
+        >
+          {primaryLabel}
+        </button>
+        {hasLanding && (
+          <button
+            type="button"
+            onClick={() => setTab("landing")}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${tab === "landing" ? "bg-white text-slate-900 shadow" : "text-slate-700 hover:text-slate-900"}`}
+          >
+            Landing Page
+          </button>
+        )}
+      </div>
+
+      {tab === "primary" ? (
+        <>
+          {screenshotUrl ? (
+            <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[520px] border border-slate-100">
+              <div className="max-h-[520px] overflow-auto">
+                <EvidenceViewer src={screenshotUrl} alt="Message screenshot" mime={screenshotMime || null} />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+              {rawText ? (
+                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{rawText}</pre>
+              ) : (
+                <div className="text-slate-600 text-sm">No primary evidence available.</div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* client-side poll when opening Landing tab and we don't yet have a URL */}
+          {!lpUrl && (landingStatus === "pending" || landingStatus === "success") && (
+            <LandingPoll
+              caseId={caseId}
+              onReady={(u, l) => {
+                setLpUrl(u);
+                setLpLink(l);
+              }}
+              onFinish={() => setLpLoading(false)}
+            />
+          )}
+          {lpLoading && (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-slate-600">
+              <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin" aria-label="Loading landing page" />
+              <span>{isScanning ? "Scanning landing page…" : "Loading landing page…"}</span>
+            </div>
+          )}
+          {lpUrl && !lpLoading ? (
+            <>
+              <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[520px] border border-slate-100">
+                <div className="max-h-[520px] overflow-auto">
+                  <EvidenceViewer src={lpUrl} alt="Landing page screenshot" mime={"image/png"} />
+                </div>
+              </div>
+              {lpLink && (
+                <div className="mt-2 text-xs">
+                  <a href={lpLink} target="_blank" className="text-slate-700 underline truncate inline-block max-w-full" title={lpLink}>{lpLink.split("?")[0]}</a>
+                </div>
+              )}
+            </>
+          ) : (!lpLoading && (
+            <div className="text-slate-600 text-sm">
+              <div className="mb-2">No landing page captured yet.</div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ActBlue URL</label>
+              <input
+                type="url"
+                value={scanUrl}
+                onChange={(e) => setScanUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") onScanSubmit(caseId); }}
+                placeholder="https://secure.actblue.com/donate/..."
+                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600"
+              />
+              <div className="mt-2 flex items-center justify-end gap-2 text-xs text-slate-600">
+                {isScanning && <span className="inline-flex items-center gap-1 text-slate-600"><span className="w-3 h-3 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />Scanning…</span>}
+                <button
+                  type="button"
+                  onClick={() => onScanSubmit(caseId)}
+                  disabled={isScanning || !scanUrl.trim()}
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 text-sm"
+                >
+                  {isScanning ? "Scanning…" : "Capture Screenshot"}
+                </button>
+              </div>
+              {error && <div className="mt-2 text-xs text-red-600">{error}</div>}
+              {info && <div className="mt-1 text-xs text-slate-700">{info}</div>}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function LandingPoll({ caseId, onReady, onFinish }: { caseId: string; onReady: (url: string, link: string | null) => void; onFinish: () => void }) {
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        for (let i = 0; i < 8; i++) {
+          const res = await fetch(`/api/cases/${caseId}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
+          if (!res.ok) break;
+          const d = await res.json();
+          if (d?.url) {
+            if (!cancelled) onReady(d.url as string, (d.landingUrl as string) || null);
+            if (!cancelled) onFinish();
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        if (!cancelled) onFinish();
+      } catch {}
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [caseId, onFinish, onReady]);
+  return null;
 }
 
 type InboundSMSViewerProps = {
@@ -589,6 +809,9 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSV
         <div className="bg-slate-50 px-4 py-3">
           <div className="text-sm text-slate-700">
             <span className="font-semibold">From:</span> {fromNumber || "(unknown)"}
+            {createdAt && (
+              <span className="ml-3 text-slate-500">Received <LocalTime iso={createdAt} /></span>
+            )}
           </div>
         </div>
         <div className="p-4">

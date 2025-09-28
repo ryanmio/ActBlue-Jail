@@ -19,6 +19,9 @@ export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [stepIndex, setStepIndex] = useState<number>(0);
+  const [mode, setMode] = useState<"image" | "text">("image");
+  const [textValue, setTextValue] = useState<string>("");
+  const [textError, setTextError] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onBrowseClick = useCallback(() => inputRef.current?.click(), []);
@@ -87,6 +90,61 @@ export default function Home() {
     if (f) void handleFile(f);
   }, [handleFile]);
 
+  const onCardPaste = useCallback((e: React.ClipboardEvent) => {
+    if (isUploading) return;
+    const files = Array.from(e.clipboardData?.files || []);
+    if (files.length > 0) {
+      e.preventDefault();
+      void handleFile(files[0]);
+      return;
+    }
+    const pasted = e.clipboardData?.getData("text/plain")?.trim() || "";
+    if (pasted.length > 0) {
+      e.preventDefault();
+      setMode("text");
+      setTextValue(pasted);
+      setTextError("");
+    }
+  }, [handleFile, isUploading]);
+
+  const submitText = useCallback(async () => {
+    const value = textValue.trim();
+    if (value.length < 10) {
+      setTextError("Please paste at least 10 characters of text.");
+      return;
+    }
+    setTextError("");
+    setIsUploading(true);
+    setStatus("");
+    setStepIndex(2); // Jump to finishing up for text flow
+    try {
+      const create = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: "text.txt", contentType: "text/plain", mode: "text" }),
+      });
+      if (!create.ok) throw new Error("Failed to create submission");
+      const { submissionId } = (await create.json()) as { submissionId: string };
+
+      const start = Date.now();
+      const resp = await fetch("/api/ocr-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId, text: value, conf: 1, ms: Date.now() - start }),
+      });
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => "");
+        throw new Error(`/api/ocr-text failed ${resp.status}: ${body}`);
+      }
+      window.location.href = `/cases/${submissionId}`;
+    } catch (e) {
+      console.error(e);
+      const message = e instanceof Error ? e.message : String(e);
+      setStatus(`Processing failed: ${message}`);
+      setIsUploading(false);
+    }
+  }, [textValue]);
+
   return (
     <main
       className="min-h-screen bg-white"
@@ -113,6 +171,7 @@ export default function Home() {
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={onDrop}
+            onPaste={onCardPaste}
             className={`relative cursor-pointer rounded-3xl border-2 border-dashed p-8 md:p-10 text-center transition-colors ${
               isDragOver
                 ? "border-slate-400 bg-white"
@@ -122,6 +181,25 @@ export default function Home() {
           >
             {!isUploading && (
               <>
+                {/* Segmented control */}
+                <div className="inline-flex items-center rounded-full border border-slate-300 bg-white overflow-hidden text-sm mb-5">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMode("image"); }}
+                    className={`px-3 py-1.5 ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+                  >
+                    Screenshot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMode("text"); }}
+                    className={`px-3 py-1.5 border-l border-slate-300 ${mode === "text" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+                  >
+                    Paste text
+                  </button>
+                </div>
+
+                {mode === "image" && (
                 <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
                   <svg
                     className="w-7 h-7 md:w-8 md:h-8"
@@ -138,19 +216,66 @@ export default function Home() {
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
                 </div>
-                <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
-                <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
-                <div className="mt-4 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-                  By uploading, you confirm you have the right to share this content and accept the <Link
-                    href="/about#terms"
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    className="underline underline-offset-2 hover:text-slate-900"
-                  >
-                    Terms
-                  </Link>.
-                </div>
+                )}
+
+                {mode === "image" && (
+                  <>
+                    <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
+                    <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
+                    <div className="mt-4 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                      By uploading, you confirm you have the right to share this content and accept the <Link
+                        href="/about#terms"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="underline underline-offset-2 hover:text-slate-900"
+                      >
+                        Terms
+                      </Link>.
+                    </div>
+                  </>
+                )}
+
+                {mode === "text" && (
+                  <div className="max-w-lg mx-auto text-left">
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Paste the message text</label>
+                    <textarea
+                      value={textValue}
+                      onChange={(e) => setTextValue(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full h-32 md:h-40 rounded-xl border border-slate-300 p-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      placeholder="Paste here (Cmd/Ctrl + V). We also detect pasted text automatically on this card."
+                    />
+                    {textError && <div className="mt-2 text-sm text-red-700">{textError}</div>}
+                    <div className="mt-4 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); void submitText(); }}
+                        className="px-4 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                      >
+                        Submit text
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const t = (await navigator.clipboard.readText?.()) || "";
+                            if (t.trim().length > 0) {
+                              setTextValue(t);
+                              setTextError("");
+                            }
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        className="px-3 py-2 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50"
+                      >
+                        Paste from clipboard
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

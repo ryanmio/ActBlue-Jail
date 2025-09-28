@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "comments_limit_reached" }, { status: 429 });
   }
 
-  const { error: insErr } = await supabase.from("comments").insert({ submission_id: id, content });
+  const { error: insErr } = await supabase.from("comments").insert({ submission_id: id, content, kind: "user" });
   if (insErr) return NextResponse.json({ error: "insert_failed" }, { status: 500 });
 
   // mark in-progress so UI polls
@@ -37,11 +37,18 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   // audit now
   await supabase.from("audit_log").insert({ action: "reclassify", actor: "anonymous", submission_id: id, payload: { via: "comment", length: content.length } });
 
-  // Kick off reclassification asynchronously; return immediately
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  runClassification(id, { includeExistingComments: true, replaceExisting: true });
-
-  return NextResponse.json({ ok: true, started: true });
+  // Run reclassification and propagate terminal status to avoid stuck states
+  try {
+    const result = await runClassification(id, { includeExistingComments: true, replaceExisting: true });
+    if (!result.ok) {
+      await supabase.from("submissions").update({ processing_status: "error" }).eq("id", id);
+      return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
+    }
+    return NextResponse.json({ ok: true, violations: result.violations, ms: result.ms });
+  } catch {
+    await supabase.from("submissions").update({ processing_status: "error" }).eq("id", id);
+    return NextResponse.json({ ok: false, error: "reclassify_failed" }, { status: 500 });
+  }
 }
 
 
