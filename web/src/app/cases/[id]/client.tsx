@@ -831,9 +831,10 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
             height={dimensions?.height}
           >
             {({ ref, open }) => (
-              <button type="button" onClick={open} className="block w-full">
+              <button type="button" onClick={open} className="block w-full relative hover:opacity-90 hover:scale-[1.02] transition-all duration-200 cursor-pointer group">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto object-contain" />
+                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto object-contain group-hover:shadow-lg transition-shadow duration-200" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200 rounded-lg pointer-events-none" />
               </button>
             )}
           </Item>
