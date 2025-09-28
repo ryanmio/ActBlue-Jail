@@ -2,9 +2,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs } from "./client";
+import { headers } from "next/headers";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
+import Footer from "@/components/Footer";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -28,16 +30,21 @@ type Violation = {
 };
 
 
-type Comment = { id: string; content: string; created_at?: string | null };
+type Comment = { id: string; content: string; created_at?: string | null; kind?: string | null };
 type CaseData = {
   item: CaseItem | null;
   violations: Array<Violation>;
   comments?: Array<Comment>;
+  reports?: Array<{ id: string }>;
+  hasReport?: boolean;
 };
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const base = env.NEXT_PUBLIC_SITE_URL || "";
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
+  const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+  const base = `${proto}://${host}`;
   const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
   if (!res.ok) {
     return <main className="mx-auto max-w-5xl p-6">Not found</main>;
@@ -50,6 +57,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
   const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
   const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
+  const hasReport = (data as { hasReport?: boolean }).hasReport === true
+    || (Array.isArray(data.reports) && data.reports.length > 0);
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
@@ -58,7 +67,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <main className="min-h-[calc(100vh+160px)]" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
         {/* Breadcrumb */}
         <nav className="text-sm text-slate-600 flex items-center gap-2 mb-8">
@@ -133,6 +142,15 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Comments */}
         <CommentsSection id={id} initialComments={data.comments || []} />
+
+        {/* Reporting */}
+        {!hasReport && (
+          <ReportingCard id={id} existingLandingUrl={landData?.landingUrl || null} />
+        )}
+
+        {/* Report history and replies */}
+        <ReportThread id={id} />
+        <Footer />
       </div>
     </main>
   );

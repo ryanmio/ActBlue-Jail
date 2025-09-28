@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
-import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { getSupabaseServer } from "@/lib/supabase-server";
 import { env } from "@/lib/env";
 
 // Lazy import puppeteer deps to avoid edge bundling issues when route is untouched
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "service_key_missing" }, { status: 400 });
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseServer();
   const json = (await req.json().catch(() => null)) as Body | null;
   const caseId = String(json?.caseId || "").trim();
   const url = String(json?.url || "").trim();
@@ -92,10 +92,10 @@ export async function POST(req: NextRequest) {
         executablePath: executablePath || undefined,
         headless: (chromium.headless as boolean) ?? true,
       });
-    } catch (e) {
+    } catch {
       // Retry using system Chrome if the downloaded chromium path is not executable
       const localExe = resolveLocalChromePath();
-      if (!localExe) throw e;
+      if (!localExe) throw new Error("No Chrome executable found");
       browser = await puppeteer.launch({
         args,
         defaultViewport: { width: 1280, height: 1200 },
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       takeShot(),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs)),
     ]) as Buffer;
-  } catch (e) {
+  } catch {
     // Mark failure and return, but keep the comment we inserted earlier
     await supabase
       .from("submissions")
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     return NextResponse.json({ ok: true, screenshotUrl: publicUrl });
-  } catch (e) {
+  } catch {
     await supabase
       .from("submissions")
       .update({ landing_render_status: "failed", landing_rendered_at: new Date().toISOString() })

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Footer from "@/components/Footer";
 
 type SubmissionRow = {
   id: string;
@@ -99,7 +100,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const q = (qParam || "").toString();
   const { items, total, limit, hasMore } = await loadCases(page, pageSize, q);
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <main className="min-h-[calc(100vh+160px)]" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
         <nav className="text-sm text-slate-600 flex items-center gap-2">
           <Link className="hover:text-slate-900 transition-colors" href="/">Home</Link>
@@ -171,6 +172,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
             </>
           )}
         </section>
+        <Footer />
       </div>
     </main>
   );

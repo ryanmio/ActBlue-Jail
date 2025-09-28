@@ -18,7 +18,8 @@ const EnvSchema = z.object({
   OCRSPACE_API_KEY: z.string().optional(),
 
   RESEND_API_KEY: z.string().optional(),
-  REPORT_TO_EMAIL: z.string().email().optional(),
+  REPORT_EMAIL_TO: z.string().email().optional(),
+  REPORT_EMAIL_FROM: z.string().email().optional(),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;
@@ -47,6 +48,8 @@ export const env: AppEnv = EnvSchema.parse({
   OCRSPACE_API_KEY: process.env.OCRSPACE_API_KEY ?? process.env["OCRspace_API_KEY"],
 
   RESEND_API_KEY: process.env.RESEND_API_KEY,
-  REPORT_TO_EMAIL: process.env.REPORT_TO_EMAIL,
+  // Accept both new and legacy names
+  REPORT_EMAIL_TO: process.env.REPORT_EMAIL_TO || process.env.REPORT_TO_EMAIL,
+  REPORT_EMAIL_FROM: process.env.REPORT_EMAIL_FROM || process.env.REPORT_FROM_EMAIL,
 });
 

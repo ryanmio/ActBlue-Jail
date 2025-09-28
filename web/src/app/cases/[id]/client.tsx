@@ -285,6 +285,172 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
   );
 }
 
+type Report = { id: string; subject: string; body: string; created_at?: string | null; status?: string | null };
+type ReportReply = { id: string; report_id: string | null; from_email: string | null; body_text: string | null; created_at?: string | null };
+export function ReportThread({ id }: { id: string }) {
+  const [reports, setReports] = useState<Array<Report>>([]);
+  const [replies, setReplies] = useState<Array<ReportReply>>([]);
+  const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setReports((data.reports || []) as Array<Report>);
+          setReplies((data.report_replies || []) as Array<ReportReply>);
+        }
+      } catch {}
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const repliesByReport = new Map<string, Array<ReportReply>>();
+  for (const r of replies) {
+    const key = r.report_id || "";
+    if (!repliesByReport.has(key)) repliesByReport.set(key, []);
+    repliesByReport.get(key)!.push(r);
+  }
+
+  if (reports.length === 0 && replies.length === 0) {
+    return (
+      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">Report History</h2>
+        <div className="text-sm text-slate-600">No reports submitted yet.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      <h2 className="text-xl font-semibold text-slate-900 mb-4">Report History</h2>
+      <div className="space-y-4">
+        {reports.map((r) => {
+          const open = !!openIds[r.id];
+          const toggle = () => setOpenIds((s) => ({ ...s, [r.id]: !s[r.id] }));
+          return (
+            <div key={r.id} className="border rounded-xl bg-slate-50">
+              <button
+                type="button"
+                onClick={toggle}
+                className="w-full text-left px-4 py-3 flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-slate-900 truncate">{r.subject}</div>
+                  {r.created_at && (
+                    <div className="text-xs text-slate-600 mt-0.5"><LocalTime iso={r.created_at} /></div>
+                  )}
+                </div>
+                <div className="text-xs text-slate-600 shrink-0">{r.status || "sent"} {open ? "▲" : "▼"}</div>
+              </button>
+              {open && (
+                <div className="px-4 pb-4">
+                  {r.body && (
+                    <div className="mt-2">
+                      {/* Structured rendering to mirror email sections */}
+                      {renderReportBody(r.body)}
+                    </div>
+                  )}
+                  {(repliesByReport.get(r.id) || []).length > 0 && (
+                    <div className="mt-3 pl-3 border-l-2 border-slate-200 space-y-2">
+                      {(repliesByReport.get(r.id) || []).map((rp) => (
+                        <div key={rp.id} className="bg-white rounded-lg border p-3">
+                          <div className="text-xs text-slate-600 mb-1">
+                            From: {rp.from_email || "(unknown)"} {rp.created_at && (<><span className="mx-1">·</span><LocalTime iso={rp.created_at} /></>)}
+                          </div>
+                          <div className="text-sm text-slate-800 whitespace-pre-wrap break-words">{rp.body_text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function renderReportBody(body: string) {
+  const lines = String(body).split(/\r?\n/);
+  const findSection = (title: string) => {
+    const idx = lines.findIndex((l) => l.trim().toLowerCase() === title.toLowerCase());
+    if (idx === -1) return [] as string[];
+    // skip underline line right after title if present
+    let start = idx + 1;
+    if (lines[start] && /^[-_]{3,}$/.test(lines[start].trim())) start++;
+    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Screenshot|Meta)\s*$/i.test(l.trim()));
+    const end = nextTitleIdx === -1 ? lines.length : nextTitleIdx;
+    return lines.slice(start, end);
+  };
+
+  const sec = {
+    campaign: findSection("Campaign/Org"),
+    summary: findSection("Summary"),
+    violations: findSection("Violations"),
+    landing: findSection("Landing page URL"),
+    screenshot: findSection("Screenshot"),
+    meta: findSection("Meta"),
+    note: findSection("Reporter note"),
+  };
+
+
+  const landingUrl = sec.landing.join(" ").trim();
+  const screenshotUrl = sec.screenshot.join(" ").trim();
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Campaign/Org</div>
+        <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.campaign.join("\n").trim() || "(unknown)"}</div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Summary</div>
+        <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.summary.join("\n").trim() || "(no summary)"}</div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Violations</div>
+        <div className="text-sm text-slate-800 whitespace-pre-wrap">
+          {sec.violations.length > 0 ? sec.violations.map((l, i) => (
+            <div key={i} className="break-words">{l}</div>
+          )) : "(none)"}
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Landing page</div>
+        {landingUrl ? (
+          <a href={landingUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 underline break-all">{landingUrl}</a>
+        ) : (
+          <div className="text-sm text-slate-800">(none)</div>
+        )}
+      </div>
+      {sec.note.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-slate-600 mb-1">Reporter note</div>
+          <div className="text-sm text-slate-800 whitespace-pre-wrap break-words">{sec.note.join("\n").trim()}</div>
+        </div>
+      )}
+      {screenshotUrl && (
+        <div>
+          <div className="text-xs font-semibold text-slate-600 mb-1">Screenshot</div>
+          <a href={screenshotUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 underline break-all">Screenshot</a>
+        </div>
+      )}
+      {sec.meta.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-slate-600 mb-1">Meta</div>
+          <div className="text-xs text-slate-700 whitespace-pre-wrap break-words">{sec.meta.join("\n").trim()}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type RequestDeletionButtonProps = {
   id: string;
   disabled?: boolean;
@@ -526,6 +692,106 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   );
 }
 
+type ReportCardProps = { id: string; existingLandingUrl?: string | null };
+export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps) {
+  const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
+  const [ccEmail, setCcEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  const onSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/report-violation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined, note: note || undefined }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to send report");
+      }
+      setInfo("Report sent to ActBlue.");
+      setCcEmail("");
+      setNote("");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to send report";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Visibility is fully controlled by the server (SSR) using hasReport; no client checks here
+
+  return (
+    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900 mb-1">Report to ActBlue</h2>
+          <p className="text-sm text-slate-600">Submit a violation report for this case.</p>
+        </div>
+        <span className="inline-flex items-center text-xs px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">AB Jail</span>
+      </div>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="md:col-span-1">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Landing Page URL</label>
+          <input
+            type="url"
+            value={landingUrl}
+            onChange={(e) => setLandingUrl(e.target.value)}
+            placeholder="https://secure.actblue.com/donate/..."
+            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+          />
+          <div className="mt-1 text-xs text-slate-600">Required if not already captured.</div>
+        </div>
+
+        <div className="md:col-span-1">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Optional CC Email</label>
+          <input
+            type="email"
+            value={ccEmail}
+            onChange={(e) => setCcEmail(e.target.value)}
+            placeholder="name@example.com"
+            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value.slice(0, 240))}
+            rows={3}
+            placeholder="Add brief context for the reviewer…"
+            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+            maxLength={240}
+          />
+          <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
+        </div>
+
+        {error && <div className="text-sm text-red-600 md:col-span-2">{error}</div>}
+        {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
+
+        <div className="flex items-center justify-end md:col-span-2">
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
+            disabled={submitting || (!landingUrl && !existingLandingUrl)}
+          >
+            {submitting ? "Sending…" : "Submit Report"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type EvidenceViewerProps = {
   src: string;
   alt?: string;
@@ -565,9 +831,10 @@ export function EvidenceViewer({ src, alt = "Evidence screenshot", mime = null }
             height={dimensions?.height}
           >
             {({ ref, open }) => (
-              <button type="button" onClick={open} className="block w-full">
+              <button type="button" onClick={open} className="block w-full relative hover:opacity-90 hover:scale-[1.02] transition-all duration-200 cursor-pointer group">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto object-contain" />
+                <img ref={ref as unknown as React.MutableRefObject<HTMLImageElement | null>} src={src} alt={alt} className="w-full h-auto object-contain group-hover:shadow-lg transition-shadow duration-200" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200 rounded-lg pointer-events-none" />
               </button>
             )}
           </Item>
@@ -827,3 +1094,5 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSV
     </div>
   );
 }
+
+// Removed body background toggler to avoid FOUC on refresh
