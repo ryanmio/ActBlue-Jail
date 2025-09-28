@@ -285,6 +285,94 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
   );
 }
 
+type Report = { id: string; subject: string; body: string; created_at?: string | null; status?: string | null };
+type ReportReply = { id: string; report_id: string | null; from_email: string | null; body_text: string | null; created_at?: string | null };
+export function ReportThread({ id }: { id: string }) {
+  const [reports, setReports] = useState<Array<Report>>([]);
+  const [replies, setReplies] = useState<Array<ReportReply>>([]);
+  const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setReports((data.reports || []) as Array<Report>);
+          setReplies((data.report_replies || []) as Array<ReportReply>);
+        }
+      } catch {}
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const repliesByReport = new Map<string, Array<ReportReply>>();
+  for (const r of replies) {
+    const key = r.report_id || "";
+    if (!repliesByReport.has(key)) repliesByReport.set(key, []);
+    repliesByReport.get(key)!.push(r);
+  }
+
+  if (reports.length === 0 && replies.length === 0) {
+    return (
+      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">Report History</h2>
+        <div className="text-sm text-slate-600">No reports submitted yet.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      <h2 className="text-xl font-semibold text-slate-900 mb-4">Report History</h2>
+      <div className="space-y-4">
+        {reports.map((r) => {
+          const open = !!openIds[r.id];
+          const toggle = () => setOpenIds((s) => ({ ...s, [r.id]: !s[r.id] }));
+          return (
+            <div key={r.id} className="border rounded-xl bg-slate-50">
+              <button
+                type="button"
+                onClick={toggle}
+                className="w-full text-left px-4 py-3 flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-slate-900 truncate">{r.subject}</div>
+                  {r.created_at && (
+                    <div className="text-xs text-slate-600 mt-0.5"><LocalTime iso={r.created_at} /></div>
+                  )}
+                </div>
+                <div className="text-xs text-slate-600 shrink-0">{r.status || "sent"} {open ? "▲" : "▼"}</div>
+              </button>
+              {open && (
+                <div className="px-4 pb-4">
+                  {r.body && (
+                    <pre className="whitespace-pre-wrap text-sm text-slate-800 mt-2">{r.body}</pre>
+                  )}
+                  {(repliesByReport.get(r.id) || []).length > 0 && (
+                    <div className="mt-3 pl-3 border-l-2 border-slate-200 space-y-2">
+                      {(repliesByReport.get(r.id) || []).map((rp) => (
+                        <div key={rp.id} className="bg-white rounded-lg border p-3">
+                          <div className="text-xs text-slate-600 mb-1">
+                            From: {rp.from_email || "(unknown)"} {rp.created_at && (<><span className="mx-1">·</span><LocalTime iso={rp.created_at} /></>)}
+                          </div>
+                          <div className="text-sm text-slate-800 whitespace-pre-wrap">{rp.body_text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 type RequestDeletionButtonProps = {
   id: string;
   disabled?: boolean;
@@ -521,6 +609,93 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+type ReportCardProps = { id: string; existingLandingUrl?: string | null; hasReportInitially?: boolean };
+export function ReportingCard({ id, existingLandingUrl = null, hasReportInitially = false }: ReportCardProps) {
+  const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
+  const [ccEmail, setCcEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [alreadyReported, setAlreadyReported] = useState<boolean>(hasReportInitially);
+
+  useEffect(() => {
+    setAlreadyReported(hasReportInitially);
+  }, [hasReportInitially]);
+
+  const onSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/report-violation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to send report");
+      }
+      setInfo("Report sent to ActBlue.");
+      setCcEmail("");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to send report";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (alreadyReported) return null;
+
+  return (
+    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900 mb-1">Report to ActBlue</h2>
+          <p className="text-sm text-slate-600">Submit a violation report for this case.</p>
+        </div>
+        <span className="inline-flex items-center text-xs px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">AB Jail</span>
+      </div>
+      <div className="mt-4 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Landing Page URL</label>
+          <input
+            type="url"
+            value={landingUrl}
+            onChange={(e) => setLandingUrl(e.target.value)}
+            placeholder="https://secure.actblue.com/donate/..."
+            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+          />
+          <div className="mt-1 text-xs text-slate-600">Required if not already captured.</div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Optional CC Email</label>
+          <input
+            type="email"
+            value={ccEmail}
+            onChange={(e) => setCcEmail(e.target.value)}
+            placeholder="name@example.com"
+            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+          />
+        </div>
+        {error && <div className="text-sm text-red-600">{error}</div>}
+        {info && <div className="text-sm text-green-700">{info}</div>}
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
+            disabled={submitting || (!landingUrl && !existingLandingUrl)}
+          >
+            {submitting ? "Sending…" : "Submit Report"}
+          </button>
+        </div>
       </div>
     </div>
   );

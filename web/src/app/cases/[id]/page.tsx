@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
@@ -33,6 +33,7 @@ type CaseData = {
   item: CaseItem | null;
   violations: Array<Violation>;
   comments?: Array<Comment>;
+  reports?: Array<{ id: string }>;
 };
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -50,6 +51,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
   const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
   const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
+  const hasReport = Array.isArray((data as unknown as { reports?: Array<any> }).reports) && ((data as unknown as { reports?: Array<any> }).reports!.length > 0);
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
@@ -133,6 +135,14 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Comments */}
         <CommentsSection id={id} initialComments={data.comments || []} />
+
+        {/* Reporting */}
+        {!hasReport && (
+          <ReportingCard id={id} existingLandingUrl={landData?.landingUrl || null} hasReportInitially={hasReport} />
+        )}
+
+        {/* Report history and replies */}
+        <ReportThread id={id} />
       </div>
     </main>
   );

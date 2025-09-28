@@ -46,9 +46,21 @@ export async function GET(
       );
       summary = sorted[0]?.description ?? null;
     }
-    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [] });
+    // Load reports and replies
+    const { data: reportRows } = await supabase
+      .from("reports")
+      .select("id, case_id, to_email, cc_email, subject, body, screenshot_url, landing_url, status, created_at")
+      .eq("case_id", id)
+      .order("created_at", { ascending: true });
+    const { data: replyRows } = await supabase
+      .from("report_replies")
+      .select("id, report_id, case_id, from_email, body_text, created_at")
+      .eq("case_id", id)
+      .order("created_at", { ascending: true });
+
+    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [], reports: reportRows || [], report_replies: replyRows || [] });
   } catch (err) {
     console.error("/api/cases/[id] supabase error", err);
-    return NextResponse.json({ item: null, violations: [], comments: [] }, { status: 500 });
+    return NextResponse.json({ item: null, violations: [], comments: [], reports: [], report_replies: [] }, { status: 500 });
   }
 }
