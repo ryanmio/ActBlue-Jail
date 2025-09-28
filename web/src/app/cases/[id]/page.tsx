@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
@@ -39,7 +40,11 @@ type CaseData = {
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
+  const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+  const base = `${proto}://${host}`;
+  const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
   if (!res.ok) {
     return <main className="mx-auto max-w-5xl p-6">Not found</main>;
   }
@@ -47,9 +52,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   if (!data.item) return <main className="mx-auto max-w-5xl p-6">Not found</main>;
 
   const item = data.item;
-  const imgRes = await fetch(`/api/cases/${id}/image-url`, { cache: "no-store" });
+  const imgRes = await fetch(`${base}/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
-  const landRes = await fetch(`/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
+  const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
   const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
   const hasReport = (data as { hasReport?: boolean }).hasReport === true
     || (Array.isArray(data.reports) && data.reports.length > 0);
