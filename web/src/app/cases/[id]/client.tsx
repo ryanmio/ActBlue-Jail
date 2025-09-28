@@ -1090,10 +1090,4 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSV
   );
 }
 
-export function BodyBgCase() {
-  useEffect(() => {
-    document.body.classList.add("bg-case");
-    return () => { document.body.classList.remove("bg-case"); };
-  }, []);
-  return null;
-}
+// Removed body background toggler to avoid FOUC on refresh

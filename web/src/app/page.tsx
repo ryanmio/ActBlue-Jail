@@ -16,10 +16,6 @@ type SubmissionRow = {
 type CaseDetail = { violations?: Array<{ code: string; title: string }> };
 
 export default function Home() {
-  useEffect(() => {
-    document.body.classList.add("bg-home");
-    return () => { document.body.classList.remove("bg-home"); };
-  }, []);
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [stepIndex, setStepIndex] = useState<number>(0);
@@ -151,7 +147,13 @@ export default function Home() {
 
   return (
     <main
-      className="min-h-screen bg-transparent"
+      className="min-h-[calc(100vh+160px)] bg-white"
+      style={{
+        background:
+          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+      }}
     >
       <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-10">
         {/* Header */}
