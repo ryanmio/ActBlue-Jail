@@ -49,7 +49,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <div className="flex-1">{children}</div>
-        <footer className="border-t bg-white">
+        <footer className="bg-transparent">
           <div className="mx-auto max-w-6xl p-4 text-xs text-gray-600 text-center space-y-1">
             <p>Not affiliated with ActBlue. Classifications indicate potential policy issues and may be incorrect.</p>
             <p>

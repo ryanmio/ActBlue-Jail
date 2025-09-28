@@ -1089,3 +1089,11 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSV
     </div>
   );
 }
+
+export function BodyBgCase() {
+  useEffect(() => {
+    document.body.classList.add("bg-case");
+    return () => { document.body.classList.remove("bg-case"); };
+  }, []);
+  return null;
+}

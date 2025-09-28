@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread, BodyBgCase } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 type CaseItem = {
@@ -66,7 +66,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <main className="min-h-screen bg-transparent">
+      <BodyBgCase />
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
         {/* Breadcrumb */}
         <nav className="text-sm text-slate-600 flex items-center gap-2 mb-8">

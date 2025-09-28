@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BodyBgCase } from "./[id]/client";
 
 type SubmissionRow = {
   id: string;
@@ -99,7 +100,8 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const q = (qParam || "").toString();
   const { items, total, limit, hasMore } = await loadCases(page, pageSize, q);
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <main className="min-h-screen bg-transparent">
+      <BodyBgCase />
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
         <nav className="text-sm text-slate-600 flex items-center gap-2">
           <Link className="hover:text-slate-900 transition-colors" href="/">Home</Link>
