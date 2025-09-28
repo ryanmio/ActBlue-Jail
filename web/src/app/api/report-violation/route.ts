@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   // Fetch case
   const { data: rows, error: err } = await supabase
     .from("submissions")
-    .select("id, sender_name, sender_id, raw_text, email_subject, email_body, ai_summary, landing_url, landing_screenshot_url")
+    .select("id, sender_name, sender_id, raw_text, email_subject, email_body, ai_summary, image_url, landing_url, landing_screenshot_url")
     .eq("id", caseId)
     .limit(1);
   if (err) return NextResponse.json({ error: "case_load_failed" }, { status: 500 });
@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
   // Build subject/body
   const shortId = sub.id.split("-")[0];
   const subject = `Reporting Possible Violation - Case #${shortId}`;
-  // Try to sign landing screenshot if stored in Supabase
-  let screenshotUrl: string | null = sub.landing_screenshot_url || null;
+  // Prefer the primary submission screenshot if available (email/SMS evidence)
+  let screenshotUrl: string | null = (sub as unknown as { image_url?: string | null }).image_url || null;
   if (screenshotUrl && !screenshotUrl.startsWith("http")) {
     const parsed = parseSupabaseUrl(screenshotUrl);
     if (parsed) {
