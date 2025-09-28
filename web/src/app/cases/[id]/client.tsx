@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
+import ReviewAnimation from "@/components/review-animation";
 
 type Props = {
   id: string;
@@ -118,9 +119,9 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
 
   if (status !== "done") {
     return (
-      <div className="flex items-center gap-2 text-xs text-gray-500">
-        <span className="h-4 w-4 inline-block rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" aria-label="Loading" />
-        <span>Classifying… this will update automatically.</span>
+      <div className="space-y-4">
+       
+        <ReviewAnimation />
       </div>
     );
   }
