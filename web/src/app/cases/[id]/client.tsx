@@ -349,7 +349,10 @@ export function ReportThread({ id }: { id: string }) {
               {open && (
                 <div className="px-4 pb-4">
                   {r.body && (
-                    <pre className="whitespace-pre-wrap text-sm text-slate-800 mt-2">{r.body}</pre>
+                    <div className="mt-2">
+                      {/* Structured rendering to mirror email sections */}
+                      {renderReportBody(r.body)}
+                    </div>
                   )}
                   {(repliesByReport.get(r.id) || []).length > 0 && (
                     <div className="mt-3 pl-3 border-l-2 border-slate-200 space-y-2">
@@ -358,7 +361,7 @@ export function ReportThread({ id }: { id: string }) {
                           <div className="text-xs text-slate-600 mb-1">
                             From: {rp.from_email || "(unknown)"} {rp.created_at && (<><span className="mx-1">·</span><LocalTime iso={rp.created_at} /></>)}
                           </div>
-                          <div className="text-sm text-slate-800 whitespace-pre-wrap">{rp.body_text}</div>
+                          <div className="text-sm text-slate-800 whitespace-pre-wrap break-words">{rp.body_text}</div>
                         </div>
                       ))}
                     </div>
@@ -369,6 +372,78 @@ export function ReportThread({ id }: { id: string }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function renderReportBody(body: string) {
+  const lines = String(body).split(/\r?\n/);
+  const findSection = (title: string) => {
+    const idx = lines.findIndex((l) => l.trim().toLowerCase() === title.toLowerCase());
+    if (idx === -1) return [] as string[];
+    // skip underline line right after title if present
+    let start = idx + 1;
+    if (lines[start] && /^[-_]{3,}$/.test(lines[start].trim())) start++;
+    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Screenshot|Meta)\s*$/i.test(l.trim()));
+    const end = nextTitleIdx === -1 ? lines.length : nextTitleIdx;
+    return lines.slice(start, end);
+  };
+
+  const sec = {
+    campaign: findSection("Campaign/Org"),
+    summary: findSection("Summary"),
+    violations: findSection("Violations"),
+    landing: findSection("Landing page URL"),
+    screenshot: findSection("Screenshot"),
+    meta: findSection("Meta"),
+  };
+
+  const extractLinks = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.match(urlRegex) || [];
+  };
+
+  const landingUrl = sec.landing.join(" ").trim();
+  const screenshotUrl = sec.screenshot.join(" ").trim();
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Campaign/Org</div>
+        <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.campaign.join("\n").trim() || "(unknown)"}</div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Summary</div>
+        <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.summary.join("\n").trim() || "(no summary)"}</div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Violations</div>
+        <div className="text-sm text-slate-800 whitespace-pre-wrap">
+          {sec.violations.length > 0 ? sec.violations.map((l, i) => (
+            <div key={i} className="break-words">{l}</div>
+          )) : "(none)"}
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold text-slate-600 mb-1">Landing page</div>
+        {landingUrl ? (
+          <a href={landingUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 underline break-all">{landingUrl}</a>
+        ) : (
+          <div className="text-sm text-slate-800">(none)</div>
+        )}
+      </div>
+      {screenshotUrl && (
+        <div>
+          <div className="text-xs font-semibold text-slate-600 mb-1">Screenshot</div>
+          <a href={screenshotUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 underline break-all">Screenshot</a>
+        </div>
+      )}
+      {sec.meta.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-slate-600 mb-1">Meta</div>
+          <div className="text-xs text-slate-700 whitespace-pre-wrap break-words">{sec.meta.join("\n").trim()}</div>
+        </div>
+      )}
     </div>
   );
 }

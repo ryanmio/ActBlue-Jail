@@ -51,7 +51,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
   const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
   const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
-  const hasReport = Array.isArray((data as unknown as { reports?: Array<any> }).reports) && ((data as unknown as { reports?: Array<any> }).reports!.length > 0);
+  type CaseApi = { reports?: Array<{ id: string }> };
+  const apiData = data as unknown as CaseApi;
+  const hasReport = Array.isArray(apiData.reports) && apiData.reports.length > 0;
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]

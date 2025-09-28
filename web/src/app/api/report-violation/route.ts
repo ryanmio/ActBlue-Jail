@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
   }
   const campaign = sub.sender_name || sub.sender_id || "(unknown sender)";
-  let summary = (sub as any).ai_summary as string | null;
+  let summary = (sub as unknown as { ai_summary?: string | null }).ai_summary ?? null;
 
   // Load violations for this case
   const { data: vioRows } = await supabase
@@ -69,9 +69,10 @@ export async function POST(req: NextRequest) {
   const violationsList = Array.isArray(vioRows) ? vioRows : [];
 
   if (!summary) {
-    const top = [...violationsList].sort(
-      (a: any, b: any) => Number(b.severity || 0) - Number(a.severity || 0) || Number(b.confidence || 0) - Number(a.confidence || 0)
-    )[0] as any | undefined;
+    type V = { code: string; title: string; description?: string | null; severity?: number | string | null; confidence?: number | string | null };
+    const top = [...violationsList as Array<V>].sort(
+      (a, b) => Number(b.severity || 0) - Number(a.severity || 0) || Number(b.confidence || 0) - Number(a.confidence || 0)
+    )[0];
     summary = (top?.description as string | null) || (top ? `${top.code} ${top.title}` : null) || null;
   }
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
   sections.push(`Campaign/Org\n-----------\n${campaign}`);
   sections.push(`Summary\n-------\n${summary || "(no summary available)"}`);
   const vioText = (violationsList.length > 0
-    ? violationsList.map((v: any) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
+    ? violationsList.map((v: { code: string; title: string; description?: string | null }) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
     : "(none detected)");
   sections.push(`Violations\n----------\n${vioText}`);
   sections.push(`Landing page URL\n-----------------\n${landingUrl}`);
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
   const vioHtml = (violationsList.length > 0)
-    ? `<ul>${violationsList.map((v: any) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
+    ? `<ul>${violationsList.map((v: { code: string; title: string; description?: string | null }) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
     : `<p>(none detected)</p>`;
   const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
   <div>
@@ -125,7 +126,9 @@ export async function POST(req: NextRequest) {
   const fromEmail = "reports@abjail.org"; // under verified domain
   try {
     const attachments: Array<{ filename: string; content: string; type?: string }> = [];
-    const fullText = (sub as any).email_body || (sub as any).raw_text || "";
+    const fullText = (sub as unknown as { email_body?: string | null; raw_text?: string | null }).email_body
+      || (sub as unknown as { email_body?: string | null; raw_text?: string | null }).raw_text
+      || "";
     if (fullText) {
       const base64 = Buffer.from(String(fullText), "utf8").toString("base64");
       attachments.push({ filename: "original_email.txt", content: base64, type: "text/plain" });
