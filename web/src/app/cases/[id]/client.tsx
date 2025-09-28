@@ -396,6 +396,7 @@ function renderReportBody(body: string) {
     landing: findSection("Landing page URL"),
     screenshot: findSection("Screenshot"),
     meta: findSection("Meta"),
+    note: findSection("Reporter note"),
   };
 
 
@@ -428,6 +429,12 @@ function renderReportBody(body: string) {
           <div className="text-sm text-slate-800">(none)</div>
         )}
       </div>
+      {sec.note.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-slate-600 mb-1">Reporter note</div>
+          <div className="text-sm text-slate-800 whitespace-pre-wrap break-words">{sec.note.join("\n").trim()}</div>
+        </div>
+      )}
       {screenshotUrl && (
         <div>
           <div className="text-xs font-semibold text-slate-600 mb-1">Screenshot</div>
@@ -689,6 +696,7 @@ type ReportCardProps = { id: string; existingLandingUrl?: string | null };
 export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps) {
   const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
   const [ccEmail, setCcEmail] = useState("");
+  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -701,7 +709,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       const res = await fetch(`/api/report-violation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined }),
+        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined, note: note || undefined }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -709,6 +717,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       }
       setInfo("Report sent to ActBlue.");
       setCcEmail("");
+      setNote("");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send report";
       setError(msg);
@@ -739,6 +748,18 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
             className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
           />
           <div className="mt-1 text-xs text-slate-600">Required if not already captured.</div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value.slice(0, 240))}
+            rows={3}
+            placeholder="Add brief context for the reviewer…"
+            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+            maxLength={240}
+          />
+          <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Optional CC Email</label>

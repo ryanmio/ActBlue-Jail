@@ -17,11 +17,12 @@ export async function POST(req: NextRequest) {
   const resend = new Resend(env.RESEND_API_KEY);
   const supabase = getSupabaseServer();
 
-  type Body = { caseId?: string; landingUrl?: string | null; ccEmail?: string | null };
+  type Body = { caseId?: string; landingUrl?: string | null; ccEmail?: string | null; note?: string | null };
   const input = (await req.json().catch(() => null)) as Body | null;
   const caseId = (input?.caseId || "").trim();
   const ccEmail = (input?.ccEmail || "").trim() || null;
   const landingUrlFromUser = (input?.landingUrl || "").trim() || null;
+  const reporterNote = (input?.note || "").trim();
   if (!caseId) return NextResponse.json({ error: "missing_case_id" }, { status: 400 });
 
   if (!env.REPORT_EMAIL_TO) return NextResponse.json({ error: "missing_report_to" }, { status: 400 });
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
     : "(none detected)");
   sections.push(`Violations\n----------\n${vioText}`);
   sections.push(`Landing page URL\n-----------------\n${landingUrl}`);
+  if (reporterNote) sections.push(`Reporter note\n-------------\n${reporterNote}`);
   if (screenshotUrl) sections.push(`Screenshot\n---------\n${screenshotUrl}`);
   sections.push(`Meta\n----\nThis report was submitted using AB Jail.\nCase UUID: ${sub.id}\nCase short_id: ${shortId}`);
   const body = sections.join("\n\n");
@@ -112,6 +114,8 @@ export async function POST(req: NextRequest) {
 
     <p style="margin:0 0 8px 0"><strong>Landing page</strong></p>
     <p style="margin:0 0 16px 0"><a href="${esc(landingUrl)}" target="_blank" rel="noopener noreferrer">${esc(landingUrl)}</a></p>
+
+    ${reporterNote ? `<p style=\"margin:0 0 8px 0\"><strong>Reporter note</strong></p><p style=\"margin:0 0 16px 0\">${esc(reporterNote)}</p>` : ""}
 
     ${screenshotUrl ? `<p style=\"margin:0 0 8px 0\"><strong>Screenshot</strong></p><p style=\"margin:0 0 16px 0\"><a href=\"${esc(screenshotUrl)}\" target=\"_blank\" rel=\"noopener noreferrer\">Screenshot</a></p>` : ""}
 
