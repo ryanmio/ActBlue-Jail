@@ -28,7 +28,7 @@ type Violation = {
 };
 
 
-type Comment = { id: string; content: string; created_at?: string | null };
+type Comment = { id: string; content: string; created_at?: string | null; kind?: string | null };
 type CaseData = {
   item: CaseItem | null;
   violations: Array<Violation>;
