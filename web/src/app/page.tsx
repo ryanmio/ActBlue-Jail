@@ -435,7 +435,7 @@ function RecentCases() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-slate-500">No issues yet</span>
+                  <span className="text-slate-500">No issues</span>
                 )}
               </div>
             </div>

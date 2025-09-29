@@ -700,6 +700,12 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewBody, setPreviewBody] = useState<string>("");
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
 
   const onSubmit = async () => {
     setSubmitting(true);
@@ -728,6 +734,97 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
 
   // Visibility is fully controlled by the server (SSR) using hasReport; no client checks here
 
+  const normalizeUrl = (u: string | null | undefined) => {
+    if (!u) return null;
+    try {
+      const obj = new URL(u);
+      return `${obj.origin}${obj.pathname}`;
+    } catch {
+      return u;
+    }
+  };
+
+  const buildPreview = async () => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load case");
+      const data = await res.json();
+      const item = data.item as { sender_name?: string | null; sender_id?: string | null } | null;
+      const campaign = (item?.sender_name || item?.sender_id || "(unknown sender)") as string;
+      const summary = (data.summary as string | null) || (() => {
+        const v = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
+        if (!v || v.length === 0) return null;
+        const top = v[0];
+        return (top?.description as string | null) || (top ? `${top.code} ${top.title}` : null) || null;
+      })();
+      const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
+      const vioText = vios.length > 0 ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(none detected)";
+      const landing = normalizeUrl(landingUrl || existingLandingUrl);
+      // Prefer primary submission screenshot via the image-url endpoint
+      let shot: string | null = null;
+      try {
+        const r = await fetch(`/api/cases/${id}/image-url`, { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          shot = (j?.url as string) || null;
+        }
+      } catch {}
+
+      const sections: string[] = [];
+      sections.push(`Campaign/Org\n-----------\n${campaign}`);
+      sections.push(`Summary\n-------\n${summary || "(no summary available)"}`);
+      sections.push(`Violations\n----------\n${vioText}`);
+      sections.push(`Landing page URL\n-----------------\n${landing || "(none)"}`);
+      if (note.trim()) sections.push(`Reporter note\n-------------\n${note.trim()}`);
+      if (shot) sections.push(`Screenshot\n---------\n${shot}`);
+      setPreviewBody(sections.join("\n\n"));
+
+      // Build HTML matching the outbound email style
+      const esc = (s: string) => String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+      const vioHtml = vios.length > 0
+        ? `<ul>${vios.map((v) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
+        : `<p>(none detected)</p>`;
+      const shortId = id.split("-")[0];
+      const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
+  <div>
+    <p style=\"margin:0 0 8px 0\"><strong>Campaign/Org</strong></p>
+    <p style=\"margin:0 0 16px 0\">${esc(campaign)}</p>
+
+    <p style=\"margin:0 0 8px 0\"><strong>Summary</strong></p>
+    <p style=\"margin:0 0 16px 0\">${esc(summary || "(no summary available)")}</p>
+
+    <p style=\"margin:0 0 8px 0\"><strong>Violations</strong></p>
+    <div style=\"margin:0 0 16px 0\">${vioHtml}</div>
+
+    <p style=\"margin:0 0 8px 0\"><strong>Landing page</strong></p>
+    <p style=\"margin:0 0 16px 0\">${landing ? `<a href=\"${esc(landing)}\" target=\"_blank\" rel=\"noopener noreferrer\">${esc(landing)}</a>` : "(none)"}</p>
+
+    ${note.trim() ? `<p style=\"margin:0 0 8px 0\"><strong>Reporter note</strong></p><p style=\"margin:0 0 16px 0\">${esc(note.trim())}</p>` : ""}
+    ${shot ? `<p style=\"margin:0 0 8px 0\"><strong>Screenshot</strong></p><p style=\"margin:0 0 16px 0\"><a href=\"${esc(shot)}\" target=\"_blank\" rel=\"noopener noreferrer\">Screenshot</a></p>` : ""}
+
+    <p style=\"margin:16px 0 4px 0\"><strong>Meta</strong></p>
+    <p style=\"margin:0\">This report was submitted using AB Jail.</p>
+    <p style=\"margin:0\">Case UUID: <code>${esc(id)}</code></p>
+    <p style=\"margin:0\">Case short_id: <code>${esc(shortId)}</code></p>
+  </div>
+  </body></html>`;
+      setPreviewHtml(html);
+      setPreviewOpen(true);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to build preview";
+      setPreviewError(msg);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
       <div className="flex items-start justify-between gap-3">
@@ -735,7 +832,31 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           <h2 className="text-xl font-semibold text-slate-900 mb-1">Report to ActBlue</h2>
           <p className="text-sm text-slate-600">Submit a violation report for this case.</p>
         </div>
-        <span className="inline-flex items-center text-xs px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">AB Jail</span>
+        <a
+          href={policyHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200 bg-white/70 text-slate-700 hover:bg-white hover:text-slate-900 hover:border-slate-300 shadow-sm transition-colors"
+          title="Open ActBlue Account Use Policy"
+        >
+          <span>ActBlue Account Use Policy</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M7 17L17 7" />
+            <path d="M7 7h10v10" />
+          </svg>
+        </a>
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-1">
@@ -777,7 +898,15 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         {error && <div className="text-sm text-red-600 md:col-span-2">{error}</div>}
         {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
 
-        <div className="flex items-center justify-end md:col-span-2">
+        <div className="flex items-center justify-end gap-2 md:col-span-2">
+          <button
+            type="button"
+            onClick={buildPreview}
+            className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-50"
+            disabled={submitting || previewLoading}
+          >
+            {previewLoading ? "Preparing…" : "Preview Report"}
+          </button>
           <button
             type="button"
             onClick={onSubmit}
@@ -788,6 +917,30 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           </button>
         </div>
       </div>
+
+      {previewOpen && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[200]">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setPreviewOpen(false)} />
+          <div className="absolute inset-0 overflow-y-auto">
+            <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Preview report</h3>
+                {previewError && <div className="text-sm text-red-600 mb-2">{previewError}</div>}
+                <div className="border rounded-xl bg-white max-h-[60vh] overflow-auto">
+                  <div className="p-4 text-sm text-slate-900" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                </div>
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => setPreviewOpen(false)} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
+                  <button type="button" onClick={async () => { await onSubmit(); setPreviewOpen(false); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50" disabled={submitting}>
+                    {submitting ? "Sending…" : "Send Report"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

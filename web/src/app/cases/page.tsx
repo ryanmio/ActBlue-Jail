@@ -140,7 +140,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 flex-wrap">
                         {it.issues.length === 0 ? (
-                          <span className="text-slate-500">No issues yet</span>
+                          <span className="text-slate-500">No issues</span>
                         ) : (
                           it.issues.map((v, idx) => (
                             <span
