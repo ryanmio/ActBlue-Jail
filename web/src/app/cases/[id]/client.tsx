@@ -697,6 +697,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
   const [ccEmail, setCcEmail] = useState("");
   const [note, setNote] = useState("");
+  const [violationsOverride, setViolationsOverride] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -705,6 +706,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewBody, setPreviewBody] = useState<string>("");
   const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
 
   const onSubmit = async () => {
@@ -715,7 +717,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       const res = await fetch(`/api/report-violation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined, note: note || undefined }),
+        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined, note: note || undefined, violationsOverride: violationsOverride || undefined }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -724,6 +726,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       setInfo("Report sent to ActBlue.");
       setCcEmail("");
       setNote("");
+      setViolationsOverride("");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send report";
       setError(msg);
@@ -753,14 +756,11 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       const data = await res.json();
       const item = data.item as { sender_name?: string | null; sender_id?: string | null } | null;
       const campaign = (item?.sender_name || item?.sender_id || "(unknown sender)") as string;
-      const summary = (data.summary as string | null) || (() => {
-        const v = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
-        if (!v || v.length === 0) return null;
-        const top = v[0];
-        return (top?.description as string | null) || (top ? `${top.code} ${top.title}` : null) || null;
-      })();
+      // summary intentionally omitted from preview
       const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
-      const vioText = vios.length > 0 ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(none detected)";
+      const vioText = violationsOverride.trim().length > 0
+        ? violationsOverride.trim()
+        : (vios.length > 0 ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(none detected)");
       const landing = normalizeUrl(landingUrl || existingLandingUrl);
       // Prefer primary submission screenshot via the image-url endpoint
       let shot: string | null = null;
@@ -774,7 +774,6 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
 
       const sections: string[] = [];
       sections.push(`Campaign/Org\n-----------\n${campaign}`);
-      sections.push(`Summary\n-------\n${summary || "(no summary available)"}`);
       sections.push(`Violations\n----------\n${vioText}`);
       sections.push(`Landing page URL\n-----------------\n${landing || "(none)"}`);
       if (note.trim()) sections.push(`Reporter note\n-------------\n${note.trim()}`);
@@ -788,17 +787,16 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         .replace(/>/g, "&gt;")
         .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
-      const vioHtml = vios.length > 0
-        ? `<ul>${vios.map((v) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
-        : `<p>(none detected)</p>`;
+      const vioHtml = violationsOverride.trim().length > 0
+        ? `<p>${esc(violationsOverride.trim())}</p>`
+        : (vios.length > 0
+          ? `<ul>${vios.map((v) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
+          : `<p>(none detected)</p>`);
       const shortId = id.split("-")[0];
       const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
   <div>
     <p style=\"margin:0 0 8px 0\"><strong>Campaign/Org</strong></p>
     <p style=\"margin:0 0 16px 0\">${esc(campaign)}</p>
-
-    <p style=\"margin:0 0 8px 0\"><strong>Summary</strong></p>
-    <p style=\"margin:0 0 16px 0\">${esc(summary || "(no summary available)")}</p>
 
     <p style=\"margin:0 0 8px 0\"><strong>Violations</strong></p>
     <div style=\"margin:0 0 16px 0\">${vioHtml}</div>
@@ -807,7 +805,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
     <p style=\"margin:0 0 16px 0\">${landing ? `<a href=\"${esc(landing)}\" target=\"_blank\" rel=\"noopener noreferrer\">${esc(landing)}</a>` : "(none)"}</p>
 
     ${note.trim() ? `<p style=\"margin:0 0 8px 0\"><strong>Reporter note</strong></p><p style=\"margin:0 0 16px 0\">${esc(note.trim())}</p>` : ""}
-    ${shot ? `<p style=\"margin:0 0 8px 0\"><strong>Screenshot</strong></p><p style=\"margin:0 0 16px 0\"><a href=\"${esc(shot)}\" target=\"_blank\" rel=\"noopener noreferrer\">Screenshot</a></p>` : ""}
+    ${shot ? `<p style=\"margin:0 0 8px 0\"><strong>Screenshot</strong></p><p style=\"margin:0 0 16px 0\"><a href=\"${esc(shot)}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"display:inline-flex;align-items:center;gap:6px;text-decoration:underline\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"3\" y=\"7\" width=\"18\" height=\"14\" rx=\"2\" ry=\"2\" stroke=\"#334155\" stroke-width=\"2\"/><path d=\"M8 7l2-3h4l2 3\" stroke=\"#334155\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"12\" cy=\"14\" r=\"3\" stroke=\"#334155\" stroke-width=\"2\"/></svg><span>Screenshot</span></a></p>` : ""}
 
     <p style=\"margin:16px 0 4px 0\"><strong>Meta</strong></p>
     <p style=\"margin:0\">This report was submitted using AB Jail.</p>
@@ -824,6 +822,28 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       setPreviewLoading(false);
     }
   };
+
+  // Prefill violations editor with the current AI violations (truncated to 500)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        if (violationsOverride.trim().length > 0) return;
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
+        if (!cancelled && Array.isArray(vios)) {
+          const text = vios.length > 0
+            ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
+            : "";
+          if (text) setViolationsOverride(text.slice(0, 500));
+        }
+      } catch {}
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [id]);
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
@@ -883,17 +903,46 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value.slice(0, 240))}
-            rows={3}
-            placeholder="Add brief context for the reviewer…"
-            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
-            maxLength={240}
-          />
-          <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((v) => !v)}
+            className="text-sm text-slate-700 underline hover:text-slate-900"
+          >
+            {advancedOpen ? "Hide advanced" : "Expand for Advanced"}
+          </button>
         </div>
+
+        {advancedOpen && (
+          <>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value.slice(0, 240))}
+                rows={3}
+                placeholder="Add brief context for the reviewer…"
+                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+                maxLength={240}
+              />
+              <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Edit violations for report (max 500)</label>
+              <textarea
+                value={violationsOverride}
+                onChange={(e) => setViolationsOverride(e.target.value.slice(0, 500))}
+                rows={4}
+                placeholder="Optionally summarize or edit violations in your own words…"
+                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+                maxLength={500}
+              />
+              <div className="mt-1 text-xs text-slate-600">{500 - violationsOverride.length} characters left</div>
+            </div>
+          </>
+        )}
+
+        
 
         {error && <div className="text-sm text-red-600 md:col-span-2">{error}</div>}
         {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
