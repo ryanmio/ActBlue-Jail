@@ -1004,6 +1004,12 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
             </button>
           </Tooltip>
         </div>
+
+        {reportSent && (
+          <div className="md:col-span-2 flex items-center justify-center py-6">
+            <EmailSuccessAnimation message="Report sent to ActBlue!" />
+          </div>
+        )}
       </div>
 
       {previewOpen && typeof window !== "undefined" && createPortal(

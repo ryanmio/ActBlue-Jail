@@ -146,7 +146,7 @@ export default function ReviewAnimation() {
         <div className="flex gap-1 ml-2">
           {[0, 1, 2].map((i) => (
             <div
-              key={i}
+              key={`header-dot-${i}`}
               className={`w-1 h-1 rounded-full transition-all duration-300 ${
                 i < headerDots ? "bg-slate-600" : "bg-slate-300"
               }`}
@@ -170,7 +170,7 @@ export default function ReviewAnimation() {
             >
               {line.segments.map((segment) => (
                 <div
-                  key={segment.id}
+                  key={`line-${line.id}-seg-${segment.id}`}
                   className={`h-3 md:h-4 rounded-sm ${segment.color}`}
                   style={{ width: `${segment.width * 0.8}px` }}
                 />
@@ -182,7 +182,7 @@ export default function ReviewAnimation() {
             <div className="flex items-center gap-2" style={{ marginLeft: `${currentLine.indent * 16}px` }}>
               {currentLine.segments.map((segment) => (
                 <div
-                  key={segment.id}
+                  key={`current-${currentLine.id}-seg-${segment.id}`}
                   className={`h-3 md:h-4 rounded-sm ${segment.color} transition-all duration-500 ease-out ${
                     segment.animated ? "opacity-100" : "opacity-0"
                   }`}
