@@ -913,7 +913,12 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           </svg>
         </a>
       </div>
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      {reportSent && (
+        <div className="py-6 flex items-center justify-center">
+          <EmailSuccessAnimation message="Report sent to ActBlue!" />
+        </div>
+      )}
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4" hidden={reportSent}>
         <div className="md:col-span-1">
           <label className="block text-sm font-medium text-slate-700 mb-1">Landing Page URL</label>
           <input
@@ -1004,12 +1009,6 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
             </button>
           </Tooltip>
         </div>
-
-        {reportSent && (
-          <div className="md:col-span-2 flex items-center justify-center py-6">
-            <EmailSuccessAnimation message="Report sent to ActBlue!" />
-          </div>
-        )}
       </div>
 
       {previewOpen && typeof window !== "undefined" && createPortal(
