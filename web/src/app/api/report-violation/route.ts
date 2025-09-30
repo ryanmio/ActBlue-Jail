@@ -17,8 +17,9 @@ export async function POST(req: NextRequest) {
   const resend = new Resend(env.RESEND_API_KEY);
   const supabase = getSupabaseServer();
 
-  type Body = { caseId?: string; landingUrl?: string | null; ccEmail?: string | null; note?: string | null };
+  type Body = { caseId?: string; landingUrl?: string | null; ccEmail?: string | null; note?: string | null; violationsOverride?: string | null };
   const input = (await req.json().catch(() => null)) as Body | null;
+  const violationsOverride = (input?.violationsOverride || "").trim();
   const caseId = (input?.caseId || "").trim();
   const ccEmail = (input?.ccEmail || "").trim() || null;
   const landingUrlFromUser = (input?.landingUrl || "").trim() || null;
@@ -59,7 +60,6 @@ export async function POST(req: NextRequest) {
     }
   }
   const campaign = sub.sender_name || sub.sender_id || "(unknown sender)";
-  let summary = (sub as unknown as { ai_summary?: string | null }).ai_summary ?? null;
 
   // Load violations for this case
   const { data: vioRows } = await supabase
@@ -69,21 +69,29 @@ export async function POST(req: NextRequest) {
     .order("severity", { ascending: false });
   const violationsList = Array.isArray(vioRows) ? vioRows : [];
 
-  if (!summary) {
-    type V = { code: string; title: string; description?: string | null; severity?: number | string | null; confidence?: number | string | null };
-    const top = [...violationsList as Array<V>].sort(
-      (a, b) => Number(b.severity || 0) - Number(a.severity || 0) || Number(b.confidence || 0) - Number(a.confidence || 0)
-    )[0];
-    summary = (top?.description as string | null) || (top ? `${top.code} ${top.title}` : null) || null;
-  }
+  // No summary in email/report body per product decision
 
   // Nicely formatted plaintext body
   const sections: string[] = [];
   sections.push(`Campaign/Org\n-----------\n${campaign}`);
-  sections.push(`Summary\n-------\n${summary || "(no summary available)"}`);
-  const vioText = (violationsList.length > 0
-    ? violationsList.map((v: { code: string; title: string; description?: string | null }) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
-    : "(none detected)");
+  // Build violations section (override → list aware)
+  let vioText: string;
+  if (violationsOverride) {
+    const ovLines = String(violationsOverride)
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+    if (ovLines.length > 1) {
+      vioText = ovLines.map((l) => `- ${l}`).join("\n");
+    } else {
+      vioText = ovLines[0] || "";
+    }
+  } else {
+    vioText = (violationsList.length > 0
+      ? violationsList.map((v: { code: string; title: string; description?: string | null }) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
+      : "(none detected)");
+  }
   sections.push(`Violations\n----------\n${vioText}`);
   sections.push(`Landing page URL\n-----------------\n${landingUrl}`);
   if (reporterNote) sections.push(`Reporter note\n-------------\n${reporterNote}`);
@@ -98,16 +106,26 @@ export async function POST(req: NextRequest) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
-  const vioHtml = (violationsList.length > 0)
-    ? `<ul>${violationsList.map((v: { code: string; title: string; description?: string | null }) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
-    : `<p>(none detected)</p>`;
+  const vioHtml = (() => {
+    if (violationsOverride) {
+      const ovLines = String(violationsOverride)
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0)
+        .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+      if (ovLines.length > 1) {
+        return `<ul>${ovLines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`;
+      }
+      return `<p>${esc(ovLines[0] || "")}</p>`;
+    }
+    return (violationsList.length > 0)
+      ? `<ul>${violationsList.map((v: { code: string; title: string; description?: string | null }) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
+      : `<p>(none detected)</p>`;
+  })();
   const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
   <div>
     <p style="margin:0 0 8px 0"><strong>Campaign/Org</strong></p>
     <p style="margin:0 0 16px 0">${esc(campaign)}</p>
-
-    <p style="margin:0 0 8px 0"><strong>Summary</strong></p>
-    <p style="margin:0 0 16px 0">${esc(summary || "(no summary available)")}</p>
 
     <p style="margin:0 0 8px 0"><strong>Violations</strong></p>
     <div style="margin:0 0 16px 0">${vioHtml}</div>

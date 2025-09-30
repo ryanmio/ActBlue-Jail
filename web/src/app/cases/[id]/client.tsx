@@ -7,6 +7,18 @@ import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
 import ReviewAnimation from "@/components/review-animation";
 
+function Tooltip({ label, children }: { label?: string; children: React.ReactNode }) {
+  if (!label) return <>{children}</>;
+  return (
+    <span className="relative inline-block group">
+      {children}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden whitespace-nowrap rounded bg-slate-900 text-white text-xs px-2 py-1 shadow group-hover:block">
+        {label}
+      </span>
+    </span>
+  );
+}
+
 type Props = {
   id: string;
   initialText: string | null;
@@ -384,7 +396,7 @@ function renderReportBody(body: string) {
     // skip underline line right after title if present
     let start = idx + 1;
     if (lines[start] && /^[-_]{3,}$/.test(lines[start].trim())) start++;
-    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Screenshot|Meta)\s*$/i.test(l.trim()));
+    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Landing page|Reporter note|Screenshot|Meta)\s*$/i.test(l.trim()));
     const end = nextTitleIdx === -1 ? lines.length : nextTitleIdx;
     return lines.slice(start, end);
   };
@@ -697,9 +709,18 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
   const [ccEmail, setCcEmail] = useState("");
   const [note, setNote] = useState("");
+  const [violationsOverride, setViolationsOverride] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewBody, setPreviewBody] = useState<string>("");
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
+  const hasLanding = Boolean((landingUrl || existingLandingUrl || "").trim());
 
   const onSubmit = async () => {
     setSubmitting(true);
@@ -709,7 +730,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       const res = await fetch(`/api/report-violation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined, note: note || undefined }),
+        body: JSON.stringify({ caseId: id, landingUrl: landingUrl || undefined, ccEmail: ccEmail || undefined, note: note || undefined, violationsOverride: violationsOverride || undefined }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -718,6 +739,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       setInfo("Report sent to ActBlue.");
       setCcEmail("");
       setNote("");
+      setViolationsOverride("");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send report";
       setError(msg);
@@ -728,6 +750,132 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
 
   // Visibility is fully controlled by the server (SSR) using hasReport; no client checks here
 
+  const normalizeUrl = (u: string | null | undefined) => {
+    if (!u) return null;
+    try {
+      const obj = new URL(u);
+      return `${obj.origin}${obj.pathname}`;
+    } catch {
+      return u;
+    }
+  };
+
+  const buildPreview = async () => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load case");
+      const data = await res.json();
+      const item = data.item as { sender_name?: string | null; sender_id?: string | null } | null;
+      const campaign = (item?.sender_name || item?.sender_id || "(unknown sender)") as string;
+      // summary intentionally omitted from preview
+      const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
+      let vioText: string;
+      if (violationsOverride.trim().length > 0) {
+        const ovLines = violationsOverride
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0)
+          .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+        vioText = ovLines.length > 1 ? ovLines.map((l) => `- ${l}`).join("\n") : (ovLines[0] || "");
+      } else {
+        vioText = vios.length > 0 ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(none detected)";
+      }
+      const landing = normalizeUrl(landingUrl || existingLandingUrl);
+      // Prefer primary submission screenshot via the image-url endpoint
+      let shot: string | null = null;
+      try {
+        const r = await fetch(`/api/cases/${id}/image-url`, { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          shot = (j?.url as string) || null;
+        }
+      } catch {}
+
+      const sections: string[] = [];
+      sections.push(`Campaign/Org\n-----------\n${campaign}`);
+      sections.push(`Violations\n----------\n${vioText}`);
+      sections.push(`Landing page URL\n-----------------\n${landing || "(none)"}`);
+      if (note.trim()) sections.push(`Reporter note\n-------------\n${note.trim()}`);
+      if (shot) sections.push(`Screenshot\n---------\n${shot}`);
+      setPreviewBody(sections.join("\n\n"));
+
+      // Build HTML matching the outbound email style
+      const esc = (s: string) => String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+      const vioHtml = (() => {
+        if (violationsOverride.trim().length > 0) {
+          const ovLines = violationsOverride
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0)
+            .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+          return ovLines.length > 1
+            ? `<ul>${ovLines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`
+            : `<p>${esc(ovLines[0] || "")}</p>`;
+        }
+        return vios.length > 0
+          ? `<ul>${vios.map((v) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
+          : `<p>(none detected)</p>`;
+      })();
+      const shortId = id.split("-")[0];
+      const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
+  <div>
+    <p style=\"margin:0 0 8px 0\"><strong>Campaign/Org</strong></p>
+    <p style=\"margin:0 0 16px 0\">${esc(campaign)}</p>
+
+    <p style=\"margin:0 0 8px 0\"><strong>Violations</strong></p>
+    <div style=\"margin:0 0 16px 0\">${vioHtml}</div>
+
+    <p style=\"margin:0 0 8px 0\"><strong>Landing page</strong></p>
+    <p style=\"margin:0 0 16px 0\">${landing ? `<a href=\"${esc(landing)}\" target=\"_blank\" rel=\"noopener noreferrer\">${esc(landing)}</a>` : "(none)"}</p>
+
+    ${note.trim() ? `<p style=\"margin:0 0 8px 0\"><strong>Reporter note</strong></p><p style=\"margin:0 0 16px 0\">${esc(note.trim())}</p>` : ""}
+    ${shot ? `<p style=\"margin:0 0 8px 0\"><strong>Screenshot</strong></p><p style=\"margin:0 0 16px 0\"><a href=\"${esc(shot)}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"display:inline-flex;align-items:center;gap:6px;text-decoration:underline\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"3\" y=\"7\" width=\"18\" height=\"14\" rx=\"2\" ry=\"2\" stroke=\"#334155\" stroke-width=\"2\"/><path d=\"M8 7l2-3h4l2 3\" stroke=\"#334155\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"12\" cy=\"14\" r=\"3\" stroke=\"#334155\" stroke-width=\"2\"/></svg><span>Screenshot</span></a></p>` : ""}
+
+    <p style=\"margin:16px 0 4px 0\"><strong>Meta</strong></p>
+    <p style=\"margin:0\">This report was submitted using AB Jail.</p>
+    <p style=\"margin:0\">Case UUID: <code>${esc(id)}</code></p>
+    <p style=\"margin:0\">Case short_id: <code>${esc(shortId)}</code></p>
+  </div>
+  </body></html>`;
+      setPreviewHtml(html);
+      setPreviewOpen(true);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to build preview";
+      setPreviewError(msg);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  // Prefill violations editor with the current AI violations (truncated to 500)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        if (violationsOverride.trim().length > 0) return;
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
+        if (!cancelled && Array.isArray(vios)) {
+          const text = vios.length > 0
+            ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
+            : "";
+          if (text) setViolationsOverride(text.slice(0, 500));
+        }
+      } catch {}
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [id]);
+
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
       <div className="flex items-start justify-between gap-3">
@@ -735,7 +883,31 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           <h2 className="text-xl font-semibold text-slate-900 mb-1">Report to ActBlue</h2>
           <p className="text-sm text-slate-600">Submit a violation report for this case.</p>
         </div>
-        <span className="inline-flex items-center text-xs px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">AB Jail</span>
+        <a
+          href={policyHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200 bg-white/70 text-slate-700 hover:bg-white hover:text-slate-900 hover:border-slate-300 shadow-sm transition-colors"
+          title="Open ActBlue Account Use Policy"
+        >
+          <span>ActBlue Account Use Policy</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M7 17L17 7" />
+            <path d="M7 7h10v10" />
+          </svg>
+        </a>
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-1">
@@ -747,7 +919,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
             placeholder="https://secure.actblue.com/donate/..."
             className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
           />
-          <div className="mt-1 text-xs text-slate-600">Required if not already captured.</div>
+          <div className="mt-1 text-xs text-slate-600">Required to send a report. Enter the ActBlue landing page URL.</div>
         </div>
 
         <div className="md:col-span-1">
@@ -762,32 +934,99 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value.slice(0, 240))}
-            rows={3}
-            placeholder="Add brief context for the reviewer…"
-            className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
-            maxLength={240}
-          />
-          <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((v) => !v)}
+            className="text-sm text-slate-700 underline hover:text-slate-900"
+          >
+            {advancedOpen ? "Hide advanced" : "Expand for Advanced"}
+          </button>
         </div>
+
+        {advancedOpen && (
+          <>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Edit violations for report (max 500)</label>
+              <textarea
+                value={violationsOverride}
+                onChange={(e) => setViolationsOverride(e.target.value.slice(0, 500))}
+                rows={4}
+                placeholder="Optionally summarize or edit violations in your own words…"
+                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+                maxLength={500}
+              />
+              <div className="mt-1 text-xs text-slate-600">{500 - violationsOverride.length} characters left</div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value.slice(0, 240))}
+                rows={3}
+                placeholder="Add brief context for the reviewer…"
+                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+                maxLength={240}
+              />
+              <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
+            </div>
+          </>
+        )}
+
+        
 
         {error && <div className="text-sm text-red-600 md:col-span-2">{error}</div>}
         {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
 
-        <div className="flex items-center justify-end md:col-span-2">
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
-            disabled={submitting || (!landingUrl && !existingLandingUrl)}
-          >
-            {submitting ? "Sending…" : "Submit Report"}
-          </button>
+        <div className="flex items-center justify-end gap-2 md:col-span-2">
+          <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
+            <button
+              type="button"
+              onClick={buildPreview}
+              className={`px-4 py-2 rounded-xl border ${hasLanding ? "bg-white hover:bg-slate-50 text-slate-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+              disabled={submitting || previewLoading || !hasLanding}
+            >
+              {previewLoading ? "Preparing…" : "Preview Report"}
+            </button>
+          </Tooltip>
+          <Tooltip label={!hasLanding ? "Landing page is required" : undefined}>
+            <button
+              type="button"
+              onClick={onSubmit}
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
+              disabled={submitting || !hasLanding}
+            >
+              {submitting ? "Sending…" : "Submit Report"}
+            </button>
+          </Tooltip>
         </div>
       </div>
+
+      {previewOpen && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[200]">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setPreviewOpen(false)} />
+          <div className="absolute inset-0 overflow-y-auto">
+            <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Preview report</h3>
+                {previewError && <div className="text-sm text-red-600 mb-2">{previewError}</div>}
+                <div className="border rounded-xl bg-white max-h-[60vh] overflow-auto">
+                  <div className="p-4 text-sm text-slate-900" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                </div>
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => setPreviewOpen(false)} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
+                  <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
+                    <button type="button" onClick={async () => { if (!hasLanding) return; await onSubmit(); setPreviewOpen(false); }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 ${hasLanding ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding}>
+                      {submitting ? "Sending…" : "Send Report"}
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
