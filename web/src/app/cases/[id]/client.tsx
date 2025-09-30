@@ -721,12 +721,12 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [previewBody, setPreviewBody] = useState<string>("");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [cardSubmittedSuccess, setCardSubmittedSuccess] = useState(false);
-  const [modalSubmittedSuccess, setModalSubmittedSuccess] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
+  const [previewSent, setPreviewSent] = useState(false);
   const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
   const hasLanding = Boolean((landingUrl || existingLandingUrl || "").trim());
 
-  const onSubmit = async (): Promise<boolean> => {
+  const onSubmit = async () => {
     setSubmitting(true);
     setError(null);
     setInfo(null);
@@ -744,11 +744,9 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       setCcEmail("");
       setNote("");
       setViolationsOverride("");
-      return true;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send report";
       setError(msg);
-      return false;
     } finally {
       setSubmitting(false);
     }
@@ -915,12 +913,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           </svg>
         </a>
       </div>
-        {cardSubmittedSuccess ? (
-          <div className="mt-6 flex items-center justify-center">
-            <EmailSuccessAnimation />
-          </div>
-        ) : (
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-1">
           <label className="block text-sm font-medium text-slate-700 mb-1">Landing Page URL</label>
           <input
@@ -1003,7 +996,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           <Tooltip label={!hasLanding ? "Landing page is required" : undefined}>
             <button
               type="button"
-              onClick={async () => { const ok = await onSubmit(); if (ok) setCardSubmittedSuccess(true); }}
+            onClick={async () => { await onSubmit(); if (!error) setReportSent(true); }}
               className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
               disabled={submitting || !hasLanding}
             >
@@ -1012,7 +1005,6 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           </Tooltip>
         </div>
       </div>
-      )}
 
       {previewOpen && typeof window !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[200]">
@@ -1021,29 +1013,26 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
             <div className="min-h-full flex items-start sm:items-center justify-center p-4">
               <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto p-6">
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">Preview report</h3>
-                {modalSubmittedSuccess ? (
-                  <div className="py-8">
-                    <EmailSuccessAnimation />
-                    <div className="mt-6 flex items-center justify-end">
-                      <button type="button" onClick={() => { setPreviewOpen(false); setModalSubmittedSuccess(false); }} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
-                    </div>
+                {previewError && <div className="text-sm text-red-600 mb-2">{previewError}</div>}
+                {previewSent ? (
+                  <div className="py-6 flex items-center justify-center">
+                    <EmailSuccessAnimation message="Report sent to ActBlue!" />
                   </div>
                 ) : (
-                  <>
-                    {previewError && <div className="text-sm text-red-600 mb-2">{previewError}</div>}
-                    <div className="border rounded-xl bg-white max-h-[60vh] overflow-auto">
-                      <div className="p-4 text-sm text-slate-900" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-                    </div>
-                    <div className="mt-4 flex items-center justify-end gap-2">
-                      <button type="button" onClick={() => setPreviewOpen(false)} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
-                      <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
-                        <button type="button" onClick={async () => { if (!hasLanding) return; const ok = await onSubmit(); if (ok) { setModalSubmittedSuccess(true); } }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 ${hasLanding ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding}>
-                          {submitting ? "Sending…" : "Send Report"}
-                        </button>
-                      </Tooltip>
-                    </div>
-                  </>
+                  <div className="border rounded-xl bg-white max-h-[60vh] overflow-auto">
+                    <div className="p-4 text-sm text-slate-900" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                  </div>
                 )}
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => setPreviewOpen(false)} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
+                  {!previewSent && (
+                    <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
+                      <button type="button" onClick={async () => { if (!hasLanding) return; await onSubmit(); setPreviewSent(true); }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 ${hasLanding ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding}>
+                        {submitting ? "Sending…" : "Send Report"}
+                      </button>
+                    </Tooltip>
+                  )}
+                </div>
               </div>
             </div>
           </div>
