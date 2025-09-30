@@ -7,6 +7,18 @@ import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
 import ReviewAnimation from "@/components/review-animation";
 
+function Tooltip({ label, children }: { label?: string; children: React.ReactNode }) {
+  if (!label) return <>{children}</>;
+  return (
+    <span className="relative inline-block group">
+      {children}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden whitespace-nowrap rounded bg-slate-900 text-white text-xs px-2 py-1 shadow group-hover:block">
+        {label}
+      </span>
+    </span>
+  );
+}
+
 type Props = {
   id: string;
   initialText: string | null;
@@ -384,7 +396,7 @@ function renderReportBody(body: string) {
     // skip underline line right after title if present
     let start = idx + 1;
     if (lines[start] && /^[-_]{3,}$/.test(lines[start].trim())) start++;
-    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Screenshot|Meta)\s*$/i.test(l.trim()));
+    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Landing page|Reporter note|Screenshot|Meta)\s*$/i.test(l.trim()));
     const end = nextTitleIdx === -1 ? lines.length : nextTitleIdx;
     return lines.slice(start, end);
   };
@@ -708,6 +720,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
+  const hasLanding = Boolean((landingUrl || existingLandingUrl || "").trim());
 
   const onSubmit = async () => {
     setSubmitting(true);
@@ -758,9 +771,17 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       const campaign = (item?.sender_name || item?.sender_id || "(unknown sender)") as string;
       // summary intentionally omitted from preview
       const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
-      const vioText = violationsOverride.trim().length > 0
-        ? violationsOverride.trim()
-        : (vios.length > 0 ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(none detected)");
+      let vioText: string;
+      if (violationsOverride.trim().length > 0) {
+        const ovLines = violationsOverride
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0)
+          .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+        vioText = ovLines.length > 1 ? ovLines.map((l) => `- ${l}`).join("\n") : (ovLines[0] || "");
+      } else {
+        vioText = vios.length > 0 ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(none detected)";
+      }
       const landing = normalizeUrl(landingUrl || existingLandingUrl);
       // Prefer primary submission screenshot via the image-url endpoint
       let shot: string | null = null;
@@ -787,11 +808,21 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         .replace(/>/g, "&gt;")
         .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
-      const vioHtml = violationsOverride.trim().length > 0
-        ? `<p>${esc(violationsOverride.trim())}</p>`
-        : (vios.length > 0
+      const vioHtml = (() => {
+        if (violationsOverride.trim().length > 0) {
+          const ovLines = violationsOverride
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0)
+            .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+          return ovLines.length > 1
+            ? `<ul>${ovLines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`
+            : `<p>${esc(ovLines[0] || "")}</p>`;
+        }
+        return vios.length > 0
           ? `<ul>${vios.map((v) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
-          : `<p>(none detected)</p>`);
+          : `<p>(none detected)</p>`;
+      })();
       const shortId = id.split("-")[0];
       const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
   <div>
@@ -888,7 +919,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
             placeholder="https://secure.actblue.com/donate/..."
             className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
           />
-          <div className="mt-1 text-xs text-slate-600">Required if not already captured.</div>
+          <div className="mt-1 text-xs text-slate-600">Required to send a report. Enter the ActBlue landing page URL.</div>
         </div>
 
         <div className="md:col-span-1">
@@ -915,19 +946,6 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         {advancedOpen && (
           <>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value.slice(0, 240))}
-                rows={3}
-                placeholder="Add brief context for the reviewer…"
-                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
-                maxLength={240}
-              />
-              <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
-            </div>
-
-            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Edit violations for report (max 500)</label>
               <textarea
                 value={violationsOverride}
@@ -939,6 +957,19 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
               />
               <div className="mt-1 text-xs text-slate-600">{500 - violationsOverride.length} characters left</div>
             </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Optional note (240 characters)</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value.slice(0, 240))}
+                rows={3}
+                placeholder="Add brief context for the reviewer…"
+                className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
+                maxLength={240}
+              />
+              <div className="mt-1 text-xs text-slate-600">{240 - note.length} characters left</div>
+            </div>
           </>
         )}
 
@@ -948,22 +979,26 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
 
         <div className="flex items-center justify-end gap-2 md:col-span-2">
-          <button
-            type="button"
-            onClick={buildPreview}
-            className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-50"
-            disabled={submitting || previewLoading}
-          >
-            {previewLoading ? "Preparing…" : "Preview Report"}
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
-            disabled={submitting || (!landingUrl && !existingLandingUrl)}
-          >
-            {submitting ? "Sending…" : "Submit Report"}
-          </button>
+          <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
+            <button
+              type="button"
+              onClick={buildPreview}
+              className={`px-4 py-2 rounded-xl border ${hasLanding ? "bg-white hover:bg-slate-50 text-slate-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+              disabled={submitting || previewLoading || !hasLanding}
+            >
+              {previewLoading ? "Preparing…" : "Preview Report"}
+            </button>
+          </Tooltip>
+          <Tooltip label={!hasLanding ? "Landing page is required" : undefined}>
+            <button
+              type="button"
+              onClick={onSubmit}
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
+              disabled={submitting || !hasLanding}
+            >
+              {submitting ? "Sending…" : "Submit Report"}
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -980,9 +1015,11 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
                 </div>
                 <div className="mt-4 flex items-center justify-end gap-2">
                   <button type="button" onClick={() => setPreviewOpen(false)} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
-                  <button type="button" onClick={async () => { await onSubmit(); setPreviewOpen(false); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50" disabled={submitting}>
-                    {submitting ? "Sending…" : "Send Report"}
-                  </button>
+                  <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
+                    <button type="button" onClick={async () => { if (!hasLanding) return; await onSubmit(); setPreviewOpen(false); }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 ${hasLanding ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding}>
+                      {submitting ? "Sending…" : "Send Report"}
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>

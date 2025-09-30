@@ -74,11 +74,24 @@ export async function POST(req: NextRequest) {
   // Nicely formatted plaintext body
   const sections: string[] = [];
   sections.push(`Campaign/Org\n-----------\n${campaign}`);
-  const vioText = violationsOverride
-    ? violationsOverride
-    : (violationsList.length > 0
+  // Build violations section (override → list aware)
+  let vioText: string;
+  if (violationsOverride) {
+    const ovLines = String(violationsOverride)
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+    if (ovLines.length > 1) {
+      vioText = ovLines.map((l) => `- ${l}`).join("\n");
+    } else {
+      vioText = ovLines[0] || "";
+    }
+  } else {
+    vioText = (violationsList.length > 0
       ? violationsList.map((v: { code: string; title: string; description?: string | null }) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
       : "(none detected)");
+  }
   sections.push(`Violations\n----------\n${vioText}`);
   sections.push(`Landing page URL\n-----------------\n${landingUrl}`);
   if (reporterNote) sections.push(`Reporter note\n-------------\n${reporterNote}`);
@@ -93,11 +106,22 @@ export async function POST(req: NextRequest) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
-  const vioHtml = violationsOverride
-    ? `<p>${esc(violationsOverride)}</p>`
-    : ((violationsList.length > 0)
+  const vioHtml = (() => {
+    if (violationsOverride) {
+      const ovLines = String(violationsOverride)
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0)
+        .map((l) => l.replace(/^[-\u2022]\s*/, ""));
+      if (ovLines.length > 1) {
+        return `<ul>${ovLines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`;
+      }
+      return `<p>${esc(ovLines[0] || "")}</p>`;
+    }
+    return (violationsList.length > 0)
       ? `<ul>${violationsList.map((v: { code: string; title: string; description?: string | null }) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
-      : `<p>(none detected)</p>`);
+      : `<p>(none detected)</p>`;
+  })();
   const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
   <div>
     <p style="margin:0 0 8px 0"><strong>Campaign/Org</strong></p>
