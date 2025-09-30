@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
 import ReviewAnimation from "@/components/review-animation";
+import { LandingPageScanner } from "@/components/landing-page-scanner";
 
 function Tooltip({ label, children }: { label?: string; children: React.ReactNode }) {
   if (!label) return <>{children}</>;
@@ -429,7 +430,7 @@ function renderReportBody(body: string) {
         <div className="text-xs font-semibold text-slate-600 mb-1">Violations</div>
         <div className="text-sm text-slate-800 whitespace-pre-wrap">
           {sec.violations.length > 0 ? sec.violations.map((l, i) => (
-            <div key={i} className="break-words">{l}</div>
+            <div key={`${l}-${i}`} className="break-words">{l}</div>
           )) : "(none)"}
         </div>
       </div>
@@ -1225,9 +1226,9 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
             />
           )}
           {lpLoading && (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-slate-600">
-              <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin" aria-label="Loading landing page" />
-              <span>{isScanning ? "Scanning landing page…" : "Loading landing page…"}</span>
+            <div className="flex flex-col items-center justify-center gap-3 py-6">
+              <LandingPageScanner />
+              <div className="text-sm text-slate-600" aria-live="polite">{isScanning ? "Scanning landing page…" : "Loading landing page…"}</div>
             </div>
           )}
           {lpUrl && !lpLoading ? (
