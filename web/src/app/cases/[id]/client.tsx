@@ -325,6 +325,17 @@ export function ReportThread({ id }: { id: string }) {
   const [reports, setReports] = useState<Array<Report>>([]);
   const [replies, setReplies] = useState<Array<ReportReply>>([]);
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+  
+  const loadReports = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setReports((data.reports || []) as Array<Report>);
+      setReplies((data.report_replies || []) as Array<ReportReply>);
+    } catch {}
+  }, [id]);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -341,6 +352,20 @@ export function ReportThread({ id }: { id: string }) {
     void load();
     return () => { cancelled = true; };
   }, [id]);
+
+  // Listen for report-sent events and refresh
+  useEffect(() => {
+    const onReportSent = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id?: string } | undefined;
+      if (!detail || detail.id !== id) return;
+      // Wait a moment for the backend to process, then refresh
+      setTimeout(() => {
+        void loadReports();
+      }, 500);
+    };
+    window.addEventListener("report-sent", onReportSent as EventListener);
+    return () => window.removeEventListener("report-sent", onReportSent as EventListener);
+  }, [id, loadReports]);
 
   const repliesByReport = new Map<string, Array<ReportReply>>();
   for (const r of replies) {
@@ -818,6 +843,12 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
       setCcEmail("");
       setNote("");
       setViolationsOverride("");
+      // Notify report history to refresh
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("report-sent", { detail: { id } }));
+        } catch {}
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send report";
       setError(msg);
