@@ -144,6 +144,8 @@ export default function EvaluationPage() {
         }),
       });
 
+      let currentSessionId = sessionId;
+      
       if (!response.ok) {
         const errorData = await response.json();
         if (errorData.error === "duplicate_evaluation") {
@@ -157,6 +159,7 @@ export default function EvaluationPage() {
         
         // Store session ID if not already set
         if (!sessionId && data.sessionId) {
+          currentSessionId = data.sessionId;
           setSessionId(data.sessionId);
           localStorage.setItem("eval_session_id", data.sessionId);
         }
@@ -175,7 +178,7 @@ export default function EvaluationPage() {
         setCurrentIndex(currentIndex + 1);
       } else if (newEvaluatedIds.length >= REQUIRED_EVALUATIONS) {
         // Completed all evaluations, go to results
-        router.push(`/evaluation/results?sessionId=${sessionId}`);
+        router.push(`/evaluation/results?sessionId=${currentSessionId}`);
       } else {
         // Need more samples
         setCurrentIndex(0);
