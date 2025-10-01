@@ -740,9 +740,50 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [previewSent, setPreviewSent] = useState(false);
+  const [status, setStatus] = useState<string | null | undefined>(processingStatus);
   const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
   const hasLanding = Boolean((landingUrl || existingLandingUrl || "").trim());
-  const isProcessing = processingStatus !== "done";
+  const isProcessing = status !== "done";
+
+  // Poll for processing status updates
+  useEffect(() => {
+    if (status === "done") return; // Already done, no need to poll
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const item = data.item as { processing_status?: string | null } | null;
+        if (!cancelled && item?.processing_status) {
+          setStatus(item.processing_status);
+          if (item.processing_status === "done") {
+            clearInterval(interval);
+          }
+        }
+      } catch {}
+    }, 2000);
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      clearInterval(interval);
+    }, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [id, status]);
+
+  // Listen for reclassify events (from comments or landing page scans)
+  useEffect(() => {
+    const onReclassify = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id?: string } | undefined;
+      if (!detail || detail.id !== id) return;
+      setStatus("classified"); // Reset to non-done status to trigger polling
+    };
+    window.addEventListener("reclassify-started", onReclassify as EventListener);
+    return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
+  }, [id]);
 
   const onSubmit = async () => {
     setSubmitting(true);
