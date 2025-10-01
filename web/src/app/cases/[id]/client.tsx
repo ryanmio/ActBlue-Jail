@@ -918,11 +918,14 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
   };
 
   // Prefill violations editor with the current AI violations (truncated to 500)
+  // Runs when advanced section is expanded
   useEffect(() => {
+    if (!advancedOpen) return; // Only load when advanced is opened
+    if (violationsOverride.trim().length > 0) return; // Already populated
+    
     let cancelled = false;
     const load = async () => {
       try {
-        if (violationsOverride.trim().length > 0) return;
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
@@ -937,7 +940,7 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
     };
     void load();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, advancedOpen, violationsOverride]);
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
