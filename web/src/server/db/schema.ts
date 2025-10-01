@@ -76,3 +76,26 @@ export const deletionRequests = pgTable(
   }
 );
 
+export const evaluationBenchmarks = pgTable(
+  "evaluation_benchmarks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    submissionId: uuid("submission_id").notNull(),
+    manualViolations: jsonb("manual_violations").$type<Array<{
+      code: string;
+      title: string;
+      rationale: string;
+      severity: number;
+      confidence: number;
+    }>>().default([]),
+    evaluatorNotes: text("evaluator_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => {
+    return {
+      submissionIdx: index("evaluation_benchmarks_submission_idx").on(table.submissionId),
+    };
+  }
+);
+

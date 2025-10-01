@@ -60,6 +60,18 @@ create table if not exists deletion_requests (
 -- indexes for faster lookups
 create index if not exists deletion_requests_submission_idx on deletion_requests(submission_id);
 
+-- Evaluation benchmarks table for prompt testing
+create table if not exists evaluation_benchmarks (
+  id uuid primary key default gen_random_uuid(),
+  submission_id uuid references submissions(id) on delete cascade,
+  manual_violations jsonb default '[]'::jsonb, -- manually tagged violations
+  evaluator_notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists evaluation_benchmarks_submission_idx on evaluation_benchmarks(submission_id);
+
 -- RLS (to enable in Supabase)
 -- alter table submissions enable row level security;
 -- create policy public_read_only on submissions for select using (public = true);
