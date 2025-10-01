@@ -81,3 +81,42 @@ export const deletionRequests = pgTable(
   }
 );
 
+export const evaluationSessions = pgTable(
+  "evaluation_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deviceId: text("device_id").notNull(),
+    ipAddress: text("ip_address"),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    totalEvaluations: integer("total_evaluations").default(0),
+    isComplete: boolean("is_complete").default(false),
+  },
+  (table) => {
+    return {
+      deviceIdx: index("evaluation_sessions_device_idx").on(table.deviceId),
+      completedIdx: index("evaluation_sessions_completed_idx").on(table.completedAt),
+    };
+  }
+);
+
+export const evaluationResponses = pgTable(
+  "evaluation_responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id").notNull(),
+    submissionId: uuid("submission_id").notNull(),
+    manualViolations: jsonb("manual_violations").$type<string[]>().default([]),
+    evaluatorNotes: text("evaluator_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    aiViolations: jsonb("ai_violations").$type<string[]>().default([]),
+  },
+  (table) => {
+    return {
+      sessionIdx: index("evaluation_responses_session_idx").on(table.sessionId),
+      submissionIdx: index("evaluation_responses_submission_idx").on(table.submissionId),
+      createdIdx: index("evaluation_responses_created_idx").on(table.createdAt),
+    };
+  }
+);
+

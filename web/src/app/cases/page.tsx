@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import Footer from "@/components/Footer";
+import { VIOLATION_POLICIES } from "@/lib/violation-policies";
 
 type SubmissionRow = {
   id: string;
@@ -24,13 +25,12 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
-const VIOLATION_OPTIONS: Array<{ code: string; title: string }> = [
-  { code: "AB001", title: "Misrepresentation/Impersonation" },
-  { code: "AB003", title: "Missing Full Entity Name" },
-  { code: "AB004", title: "Entity Clarity" },
-  { code: "AB007", title: "False/Unsubstantiated Claims" },
-  { code: "AB008", title: "Unverified Matching Program" },
-];
+// Filter to show only these violation codes in the cases page
+const DISPLAYED_VIOLATION_CODES = ["AB001", "AB003", "AB004", "AB007", "AB008"];
+
+const VIOLATION_OPTIONS = VIOLATION_POLICIES.filter((v: { code: string; title: string; policy: string }) =>
+  DISPLAYED_VIOLATION_CODES.includes(v.code)
+);
 
 async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
 {
@@ -145,7 +145,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       <input type="hidden" name="limit" value={String(pageSize)} />
                       {q && <input type="hidden" name="q" value={q} />}
                       <div className="grid grid-cols-1 gap-2">
-                        {VIOLATION_OPTIONS.map((opt) => {
+                        {VIOLATION_OPTIONS.map((opt: { code: string; title: string }) => {
                           const checked = selectedCodes.includes(opt.code);
                           return (
                             <label key={opt.code} className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
