@@ -43,17 +43,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ samples: [] });
     }
 
-    // Filter out submissions with invalid image URLs (prefer those with valid HTTP URLs)
-    const validSubmissions = submissions.filter(
+    // Prioritize submissions with valid image URLs
+    const withImages = submissions.filter(
       (sub) => sub.image_url && sub.image_url.startsWith("http")
     );
+    const withoutImages = submissions.filter(
+      (sub) => !sub.image_url || !sub.image_url.startsWith("http")
+    );
 
-    // If we don't have enough valid submissions, fall back to all submissions
-    const submissionsToUse = validSubmissions.length >= count ? validSubmissions : submissions;
+    // Shuffle each group separately
+    const shuffledWithImages = withImages.sort(() => Math.random() - 0.5);
+    const shuffledWithoutImages = withoutImages.sort(() => Math.random() - 0.5);
 
-    // Shuffle and take requested count
-    const shuffled = submissionsToUse.sort(() => Math.random() - 0.5).slice(0, count);
-    const submissionIds = shuffled.map((s) => s.id);
+    // Prioritize image submissions, then add ones without images if needed
+    const submissionsToUse = [...shuffledWithImages, ...shuffledWithoutImages].slice(0, count);
+    const submissionIds = submissionsToUse.map((s) => s.id);
 
     // Get violations for these submissions
     const { data: violations, error: violationsError } = await supabase
