@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
   const offset = Number.isFinite(explicitOffset) && explicitOffset >= 0 ? explicitOffset : (page - 1) * limit;
   const q = (searchParams.get("q") || "").trim();
   const include = (searchParams.get("include") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  // Support both repeated ?codes=AB001&codes=AB003 and comma-separated ?codes=AB001,AB003
+  const multiCodes = searchParams.getAll("codes");
+  const singleCodes = (searchParams.get("codes") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const codes = Array.from(new Set([...(multiCodes || []), ...(singleCodes || [])])).filter(Boolean);
 
   try {
     const supabase = getSupabaseServer();
@@ -28,6 +32,25 @@ export async function GET(req: NextRequest) {
 
     // Only show public cases
     builder = builder.eq("public", true);
+
+    // If violation codes are provided, filter submissions to those having at least one matching code
+    if (codes.length > 0) {
+      const { data: vioRows, error: vioErr } = await supabase
+        .from("violations")
+        .select("submission_id, code")
+        .in("code", codes);
+      if (vioErr) throw vioErr;
+      const idSet = new Set<string>();
+      for (const r of vioRows || []) {
+        const sid = String((r as { submission_id: string }).submission_id);
+        if (sid) idSet.add(sid);
+      }
+      const ids = Array.from(idSet);
+      if (ids.length === 0) {
+        return NextResponse.json({ items: [], total: 0, limit, offset, page, hasMore: false });
+      }
+      builder = builder.in("id", ids);
+    }
 
     if (q.length > 0) {
       const sanitized = q.replace(/[%]/g, "").replace(/,/g, " ");
