@@ -145,7 +145,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Reporting */}
         {!hasReport && (
-          <ReportingCard id={id} existingLandingUrl={landData?.landingUrl || null} />
+          <ReportingCard id={id} existingLandingUrl={landData?.landingUrl || null} processingStatus={item.processing_status ?? null} />
         )}
 
         {/* Report history and replies */}

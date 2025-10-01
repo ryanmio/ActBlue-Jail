@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
 import ReviewAnimation from "@/components/review-animation";
+import { LandingPageScanner } from "@/components/landing-page-scanner";
+import { EmailSuccessAnimation } from "@/components/email-success-animation";
 
 function Tooltip({ label, children }: { label?: string; children: React.ReactNode }) {
   if (!label) return <>{children}</>;
@@ -85,16 +87,26 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
   const [status, setStatus] = useState<string | null | undefined>(initialStatus);
   const [overallConfidence, setOverallConfidence] = useState<number | null>(initialAiConfidence == null ? null : Number(initialAiConfidence));
   const intervalRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current != null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    if (timeoutRef.current != null) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }, []);
 
   const startPolling = useCallback(() => {
     stopPolling();
+    // Set 2-minute timeout
+    timeoutRef.current = window.setTimeout(() => {
+      stopPolling();
+    }, 120000);
+
     intervalRef.current = window.setInterval(async () => {
       try {
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
@@ -233,9 +245,14 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
         }
       } catch {}
     }, 2000);
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      clearInterval(interval);
+    }, 120000);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, [id, senderName, senderId]);
 
@@ -285,9 +302,14 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
         }
       } catch {}
     }, 2000);
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      clearInterval(interval);
+    }, 120000);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, [id, initialStatus]);
 
@@ -303,6 +325,17 @@ export function ReportThread({ id }: { id: string }) {
   const [reports, setReports] = useState<Array<Report>>([]);
   const [replies, setReplies] = useState<Array<ReportReply>>([]);
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+  
+  const loadReports = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setReports((data.reports || []) as Array<Report>);
+      setReplies((data.report_replies || []) as Array<ReportReply>);
+    } catch {}
+  }, [id]);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -319,6 +352,20 @@ export function ReportThread({ id }: { id: string }) {
     void load();
     return () => { cancelled = true; };
   }, [id]);
+
+  // Listen for report-sent events and refresh
+  useEffect(() => {
+    const onReportSent = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id?: string } | undefined;
+      if (!detail || detail.id !== id) return;
+      // Wait a moment for the backend to process, then refresh
+      setTimeout(() => {
+        void loadReports();
+      }, 500);
+    };
+    window.addEventListener("report-sent", onReportSent as EventListener);
+    return () => window.removeEventListener("report-sent", onReportSent as EventListener);
+  }, [id, loadReports]);
 
   const repliesByReport = new Map<string, Array<ReportReply>>();
   for (const r of replies) {
@@ -421,15 +468,12 @@ function renderReportBody(body: string) {
         <div className="text-xs font-semibold text-slate-600 mb-1">Campaign/Org</div>
         <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.campaign.join("\n").trim() || "(unknown)"}</div>
       </div>
-      <div>
-        <div className="text-xs font-semibold text-slate-600 mb-1">Summary</div>
-        <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.summary.join("\n").trim() || "(no summary)"}</div>
-      </div>
+      {/* Summary removed */}
       <div>
         <div className="text-xs font-semibold text-slate-600 mb-1">Violations</div>
         <div className="text-sm text-slate-800 whitespace-pre-wrap">
           {sec.violations.length > 0 ? sec.violations.map((l, i) => (
-            <div key={i} className="break-words">{l}</div>
+            <div key={`${l}-${i}`} className="break-words">{l}</div>
           )) : "(none)"}
         </div>
       </div>
@@ -704,8 +748,8 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   );
 }
 
-type ReportCardProps = { id: string; existingLandingUrl?: string | null };
-export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps) {
+type ReportCardProps = { id: string; existingLandingUrl?: string | null; processingStatus?: string | null };
+export function ReportingCard({ id, existingLandingUrl = null, processingStatus = null }: ReportCardProps) {
   const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
   const [ccEmail, setCcEmail] = useState("");
   const [note, setNote] = useState("");
@@ -719,8 +763,67 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [previewBody, setPreviewBody] = useState<string>("");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
+  const [previewSent, setPreviewSent] = useState(false);
+  const [status, setStatus] = useState<string | null | undefined>(processingStatus);
   const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
   const hasLanding = Boolean((landingUrl || existingLandingUrl || "").trim());
+  const isProcessing = status !== "done";
+
+  // Poll for processing status updates and landing URL
+  useEffect(() => {
+    if (status === "done") return; // Already done, no need to poll
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const item = data.item as { processing_status?: string | null; landing_url?: string | null } | null;
+        if (!cancelled && item?.processing_status) {
+          setStatus(item.processing_status);
+          // Update landing URL if we got one and our field is empty
+          if (item.landing_url && !landingUrl) {
+            setLandingUrl(item.landing_url);
+          }
+          if (item.processing_status === "done") {
+            clearInterval(interval);
+          }
+        }
+      } catch {}
+    }, 2000);
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      clearInterval(interval);
+    }, 120000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [id, status]);
+
+  // Listen for reclassify events (from comments or landing page scans)
+  useEffect(() => {
+    const onReclassify = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id?: string } | undefined;
+      if (!detail || detail.id !== id) return;
+      setStatus("classified"); // Reset to non-done status to trigger polling
+      // Also fetch fresh landing URL when reclassified
+      fetch(`/api/cases/${id}`, { cache: "no-store" })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json();
+          const item = data.item as { landing_url?: string | null } | null;
+          if (item?.landing_url && !landingUrl) {
+            setLandingUrl(item.landing_url);
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("reclassify-started", onReclassify as EventListener);
+    return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
+  }, [id, landingUrl]);
 
   const onSubmit = async () => {
     setSubmitting(true);
@@ -740,6 +843,12 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
       setCcEmail("");
       setNote("");
       setViolationsOverride("");
+      // Notify report history to refresh
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("report-sent", { detail: { id } }));
+        } catch {}
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to send report";
       setError(msg);
@@ -855,11 +964,14 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   };
 
   // Prefill violations editor with the current AI violations (truncated to 500)
+  // Runs when advanced section is expanded
   useEffect(() => {
+    if (!advancedOpen) return; // Only load when advanced is opened
+    if (violationsOverride.trim().length > 0) return; // Already populated
+    
     let cancelled = false;
     const load = async () => {
       try {
-        if (violationsOverride.trim().length > 0) return;
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
@@ -874,7 +986,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
     };
     void load();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, advancedOpen, violationsOverride]);
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
@@ -909,7 +1021,12 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
           </svg>
         </a>
       </div>
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      {reportSent && (
+        <div className="py-6 flex items-center justify-center">
+          <EmailSuccessAnimation message="Report sent to ActBlue!" />
+        </div>
+      )}
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4" hidden={reportSent}>
         <div className="md:col-span-1">
           <label className="block text-sm font-medium text-slate-700 mb-1">Landing Page URL</label>
           <input
@@ -979,22 +1096,22 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
 
         <div className="flex items-center justify-end gap-2 md:col-span-2">
-          <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
+          <Tooltip label={isProcessing ? "AI is still analyzing violations" : (!hasLanding ? "Landing page is required" : "")}>
             <button
               type="button"
               onClick={buildPreview}
-              className={`px-4 py-2 rounded-xl border ${hasLanding ? "bg-white hover:bg-slate-50 text-slate-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
-              disabled={submitting || previewLoading || !hasLanding}
+              className={`px-4 py-2 rounded-xl border ${hasLanding && !isProcessing ? "bg-white hover:bg-slate-50 text-slate-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+              disabled={submitting || previewLoading || !hasLanding || isProcessing}
             >
               {previewLoading ? "Preparing…" : "Preview Report"}
             </button>
           </Tooltip>
-          <Tooltip label={!hasLanding ? "Landing page is required" : undefined}>
+          <Tooltip label={isProcessing ? "AI is still analyzing violations" : (!hasLanding ? "Landing page is required" : undefined)}>
             <button
               type="button"
-              onClick={onSubmit}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
-              disabled={submitting || !hasLanding}
+            onClick={async () => { await onSubmit(); if (!error) setReportSent(true); }}
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow"
+              disabled={submitting || !hasLanding || isProcessing}
             >
               {submitting ? "Sending…" : "Submit Report"}
             </button>
@@ -1010,16 +1127,24 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
               <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto p-6">
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">Preview report</h3>
                 {previewError && <div className="text-sm text-red-600 mb-2">{previewError}</div>}
-                <div className="border rounded-xl bg-white max-h-[60vh] overflow-auto">
-                  <div className="p-4 text-sm text-slate-900" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-                </div>
+                {previewSent ? (
+                  <div className="py-6 flex items-center justify-center">
+                    <EmailSuccessAnimation message="Report sent to ActBlue!" />
+                  </div>
+                ) : (
+                  <div className="border rounded-xl bg-white max-h-[60vh] overflow-auto">
+                    <div className="p-4 text-sm text-slate-900" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                  </div>
+                )}
                 <div className="mt-4 flex items-center justify-end gap-2">
-                  <button type="button" onClick={() => setPreviewOpen(false)} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
-                  <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
-                    <button type="button" onClick={async () => { if (!hasLanding) return; await onSubmit(); setPreviewOpen(false); }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 ${hasLanding ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding}>
-                      {submitting ? "Sending…" : "Send Report"}
-                    </button>
-                  </Tooltip>
+                  <button type="button" onClick={() => { setPreviewOpen(false); setPreviewSent(false); }} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
+                  {!previewSent && (
+                    <Tooltip label={isProcessing ? "AI is still analyzing violations" : (!hasLanding ? "Landing page is required" : "")}>
+                      <button type="button" onClick={async () => { if (!hasLanding || isProcessing) return; await onSubmit(); setPreviewSent(true); }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed ${hasLanding && !isProcessing ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding || isProcessing}>
+                        {submitting ? "Sending…" : "Send Report"}
+                      </button>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             </div>
@@ -1194,7 +1319,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
       </div>
 
       {tab === "primary" ? (
-        <>
+        <div key="primary-tab">
           {screenshotUrl ? (
             <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[520px] border border-slate-100">
               <div className="max-h-[520px] overflow-auto">
@@ -1210,9 +1335,9 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
               )}
             </div>
           )}
-        </>
+        </div>
       ) : (
-        <>
+        <div key="landing-tab">
           {/* client-side poll when opening Landing tab and we don't yet have a URL */}
           {!lpUrl && (landingStatus === "pending" || landingStatus === "success") && (
             <LandingPoll
@@ -1225,9 +1350,9 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
             />
           )}
           {lpLoading && (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-slate-600">
-              <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin" aria-label="Loading landing page" />
-              <span>{isScanning ? "Scanning landing page…" : "Loading landing page…"}</span>
+            <div className="flex flex-col items-center justify-center gap-3 py-6">
+              <LandingPageScanner />
+              <div className="text-sm text-slate-600" aria-live="polite">{isScanning ? "Scanning landing page…" : "Loading landing page…"}</div>
             </div>
           )}
           {lpUrl && !lpLoading ? (
@@ -1270,7 +1395,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
               {info && <div className="mt-1 text-xs text-slate-700">{info}</div>}
             </div>
           ))}
-        </>
+        </div>
       )}
     </div>
   );

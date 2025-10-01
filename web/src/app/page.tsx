@@ -405,7 +405,7 @@ function RecentCases() {
         {loading && (
           <div className="space-y-3 py-2">
             {[...Array(3)].map((_, idx) => (
-              <div key={idx} className="animate-pulse py-3 flex items-center justify-between gap-4">
+              <div key={`card-skeleton-${idx}`} className="animate-pulse py-3 flex items-center justify-between gap-4">
                 <div className="min-w-0 w-full">
                   <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
                   <div className="flex gap-2">
@@ -486,7 +486,7 @@ function WorstOffenders() {
           <tbody>
             {loading && (
               [...Array(3)].map((_, idx) => (
-                <tr key={idx} className="border-t animate-pulse">
+                <tr key={`table-skeleton-${idx}`} className="border-t animate-pulse">
                   <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-48" /></td>
                   <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-10" /></td>
                   <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-24" /></td>

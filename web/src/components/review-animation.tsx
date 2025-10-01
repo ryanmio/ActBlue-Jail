@@ -1,6 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
+
+// Global counter to ensure unique line IDs across all component instances
+let globalLineId = 0
 
 interface CodeSegment {
   id: number
@@ -67,9 +70,9 @@ export default function ReviewAnimation() {
   const [lines, setLines] = useState<CodeLine[]>([])
   const [currentLine, setCurrentLine] = useState<CodeLine | null>(null)
   const [headerDots, setHeaderDots] = useState(0)
+  const instanceId = useRef(Math.random().toString(36).substr(2, 9))
 
   useEffect(() => {
-    let lineId = 0
     let patternIndex = 0
     let animationRunning = true
 
@@ -86,7 +89,7 @@ export default function ReviewAnimation() {
       const pattern = linePatterns[patternIndex % linePatterns.length]
 
       const newLine: CodeLine = {
-        id: lineId++,
+        id: globalLineId++,
         segments: pattern.segments.map((seg, index) => ({
           id: index,
           width: seg.width,
@@ -146,7 +149,7 @@ export default function ReviewAnimation() {
         <div className="flex gap-1 ml-2">
           {[0, 1, 2].map((i) => (
             <div
-              key={i}
+              key={`header-dot-${i}`}
               className={`w-1 h-1 rounded-full transition-all duration-300 ${
                 i < headerDots ? "bg-slate-600" : "bg-slate-300"
               }`}
@@ -160,7 +163,7 @@ export default function ReviewAnimation() {
         <div className="space-y-2 md:space-y-3">
           {lines.map((line, index) => (
             <div
-              key={line.id}
+              key={`${instanceId.current}-line-${line.id}`}
               className="flex items-center gap-2 transition-all duration-300 ease-out"
               style={{
                 transform: `translateY(${-(lines.length - 1 - index) * 2}px)`,
@@ -170,7 +173,7 @@ export default function ReviewAnimation() {
             >
               {line.segments.map((segment) => (
                 <div
-                  key={segment.id}
+                  key={`${instanceId.current}-line-${line.id}-seg-${segment.id}`}
                   className={`h-3 md:h-4 rounded-sm ${segment.color}`}
                   style={{ width: `${segment.width * 0.8}px` }}
                 />
@@ -182,7 +185,7 @@ export default function ReviewAnimation() {
             <div className="flex items-center gap-2" style={{ marginLeft: `${currentLine.indent * 16}px` }}>
               {currentLine.segments.map((segment) => (
                 <div
-                  key={segment.id}
+                  key={`${instanceId.current}-current-${currentLine.id}-seg-${segment.id}`}
                   className={`h-3 md:h-4 rounded-sm ${segment.color} transition-all duration-500 ease-out ${
                     segment.animated ? "opacity-100" : "opacity-0"
                   }`}
