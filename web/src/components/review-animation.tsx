@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 interface CodeSegment {
   id: number
@@ -67,6 +67,7 @@ export default function ReviewAnimation() {
   const [lines, setLines] = useState<CodeLine[]>([])
   const [currentLine, setCurrentLine] = useState<CodeLine | null>(null)
   const [headerDots, setHeaderDots] = useState(0)
+  const instanceId = useRef(Math.random().toString(36).substr(2, 9))
 
   useEffect(() => {
     let lineId = 0
@@ -160,7 +161,7 @@ export default function ReviewAnimation() {
         <div className="space-y-2 md:space-y-3">
           {lines.map((line, index) => (
             <div
-              key={line.id}
+              key={`${instanceId.current}-line-${line.id}`}
               className="flex items-center gap-2 transition-all duration-300 ease-out"
               style={{
                 transform: `translateY(${-(lines.length - 1 - index) * 2}px)`,
@@ -170,7 +171,7 @@ export default function ReviewAnimation() {
             >
               {line.segments.map((segment) => (
                 <div
-                  key={`line-${line.id}-seg-${segment.id}`}
+                  key={`${instanceId.current}-line-${line.id}-seg-${segment.id}`}
                   className={`h-3 md:h-4 rounded-sm ${segment.color}`}
                   style={{ width: `${segment.width * 0.8}px` }}
                 />
@@ -182,7 +183,7 @@ export default function ReviewAnimation() {
             <div className="flex items-center gap-2" style={{ marginLeft: `${currentLine.indent * 16}px` }}>
               {currentLine.segments.map((segment) => (
                 <div
-                  key={`current-${currentLine.id}-seg-${segment.id}`}
+                  key={`${instanceId.current}-current-${currentLine.id}-seg-${segment.id}`}
                   className={`h-3 md:h-4 rounded-sm ${segment.color} transition-all duration-500 ease-out ${
                     segment.animated ? "opacity-100" : "opacity-0"
                   }`}

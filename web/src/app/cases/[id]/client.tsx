@@ -102,10 +102,10 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
 
   const startPolling = useCallback(() => {
     stopPolling();
-    // Set 1-minute timeout
+    // Set 2-minute timeout
     timeoutRef.current = window.setTimeout(() => {
       stopPolling();
-    }, 60000);
+    }, 120000);
 
     intervalRef.current = window.setInterval(async () => {
       try {
@@ -248,7 +248,7 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
     const timeout = setTimeout(() => {
       cancelled = true;
       clearInterval(interval);
-    }, 60000);
+    }, 120000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -305,7 +305,7 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
     const timeout = setTimeout(() => {
       cancelled = true;
       clearInterval(interval);
-    }, 60000);
+    }, 120000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -766,7 +766,7 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
     const timeout = setTimeout(() => {
       cancelled = true;
       clearInterval(interval);
-    }, 60000);
+    }, 120000);
     return () => {
       cancelled = true;
       clearInterval(interval);
