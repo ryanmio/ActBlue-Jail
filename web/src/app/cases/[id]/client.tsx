@@ -1270,7 +1270,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
       </div>
 
       {tab === "primary" ? (
-        <>
+        <div key="primary-tab">
           {screenshotUrl ? (
             <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[520px] border border-slate-100">
               <div className="max-h-[520px] overflow-auto">
@@ -1286,9 +1286,9 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
               )}
             </div>
           )}
-        </>
+        </div>
       ) : (
-        <>
+        <div key="landing-tab">
           {/* client-side poll when opening Landing tab and we don't yet have a URL */}
           {!lpUrl && (landingStatus === "pending" || landingStatus === "success") && (
             <LandingPoll
@@ -1346,7 +1346,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
               {info && <div className="mt-1 text-xs text-slate-700">{info}</div>}
             </div>
           ))}
-        </>
+        </div>
       )}
     </div>
   );
