@@ -29,7 +29,7 @@ export async function runSenderExtraction(submissionId: string) {
     try {
       const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
       signedUrl = signed?.signedUrl || null;
-    } catch (_e) {
+    } catch {
       // ignore signing error; proceed with text-only
     }
   }

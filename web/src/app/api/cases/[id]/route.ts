@@ -30,14 +30,15 @@ export async function GET(
     if (vErr) throw vErr;
     const { data: commentsRows } = await supabase
       .from("comments")
-      .select("id, content, created_at")
+      .select("id, content, created_at, kind")
       .eq("submission_id", id)
+      .eq("kind", "user")
       .order("created_at", { ascending: true })
       .limit(10);
-    // Compute a simple summary on the server for convenience: pick the highest severity/confidence description
-    let summary: string | null = null;
+    // Prefer stored AI summary; fall back to top violation rationale
+    let summary: string | null = (item as unknown as { ai_summary?: string | null }).ai_summary ?? null;
     const list = (Array.isArray(vios) ? vios : []) as Array<ViolationRow>;
-    if (list.length > 0) {
+    if (!summary && list.length > 0) {
       const sorted = [...list].sort(
         (a, b) =>
           Number(b.severity ?? 0) - Number(a.severity ?? 0) ||
@@ -45,9 +46,30 @@ export async function GET(
       );
       summary = sorted[0]?.description ?? null;
     }
-    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [] });
+    // Load reports and replies
+    const { data: reportRows } = await supabase
+      .from("reports")
+      .select("id, case_id, to_email, cc_email, subject, body, screenshot_url, landing_url, status, created_at")
+      .eq("case_id", id)
+      .order("created_at", { ascending: true });
+    // Secondary signal for hasReport that does not rely on reports table access (RLS-safe)
+    const { data: landingNotes } = await supabase
+      .from("comments")
+      .select("id, content")
+      .eq("submission_id", id)
+      .eq("kind", "landing_page")
+      .ilike("content", "Report filed%")
+      .limit(1);
+    const { data: replyRows } = await supabase
+      .from("report_replies")
+      .select("id, report_id, case_id, from_email, body_text, created_at")
+      .eq("case_id", id)
+      .order("created_at", { ascending: true });
+
+    const hasReport = (Array.isArray(reportRows) && reportRows.length > 0) || (Array.isArray(landingNotes) && landingNotes.length > 0);
+    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [], reports: reportRows || [], report_replies: replyRows || [], hasReport });
   } catch (err) {
     console.error("/api/cases/[id] supabase error", err);
-    return NextResponse.json({ item: null, violations: [], comments: [] }, { status: 500 });
+    return NextResponse.json({ item: null, violations: [], comments: [], reports: [], report_replies: [] }, { status: 500 });
   }
 }

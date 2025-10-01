@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const submissionId: string | undefined = body?.submissionId;
+  const includeExistingComments: boolean = Boolean(body?.includeExistingComments);
   if (!submissionId) {
     console.error("/api/classify:error missing_args", { body });
     return NextResponse.json({ error: "missing_args" }, { status: 400 });
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   console.log("/api/classify:running", { submissionId });
   const result = await runClassification(submissionId, {
-    includeExistingComments: false,
+    includeExistingComments,
     replaceExisting: true,
   });
   if (!result.ok) {

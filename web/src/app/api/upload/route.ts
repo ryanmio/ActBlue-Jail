@@ -7,6 +7,7 @@ import { getSupabaseServer } from "@/lib/supabase-server";
 const BodySchema = z.object({
   filename: z.string(),
   contentType: z.string().default("image/jpeg"),
+  mode: z.enum(["image", "text"]).default("image"),
 });
 
 function sanitizeFilename(originalName: string, contentType?: string): string {
@@ -54,7 +55,10 @@ export async function POST(req: NextRequest) {
   const submissionId = randomUUID();
   const safeFilename = sanitizeFilename(parsed.data.filename, parsed.data.contentType);
   const objectPath = `${submissionId}/${safeFilename}`;
-  const imageUrl = `supabase://${env.SUPABASE_BUCKET_INCOMING}/${objectPath}`;
+  const isTextMode = parsed.data.mode === "text";
+  const imageUrl = isTextMode
+    ? `text://${submissionId}`
+    : `supabase://${env.SUPABASE_BUCKET_INCOMING}/${objectPath}`;
 
   let insertOk = false;
   let insertError: string | null = null;

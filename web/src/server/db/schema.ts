@@ -26,9 +26,14 @@ export const submissions = pgTable(
     redactLevel: text("redact_level").default("default"), // enum in SQL
     aiVersion: text("ai_version"),
     aiConfidence: numeric("ai_confidence", { precision: 3, scale: 2 }),
+    aiSummary: text("ai_summary"),
     emailSubject: text("email_subject"),
     emailBody: text("email_body"),
     isPublic: boolean("public").default(true),
+    landingUrl: text("landing_url"),
+    landingScreenshotUrl: text("landing_screenshot_url"),
+    landingRenderedAt: timestamp("landing_rendered_at", { withTimezone: true }),
+    landingRenderStatus: text("landing_render_status"),
   },
   (table) => {
     return {

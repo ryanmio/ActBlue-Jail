@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "openai_failed", detail: json }, { status: 502 });
     }
     rawText = json?.choices?.[0]?.message?.content || "";
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: "openai_failed" }, { status: 500 });
   }
 
