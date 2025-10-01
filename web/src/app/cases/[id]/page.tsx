@@ -1,6 +1,13 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 import Link from "next/link";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceViewer, InboundSMSViewer } from "./client";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { headers } from "next/headers";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
+import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
+import Footer from "@/components/Footer";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -13,6 +20,7 @@ type CaseItem = {
   message_type?: string | null;
 };
 
+
 type Violation = {
   id: string;
   code: string;
@@ -22,16 +30,23 @@ type Violation = {
   confidence?: string | number | null;
 };
 
-type Comment = { id: string; content: string; created_at?: string | null };
+
+type Comment = { id: string; content: string; created_at?: string | null; kind?: string | null };
 type CaseData = {
   item: CaseItem | null;
   violations: Array<Violation>;
   comments?: Array<Comment>;
+  reports?: Array<{ id: string }>;
+  hasReport?: boolean;
 };
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}`, { cache: "no-store" });
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
+  const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+  const base = `${proto}://${host}`;
+  const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
   if (!res.ok) {
     return <main className="mx-auto max-w-5xl p-6">Not found</main>;
   }
@@ -39,26 +54,31 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   if (!data.item) return <main className="mx-auto max-w-5xl p-6">Not found</main>;
 
   const item = data.item;
-  const imgRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases/${id}/image-url`, { cache: "no-store" });
+  const imgRes = await fetch(`${base}/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
+  const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
+  const landData = landRes.ok ? await landRes.json() : { url: null, landingUrl: null, status: null } as { url: string | null; landingUrl: string | null; status: string | null };
+  const hasReport = (data as { hasReport?: boolean }).hasReport === true
+    || (Array.isArray(data.reports) && data.reports.length > 0);
   const createdAtIso = item.created_at ?? null;
   const isPublic = (item as unknown as { public?: boolean }).public !== false;
   const topViolation = [...(data.violations || [])]
     .sort((a, b) => (Number(b.severity || 0) - Number(a.severity || 0)) || (Number(b.confidence || 0) - Number(a.confidence || 0)))[0];
-  const overallConfidence = item.ai_confidence == null ? null : Number(item.ai_confidence);
   const summaryInitial = topViolation?.description || null;
+  
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <main className="min-h-[calc(100vh+160px)]" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
         {/* Breadcrumb */}
-        <nav className="text-sm text-slate-600 flex items-center gap-2 mb-8">
-          <Link className="hover:text-slate-900 transition-colors" href="/">Home</Link>
-          <span className="text-slate-400">→</span>
-          <Link className="hover:text-slate-900 transition-colors" href="/cases">Cases</Link>
-          <span className="text-slate-400">→</span>
-          <span className="text-slate-900 font-medium truncate">Case Details</span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Cases", href: "/cases" },
+            { label: "Case Details" },
+          ]}
+          className="mb-4"
+        />
 
         {/* Hero section */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-8 md:p-10">
@@ -91,17 +111,17 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} />
             ) : (
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-                <h2 className="text-xl font-semibold text-slate-900 mb-6">Screenshot Evidence</h2>
-                <div className="rounded-2xl overflow-hidden bg-slate-50 mx-auto w-full max-w-[480px] md:max-w-[520px] border border-slate-100">
-                  {imgData.url ? (
-                    <EvidenceViewer src={imgData.url} alt="Political message screenshot" mime={imgData?.mime || null} />
-                  ) : (
-                    <div className="p-8 text-center text-slate-500">
-                      <div className="text-4xl mb-2">📱</div>
-                      <p>Screenshot loading...</p>
-                    </div>
-                  )}
-                </div>
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
+                <EvidenceTabs
+                  caseId={id}
+                  messageType={item.message_type}
+                  rawText={item.raw_text}
+                  screenshotUrl={imgData.url}
+                  screenshotMime={imgData?.mime || null}
+                  landingImageUrl={landData?.url || null}
+                  landingLink={landData?.landingUrl || null}
+                  landingStatus={landData?.status || null}
+                />
               </div>
             )}
           </div>
@@ -124,6 +144,15 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
         {/* Comments */}
         <CommentsSection id={id} initialComments={data.comments || []} />
+
+        {/* Reporting */}
+        {!hasReport && (
+          <ReportingCard id={id} existingLandingUrl={landData?.landingUrl || null} processingStatus={item.processing_status ?? null} />
+        )}
+
+        {/* Report history and replies */}
+        <ReportThread id={id} />
+        <Footer />
       </div>
     </main>
   );

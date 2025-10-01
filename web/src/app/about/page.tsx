@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 export default function AboutPage() {
   return (
@@ -12,15 +13,13 @@ export default function AboutPage() {
       }}
     >
       <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-8 md:space-y-10">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50"
-          >
-            Home
-          </Link>
-          <div />
-        </div>
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "About" },
+          ]}
+          className="mb-2"
+        />
 
         <header className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">About</h1>
