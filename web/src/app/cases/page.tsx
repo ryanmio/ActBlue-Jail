@@ -112,21 +112,24 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
         />
 
         <section className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">All cases</h1>
-            <div className="flex items-center gap-4">
-              <form action="/cases" className="flex items-center gap-2" method="get">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4 md:mb-0">
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">All cases</h1>
+              <div className="text-sm text-slate-600 md:hidden">{total} total</div>
+            </div>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-3 md:gap-4 md:-mt-8">
+              <form action="/cases" className="flex items-center gap-2 w-full md:w-auto" method="get">
                 <input type="hidden" name="page" value="1" />
                 <input type="hidden" name="limit" value={String(pageSize)} />
                 <input
                   name="q"
                   defaultValue={q}
                   placeholder="Search sender..."
-                  className="w-56 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  className="flex-1 md:w-56 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
                 />
                 <button className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" type="submit">Search</button>
               </form>
-              <div className="text-sm text-slate-600">{total} total</div>
+              <div className="text-sm text-slate-600 hidden md:block">{total} total</div>
             </div>
           </div>
 
@@ -141,19 +144,24 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       <div className="font-medium text-slate-900 truncate max-w-[60vw]">
                         {it.senderName || it.senderId || "Unknown sender"}
                       </div>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 flex-wrap">
+                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 md:flex-wrap">
                         {it.issues.length === 0 ? (
                           <span className="text-slate-500">No issues</span>
                         ) : (
-                          it.issues.map((v, idx) => (
-                            <span
-                              key={`${v.code}-${idx}`}
-                              title={v.code}
-                              className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300"
-                            >
-                              {v.title}
-                            </span>
-                          ))
+                          <>
+                            {it.issues.map((v, idx) => (
+                              <span
+                                key={`${v.code}-${idx}`}
+                                title={v.code}
+                                className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300 max-w-[80%] md:max-w-none min-w-0`}
+                              >
+                                <span className="truncate">{v.title}</span>
+                              </span>
+                            ))}
+                            {it.issues.length > 1 && (
+                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300 md:hidden">+{it.issues.length - 1} more</span>
+                            )}
+                          </>
                         )}
                       </div>
                       <div className="mt-1 text-xs text-slate-600 truncate max-w-[70ch]">
