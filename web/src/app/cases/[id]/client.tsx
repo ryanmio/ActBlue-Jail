@@ -745,7 +745,7 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
   const hasLanding = Boolean((landingUrl || existingLandingUrl || "").trim());
   const isProcessing = status !== "done";
 
-  // Poll for processing status updates
+  // Poll for processing status updates and landing URL
   useEffect(() => {
     if (status === "done") return; // Already done, no need to poll
     let cancelled = false;
@@ -754,9 +754,13 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        const item = data.item as { processing_status?: string | null } | null;
+        const item = data.item as { processing_status?: string | null; landing_url?: string | null } | null;
         if (!cancelled && item?.processing_status) {
           setStatus(item.processing_status);
+          // Update landing URL if we got one and our field is empty
+          if (item.landing_url && !landingUrl) {
+            setLandingUrl(item.landing_url);
+          }
           if (item.processing_status === "done") {
             clearInterval(interval);
           }
@@ -780,10 +784,21 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
       const detail = (e as CustomEvent).detail as { id?: string } | undefined;
       if (!detail || detail.id !== id) return;
       setStatus("classified"); // Reset to non-done status to trigger polling
+      // Also fetch fresh landing URL when reclassified
+      fetch(`/api/cases/${id}`, { cache: "no-store" })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json();
+          const item = data.item as { landing_url?: string | null } | null;
+          if (item?.landing_url && !landingUrl) {
+            setLandingUrl(item.landing_url);
+          }
+        })
+        .catch(() => {});
     };
     window.addEventListener("reclassify-started", onReclassify as EventListener);
     return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
-  }, [id]);
+  }, [id, landingUrl]);
 
   const onSubmit = async () => {
     setSubmitting(true);

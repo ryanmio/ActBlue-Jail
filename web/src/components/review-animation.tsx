@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useRef } from "react"
 
+// Global counter to ensure unique line IDs across all component instances
+let globalLineId = 0
+
 interface CodeSegment {
   id: number
   width: number // pixel width
@@ -70,7 +73,6 @@ export default function ReviewAnimation() {
   const instanceId = useRef(Math.random().toString(36).substr(2, 9))
 
   useEffect(() => {
-    let lineId = 0
     let patternIndex = 0
     let animationRunning = true
 
@@ -87,7 +89,7 @@ export default function ReviewAnimation() {
       const pattern = linePatterns[patternIndex % linePatterns.length]
 
       const newLine: CodeLine = {
-        id: lineId++,
+        id: globalLineId++,
         segments: pattern.segments.map((seg, index) => ({
           id: index,
           width: seg.width,
