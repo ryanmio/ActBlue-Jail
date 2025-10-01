@@ -87,16 +87,26 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
   const [status, setStatus] = useState<string | null | undefined>(initialStatus);
   const [overallConfidence, setOverallConfidence] = useState<number | null>(initialAiConfidence == null ? null : Number(initialAiConfidence));
   const intervalRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current != null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    if (timeoutRef.current != null) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }, []);
 
   const startPolling = useCallback(() => {
     stopPolling();
+    // Set 1-minute timeout
+    timeoutRef.current = window.setTimeout(() => {
+      stopPolling();
+    }, 60000);
+
     intervalRef.current = window.setInterval(async () => {
       try {
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
@@ -235,9 +245,14 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
         }
       } catch {}
     }, 2000);
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      clearInterval(interval);
+    }, 60000);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, [id, senderName, senderId]);
 
@@ -287,9 +302,14 @@ export function LiveSummary({ id, initialSummary, initialStatus }: LiveSummaryPr
         }
       } catch {}
     }, 2000);
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      clearInterval(interval);
+    }, 60000);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, [id, initialStatus]);
 
@@ -703,8 +723,8 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   );
 }
 
-type ReportCardProps = { id: string; existingLandingUrl?: string | null };
-export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps) {
+type ReportCardProps = { id: string; existingLandingUrl?: string | null; processingStatus?: string | null };
+export function ReportingCard({ id, existingLandingUrl = null, processingStatus = null }: ReportCardProps) {
   const [landingUrl, setLandingUrl] = useState(existingLandingUrl || "");
   const [ccEmail, setCcEmail] = useState("");
   const [note, setNote] = useState("");
@@ -722,6 +742,7 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
   const [previewSent, setPreviewSent] = useState(false);
   const policyHref = `https://help.actblue.com/hc/en-us/articles/16870069234839-ActBlue-Account-Use-Policy@${id}/`;
   const hasLanding = Boolean((landingUrl || existingLandingUrl || "").trim());
+  const isProcessing = processingStatus !== "done";
 
   const onSubmit = async () => {
     setSubmitting(true);
@@ -985,22 +1006,22 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
         {info && <div className="text-sm text-green-700 md:col-span-2">{info}</div>}
 
         <div className="flex items-center justify-end gap-2 md:col-span-2">
-          <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
+          <Tooltip label={isProcessing ? "AI is still analyzing violations" : (!hasLanding ? "Landing page is required" : "")}>
             <button
               type="button"
               onClick={buildPreview}
-              className={`px-4 py-2 rounded-xl border ${hasLanding ? "bg-white hover:bg-slate-50 text-slate-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
-              disabled={submitting || previewLoading || !hasLanding}
+              className={`px-4 py-2 rounded-xl border ${hasLanding && !isProcessing ? "bg-white hover:bg-slate-50 text-slate-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+              disabled={submitting || previewLoading || !hasLanding || isProcessing}
             >
               {previewLoading ? "Preparing…" : "Preview Report"}
             </button>
           </Tooltip>
-          <Tooltip label={!hasLanding ? "Landing page is required" : undefined}>
+          <Tooltip label={isProcessing ? "AI is still analyzing violations" : (!hasLanding ? "Landing page is required" : undefined)}>
             <button
               type="button"
             onClick={async () => { await onSubmit(); if (!error) setReportSent(true); }}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow"
-              disabled={submitting || !hasLanding}
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow"
+              disabled={submitting || !hasLanding || isProcessing}
             >
               {submitting ? "Sending…" : "Submit Report"}
             </button>
@@ -1026,10 +1047,10 @@ export function ReportingCard({ id, existingLandingUrl = null }: ReportCardProps
                   </div>
                 )}
                 <div className="mt-4 flex items-center justify-end gap-2">
-                  <button type="button" onClick={() => setPreviewOpen(false)} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
+                  <button type="button" onClick={() => { setPreviewOpen(false); setPreviewSent(false); }} className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-slate-700">Close</button>
                   {!previewSent && (
-                    <Tooltip label={!hasLanding ? "Landing page is required" : ""}>
-                      <button type="button" onClick={async () => { if (!hasLanding) return; await onSubmit(); setPreviewSent(true); }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 ${hasLanding ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding}>
+                    <Tooltip label={isProcessing ? "AI is still analyzing violations" : (!hasLanding ? "Landing page is required" : "")}>
+                      <button type="button" onClick={async () => { if (!hasLanding || isProcessing) return; await onSubmit(); setPreviewSent(true); }} className={`px-4 py-2 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed ${hasLanding && !isProcessing ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-400 cursor-not-allowed"}`} disabled={submitting || !hasLanding || isProcessing}>
                         {submitting ? "Sending…" : "Send Report"}
                       </button>
                     </Tooltip>
