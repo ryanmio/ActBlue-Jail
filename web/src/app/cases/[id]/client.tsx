@@ -423,10 +423,7 @@ function renderReportBody(body: string) {
         <div className="text-xs font-semibold text-slate-600 mb-1">Campaign/Org</div>
         <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.campaign.join("\n").trim() || "(unknown)"}</div>
       </div>
-      <div>
-        <div className="text-xs font-semibold text-slate-600 mb-1">Summary</div>
-        <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.summary.join("\n").trim() || "(no summary)"}</div>
-      </div>
+      {/* Summary removed */}
       <div>
         <div className="text-xs font-semibold text-slate-600 mb-1">Violations</div>
         <div className="text-sm text-slate-800 whitespace-pre-wrap">
