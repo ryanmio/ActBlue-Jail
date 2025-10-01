@@ -130,37 +130,41 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                 />
                 <button className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" type="submit">Search</button>
               </form>
+              {/* Compact filter dropdown */}
+              <div className="relative">
+                <details className="[&_summary::-webkit-details-marker]:hidden">
+                  <summary className="list-none text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 inline-flex items-center gap-2 cursor-pointer select-none">
+                    <span>Filter</span>
+                    {selectedCodes.length > 0 && (
+                      <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">{selectedCodes.length}</span>
+                    )}
+                  </summary>
+                  <div className="absolute right-0 mt-2 w-72 z-20 rounded-xl border border-slate-200 bg-white p-3 shadow-xl md:w-80">
+                    <form action="/cases" method="get" className="space-y-3">
+                      <input type="hidden" name="page" value="1" />
+                      <input type="hidden" name="limit" value={String(pageSize)} />
+                      {q && <input type="hidden" name="q" value={q} />}
+                      <div className="grid grid-cols-1 gap-2">
+                        {VIOLATION_OPTIONS.map((opt) => {
+                          const checked = selectedCodes.includes(opt.code);
+                          return (
+                            <label key={opt.code} className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
+                              <input type="checkbox" name="codes" value={opt.code} defaultChecked={checked} className="accent-slate-900" />
+                              <span className="truncate"><span className="text-xs text-slate-500 mr-1">{opt.code}</span>{opt.title}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800">Apply</button>
+                      </div>
+                    </form>
+                  </div>
+                </details>
+              </div>
               <div className="text-sm text-slate-600 hidden md:block">{total} total</div>
             </div>
-            {/* Filters */}
-            <details className="mt-3 md:mt-4">
-              <summary className="list-none w-full md:w-auto inline-flex items-center justify-between gap-2 text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 cursor-pointer">
-                <span>Filter violations</span>
-                {selectedCodes.length > 0 && (
-                  <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">{selectedCodes.length}</span>
-                )}
-              </summary>
-              <form action="/cases" method="get" className="mt-3 md:mt-4">
-                <input type="hidden" name="page" value="1" />
-                <input type="hidden" name="limit" value={String(pageSize)} />
-                {q && <input type="hidden" name="q" value={q} />}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {VIOLATION_OPTIONS.map((opt) => {
-                    const checked = selectedCodes.includes(opt.code);
-                    return (
-                      <label key={opt.code} className="flex items-center gap-2 text-sm text-slate-800 border border-slate-300 rounded-md px-3 py-2 hover:bg-slate-50">
-                        <input type="checkbox" name="codes" value={opt.code} defaultChecked={checked} className="accent-slate-900" />
-                        <span className="truncate"><span className="text-xs text-slate-500 mr-1">{opt.code}</span>{opt.title}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800">Apply</button>
-                  <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
-                </div>
-              </form>
-            </details>
           </div>
 
           {items.length === 0 ? (
