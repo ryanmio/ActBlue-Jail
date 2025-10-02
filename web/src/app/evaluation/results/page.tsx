@@ -185,7 +185,7 @@ function ResultsContent() {
 
               <div className="group relative bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-green-300 transition-all cursor-help">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-600">Recall</span>
+                  <span className="text-xs font-medium text-gray-600">Detection Rate</span>
                   <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center">
                     <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -198,7 +198,7 @@ function ResultsContent() {
                 
                 {/* Hover Tooltip */}
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none shadow-xl">
-                  <div className="font-bold mb-1">Recall</div>
+                  <div className="font-bold mb-1">Detection Rate</div>
                   <div className="text-gray-300">Of all actual violations, what % does AI catch? (Fewer misses = better)</div>
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
                     <div className="border-4 border-transparent border-t-gray-900"></div>
@@ -285,7 +285,7 @@ function ResultsContent() {
               <p className="text-xs text-gray-600">{aggregateMetrics.totalEvaluations} evaluations across {aggregateMetrics.totalSessions || "all"} sessions</p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-3 mb-3">
+            <div className="grid md:grid-cols-3 gap-3">
               <div className="bg-white border border-gray-200 rounded-xl p-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium text-gray-600">Accuracy</span>
@@ -304,29 +304,10 @@ function ResultsContent() {
 
               <div className="bg-white border border-gray-200 rounded-xl p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-gray-600">Recall</span>
+                  <span className="text-xs font-medium text-gray-600">Detection Rate</span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 mb-0.5">{aggregateMetrics.recall}%</div>
                 <p className="text-xs text-gray-500">Average</p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-4 gap-2">
-              <div className="bg-white border border-gray-200 rounded-lg p-2">
-                <div className="text-lg font-bold text-gray-900">{aggregateMetrics.truePositives}</div>
-                <div className="text-xs font-medium text-gray-600">True Positives</div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-2">
-                <div className="text-lg font-bold text-gray-900">{aggregateMetrics.trueNegatives}</div>
-                <div className="text-xs font-medium text-gray-600">True Negatives</div>
-              </div>
-              <div className="bg-white border border-red-100 rounded-lg p-2">
-                <div className="text-lg font-bold text-red-600">{aggregateMetrics.falsePositives}</div>
-                <div className="text-xs font-medium text-gray-600">False Positives</div>
-              </div>
-              <div className="bg-white border border-orange-100 rounded-lg p-2">
-                <div className="text-lg font-bold text-orange-600">{aggregateMetrics.falseNegatives}</div>
-                <div className="text-xs font-medium text-gray-600">False Negatives</div>
               </div>
             </div>
           </div>
