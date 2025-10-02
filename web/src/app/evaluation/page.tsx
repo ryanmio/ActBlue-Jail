@@ -384,34 +384,47 @@ export default function EvaluationPage() {
               {/* Tab Bar */}
               <div className="flex border-b bg-gray-50">
                 <button
-                  onClick={() => setActiveTab("image")}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                  onClick={() => hasImage && setActiveTab("image")}
+                  disabled={!hasImage}
+                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
                     activeTab === "image"
                       ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
+                      : hasImage
+                      ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                      : "text-gray-400 cursor-not-allowed"
                   }`}
                 >
                   📸 Image
+                  {hasImage && (
+                    <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab("text")}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
                     activeTab === "text"
                       ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
                   📄 Text
+                  <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                 </button>
                 <button
-                  onClick={() => setActiveTab("landing")}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                  onClick={() => hasLanding && setActiveTab("landing")}
+                  disabled={!hasLanding}
+                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
                     activeTab === "landing"
                       ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
+                      : hasLanding
+                      ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                      : "text-gray-400 cursor-not-allowed"
                   }`}
                 >
                   🌐 Landing
+                  {hasLanding && (
+                    <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  )}
                 </button>
               </div>
 
