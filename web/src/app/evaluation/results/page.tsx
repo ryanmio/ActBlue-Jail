@@ -314,19 +314,19 @@ function ResultsContent() {
             <div className="grid md:grid-cols-4 gap-2">
               <div className="bg-white border border-gray-200 rounded-lg p-2">
                 <div className="text-lg font-bold text-gray-900">{aggregateMetrics.truePositives}</div>
-                <div className="text-xs font-medium text-gray-600">TP</div>
+                <div className="text-xs font-medium text-gray-600">True Positives</div>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-2">
                 <div className="text-lg font-bold text-gray-900">{aggregateMetrics.trueNegatives}</div>
-                <div className="text-xs font-medium text-gray-600">TN</div>
+                <div className="text-xs font-medium text-gray-600">True Negatives</div>
               </div>
               <div className="bg-white border border-red-100 rounded-lg p-2">
                 <div className="text-lg font-bold text-red-600">{aggregateMetrics.falsePositives}</div>
-                <div className="text-xs font-medium text-gray-600">FP</div>
+                <div className="text-xs font-medium text-gray-600">False Positives</div>
               </div>
               <div className="bg-white border border-orange-100 rounded-lg p-2">
                 <div className="text-lg font-bold text-orange-600">{aggregateMetrics.falseNegatives}</div>
-                <div className="text-xs font-medium text-gray-600">FN</div>
+                <div className="text-xs font-medium text-gray-600">False Negatives</div>
               </div>
             </div>
           </div>
