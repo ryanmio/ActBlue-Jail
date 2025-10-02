@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Combine data
-    const samples = shuffled.map((sub) => ({
+    const samples = submissionsToUse.map((sub) => ({
       id: sub.id,
       imageUrl: sub.image_url,
       senderId: sub.sender_id,
