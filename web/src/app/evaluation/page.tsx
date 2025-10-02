@@ -341,7 +341,9 @@ export default function EvaluationPage() {
               {/* AI Violations - At Top */}
               <div className="border-b border-gray-200 bg-gray-50/50 p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <div className={`w-2 h-2 rounded-full ${
+                    currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
+                  }`}></div>
                   <h3 className="text-sm font-semibold text-gray-900">
                     AI-Detected Violations
                   </h3>
