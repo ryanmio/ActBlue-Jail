@@ -149,8 +149,6 @@ export default function EvaluationPage() {
         }),
       });
 
-      let currentSessionId = sessionId;
-      
       if (!response.ok) {
         const errorData = await response.json();
         if (errorData.error === "duplicate_evaluation") {
@@ -164,7 +162,6 @@ export default function EvaluationPage() {
         
         // Store session ID if not already set
         if (!sessionId && data.sessionId) {
-          currentSessionId = data.sessionId;
           setSessionId(data.sessionId);
           localStorage.setItem("eval_session_id", data.sessionId);
         }
@@ -269,7 +266,7 @@ export default function EvaluationPage() {
                 Great work! 🎉
               </h2>
               <p className="text-gray-600">
-                You've completed the minimum {REQUIRED_EVALUATIONS} evaluations.
+                You&apos;ve completed the minimum {REQUIRED_EVALUATIONS} evaluations.
               </p>
             </div>
 
@@ -297,7 +294,7 @@ export default function EvaluationPage() {
             </div>
 
             <p className="text-xs text-center text-gray-500">
-              More evaluations help improve the AI's accuracy!
+              More evaluations help improve the AI&apos;s accuracy!
             </p>
           </div>
         </div>
