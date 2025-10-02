@@ -339,8 +339,8 @@ export default function EvaluationPage() {
             {/* Left: Case Content with Tabs */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               {/* AI Violations - At Top */}
-              <div className="border-b bg-gradient-to-r from-yellow-50 to-amber-50 p-3">
-                <h3 className="text-xs font-bold text-gray-800 mb-2 uppercase tracking-wide">
+              <div className="border-b bg-gradient-to-r from-blue-50 to-sky-50 p-3">
+                <h3 className="text-xs font-bold text-blue-600 mb-2 uppercase tracking-wide">
                   AI-Detected Violations
                 </h3>
                 {currentSample.aiViolations.length > 0 ? (
@@ -348,9 +348,9 @@ export default function EvaluationPage() {
                     {currentSample.aiViolations.map((violation) => (
                       <HoverCard key={violation.code} openDelay={200}>
                         <HoverCardTrigger asChild>
-                          <button className="inline-flex items-center bg-yellow-100 border border-yellow-300 rounded-full px-3 py-1 text-xs font-semibold text-yellow-900 cursor-help hover:bg-yellow-200 transition-colors">
+                          <button className="inline-flex items-center bg-white border border-gray-300 rounded-full px-3 py-1 text-xs font-semibold text-red-900 cursor-help hover:bg-gray-50 transition-colors">
                             {violation.code}
-                            <span className="ml-1.5 text-yellow-700 font-medium">
+                            <span className="ml-1.5 text-red-800 font-medium">
                               {Math.round((violation.confidence || 0) * 100)}%
                             </span>
                           </button>
