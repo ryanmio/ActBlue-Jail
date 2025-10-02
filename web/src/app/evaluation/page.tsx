@@ -603,7 +603,7 @@ export default function EvaluationPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-500 italic">None selected</p>
+                  <p className="text-xs text-gray-500 italic">No Violations</p>
                 )}
               </div>
 
