@@ -339,8 +339,8 @@ export default function EvaluationPage() {
             {/* Left: Case Content with Tabs */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               {/* AI Violations - At Top */}
-              <div className="border-b bg-gradient-to-r from-blue-100 to-blue-200 p-3">
-                <h3 className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">
+              <div className="border-b bg-white p-3">
+                <h3 className="text-xs font-bold text-blue-950 mb-2 uppercase tracking-wide">
                   AI-Detected Violations
                 </h3>
                 {currentSample.aiViolations.length > 0 ? (
