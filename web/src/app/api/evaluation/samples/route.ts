@@ -3,6 +3,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 /**
+ * Convert supabase:// URL to signed URL
+ */
+async function convertToSignedUrl(supabase: any, url: string | null): Promise<string | null> {
+  if (!url) return null;
+  
+  // If already an HTTP URL, return as-is
+  if (url.startsWith("http")) return url;
+  
+  // Parse supabase:// URLs
+  if (!url.startsWith("supabase://")) return null;
+  
+  const rest = url.replace("supabase://", "");
+  const [bucket, ...pathParts] = rest.split("/");
+  const path = pathParts.join("/");
+  
+  if (!bucket || !path) return null;
+  
+  try {
+    const { data: signed } = await supabase
+      .storage
+      .from(bucket)
+      .createSignedUrl(path, 3600); // 1 hour expiry
+    
+    return signed?.signedUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * GET /api/evaluation/samples
  * Returns random submissions with AI-detected violations for evaluation
  * Query params:
@@ -43,21 +73,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ samples: [] });
     }
 
-    // Prioritize submissions with valid image URLs
-    const withImages = submissions.filter(
-      (sub) => sub.image_url && sub.image_url.startsWith("http")
-    );
-    const withoutImages = submissions.filter(
-      (sub) => !sub.image_url || !sub.image_url.startsWith("http")
-    );
-
-    // Shuffle each group separately
-    const shuffledWithImages = withImages.sort(() => Math.random() - 0.5);
-    const shuffledWithoutImages = withoutImages.sort(() => Math.random() - 0.5);
-
-    // Prioritize image submissions, then add ones without images if needed
-    const submissionsToUse = [...shuffledWithImages, ...shuffledWithoutImages].slice(0, count);
-    const submissionIds = submissionsToUse.map((s) => s.id);
+    // Shuffle and take requested count
+    const shuffled = submissions.sort(() => Math.random() - 0.5).slice(0, count);
+    const submissionIds = shuffled.map((s) => s.id);
 
     // Get violations for these submissions
     const { data: violations, error: violationsError } = await supabase
@@ -84,22 +102,24 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    // Combine data
-    const samples = submissionsToUse.map((sub) => ({
-      id: sub.id,
-      imageUrl: sub.image_url,
-      senderId: sub.sender_id,
-      senderName: sub.sender_name,
-      rawText: sub.raw_text,
-      messageType: sub.message_type,
-      aiConfidence: sub.ai_confidence,
-      createdAt: sub.created_at,
-      landingUrl: sub.landing_url,
-      landingScreenshotUrl: sub.landing_screenshot_url,
-      aiViolations: violationsBySubmission[sub.id] || [],
-    }));
+    // Convert supabase:// URLs to signed URLs
+    const samplesWithSignedUrls = await Promise.all(
+      shuffled.map(async (sub) => ({
+        id: sub.id,
+        imageUrl: await convertToSignedUrl(supabase, sub.image_url),
+        senderId: sub.sender_id,
+        senderName: sub.sender_name,
+        rawText: sub.raw_text,
+        messageType: sub.message_type,
+        aiConfidence: sub.ai_confidence,
+        createdAt: sub.created_at,
+        landingUrl: sub.landing_url,
+        landingScreenshotUrl: await convertToSignedUrl(supabase, sub.landing_screenshot_url),
+        aiViolations: violationsBySubmission[sub.id] || [],
+      }))
+    );
 
-    return NextResponse.json({ samples });
+    return NextResponse.json({ samples: samplesWithSignedUrls });
   } catch (error) {
     console.error("/api/evaluation/samples: error", error);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });

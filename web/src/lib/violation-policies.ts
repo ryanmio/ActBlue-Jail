@@ -54,7 +54,7 @@ export const VIOLATION_POLICIES: ViolationPolicy[] = [
   {
     code: "AB008",
     title: "Unverified Matching Program",
-    policy: "All text and email fundraising solicitations may not [...] promote unverified matching programs.",
+    policy: "All text and email fundraising solicitations may not [...] promote unverified matching programs. If an entity advertises a matching program for contributions made through ActBlue, the entity must be able to provide documentation to ActBlue of such a program, upon request.",
   },
 ];
 

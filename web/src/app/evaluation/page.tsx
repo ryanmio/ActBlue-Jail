@@ -98,11 +98,14 @@ export default function EvaluationPage() {
   // Set default tab based on what's available
   useEffect(() => {
     if (currentSample) {
-      const hasImage = currentSample.imageUrl && currentSample.imageUrl.startsWith("http");
-      const hasLanding = currentSample.landingScreenshotUrl && currentSample.landingScreenshotUrl.startsWith("http");
+      const hasImage = currentSample.imageUrl !== null && currentSample.imageUrl !== undefined;
+      const hasLanding = currentSample.landingScreenshotUrl !== null && currentSample.landingScreenshotUrl !== undefined;
       
+      // Default to text tab, switch to image if available
       if (hasImage) {
         setActiveTab("image");
+      } else if (currentSample.rawText) {
+        setActiveTab("text");
       } else if (hasLanding) {
         setActiveTab("landing");
       } else {
@@ -244,8 +247,8 @@ export default function EvaluationPage() {
     );
   }
 
-  const hasImage = currentSample?.imageUrl && currentSample.imageUrl.startsWith("http");
-  const hasLanding = currentSample?.landingScreenshotUrl && currentSample.landingScreenshotUrl.startsWith("http");
+  const hasImage = currentSample?.imageUrl !== null && currentSample?.imageUrl !== undefined;
+  const hasLanding = currentSample?.landingScreenshotUrl !== null && currentSample?.landingScreenshotUrl !== undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-6">
