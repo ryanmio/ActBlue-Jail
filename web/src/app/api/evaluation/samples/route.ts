@@ -3,10 +3,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 /**
- * Convert supabase:// URL to signed URL
+ * Check if URL is an image file (not PDF or other formats)
+ */
+function isImageFile(url: string | null): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return lower.endsWith('.png') || 
+         lower.endsWith('.jpg') || 
+         lower.endsWith('.jpeg') || 
+         lower.endsWith('.gif') || 
+         lower.endsWith('.webp') ||
+         lower.includes('.png?') ||
+         lower.includes('.jpg?') ||
+         lower.includes('.jpeg?') ||
+         lower.includes('.gif?') ||
+         lower.includes('.webp?');
+}
+
+/**
+ * Convert supabase:// URL to signed URL (only for valid image files)
  */
 async function convertToSignedUrl(supabase: any, url: string | null): Promise<string | null> {
   if (!url) return null;
+  
+  // Check if it's an image file before processing
+  if (!isImageFile(url)) return null;
   
   // If already an HTTP URL, return as-is
   if (url.startsWith("http")) return url;
