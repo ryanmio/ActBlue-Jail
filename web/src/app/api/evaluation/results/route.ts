@@ -82,6 +82,7 @@ function calculateMetrics(responses: Array<{ manual_violations: any; ai_violatio
       falseNegatives: 0,
       truePositives: 0,
       trueNegatives: 0,
+      totalSessions: undefined as number | undefined,
     };
   }
 
@@ -150,6 +151,7 @@ function calculateMetrics(responses: Array<{ manual_violations: any; ai_violatio
     falseNegatives,
     truePositives,
     trueNegatives,
+    totalSessions: undefined as number | undefined,
   };
 }
 
