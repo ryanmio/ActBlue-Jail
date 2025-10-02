@@ -339,18 +339,24 @@ export default function EvaluationPage() {
             {/* Left: Case Content with Tabs */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               {/* AI Violations - At Top */}
-              <div className="border-b bg-white p-3">
-                <h3 className="text-xs font-bold text-blue-950 mb-2 uppercase tracking-wide">
-                  AI-Detected Violations
-                </h3>
+              <div className="border-b border-gray-200 bg-gray-50/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    AI-Detected Violations
+                  </h3>
+                  <span className="text-xs text-gray-500 font-medium">
+                    {currentSample.aiViolations.length} found
+                  </span>
+                </div>
                 {currentSample.aiViolations.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {currentSample.aiViolations.map((violation) => (
                       <HoverCard key={violation.code} openDelay={200}>
                         <HoverCardTrigger asChild>
-                          <button className="inline-flex items-center bg-white border border-gray-400 rounded-full px-3 py-1 text-xs font-semibold text-red-950 cursor-help hover:bg-gray-100 transition-colors">
-                            {violation.code}
-                            <span className="ml-1.5 text-red-900 font-medium">
+                          <button className="inline-flex items-center bg-white border border-red-200 rounded-lg px-3 py-1.5 text-xs font-medium text-red-800 cursor-help hover:bg-red-50 hover:border-red-300 transition-all duration-200 shadow-sm">
+                            <span className="font-semibold">{violation.code}</span>
+                            <span className="ml-2 text-red-600 font-normal">
                               {Math.round((violation.confidence || 0) * 100)}%
                             </span>
                           </button>
