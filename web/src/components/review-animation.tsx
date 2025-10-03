@@ -145,7 +145,7 @@ export default function ReviewAnimation() {
     <div className="w-full">
       {/* Header (no inner card, blends with parent card) */}
       <div className="flex items-center gap-2 mb-4 text-slate-600 text-sm font-medium">
-        <span>Scanning for violations</span>
+        <span>Reviewing for violations</span>
         <div className="flex gap-1 ml-2">
           {[0, 1, 2].map((i) => (
             <div
