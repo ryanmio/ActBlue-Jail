@@ -9,6 +9,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 const REQUIRED_EVALUATIONS = 20;
 
@@ -202,6 +203,21 @@ export default function EvaluationPage() {
     }
   };
 
+  const handleNavigateHome = (e: React.MouseEvent) => {
+    // If user has made progress, confirm before leaving
+    if (evaluatedIds.length > 0 && evaluatedIds.length < REQUIRED_EVALUATIONS) {
+      e.preventDefault();
+      const confirmed = confirm(
+        `You've completed ${evaluatedIds.length} of ${REQUIRED_EVALUATIONS} evaluations. Are you sure you want to leave? Your progress will be saved.`
+      );
+      if (confirmed) {
+        router.push("/");
+      }
+    } else {
+      router.push("/");
+    }
+  };
+
   const handleViewResults = () => {
     router.push(`/evaluation/results?sessionId=${sessionId}`);
   };
@@ -301,6 +317,22 @@ export default function EvaluationPage() {
       )}
 
       <div className="max-w-6xl mx-auto px-4">
+        {/* Breadcrumb */}
+        <div className="mb-4" onClick={(e) => {
+          // Intercept clicks on links within the breadcrumb
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'A' && target.textContent === 'Home') {
+            handleNavigateHome(e);
+          }
+        }}>
+          <Breadcrumb
+            items={[
+              { label: "Home", href: "/" },
+              { label: "AI Training" },
+            ]}
+          />
+        </div>
+
         {/* Header */}
         <div className="mb-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">
