@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function AboutPage() {
   return (
@@ -21,7 +22,8 @@ export default function AboutPage() {
           className="mb-2"
         />
 
-        <header className="text-center space-y-2">
+        <header className="relative text-center space-y-2">
+          <PageHeader />
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">About</h1>
           <p className="text-sm text-slate-700">Not affiliated with ActBlue.</p>
         </header>
