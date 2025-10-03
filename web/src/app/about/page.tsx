@@ -43,11 +43,114 @@ export default function AboutPage() {
         </section>
 
         <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Disclaimer</h2>
-          <p className="text-sm text-slate-700">
-            This site is not affiliated with ActBlue. Entries are user-submitted allegations of potential policy
-            violations. We show evidence snippets and model confidence, and encourage manual review.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900">Legal Disclaimer</h2>
+          <div className="space-y-4 text-sm text-slate-700">
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Purpose and scope</h3>
+              <p>
+                AB Jail is an open-source, community-led transparency project that documents potential fundraising policy violations. The site is for research, journalism, and public accountability. It is not a court of law and it does not adjudicate facts.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">No affiliation</h3>
+              <p>
+                AB Jail is not affiliated with ActBlue, ActBlue Civics, ActBlue Charities, Numero, NGP, ClickToWin, or any campaign, PAC, nonprofit, platform, vendor, or payment processor mentioned on this site. References to third-party names, policies, trademarks, or products are for identification and reporting purposes only and do not imply endorsement or association.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">User-submitted and automatically processed content</h3>
+              <p>
+                Materials on this site may include user uploads and messages received by AB Jail via seeded "honeytrap" phone numbers and email addresses. AB Jail uses automated tools to extract text, identify senders, and label potential policy issues. Automated labels are probabilistic, may be incomplete or incorrect, and should be treated as leads for further review – not as definitive findings.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">No statements of fact about unlawful conduct</h3>
+              <p>
+                Entries on this site describe alleged or potential practices as they appear in the submitted materials and relevant public policies. Unless expressly stated, AB Jail does not assert that any person or entity violated a law or regulation. Descriptions and summaries are presented as opinions based on disclosed facts – namely the quoted message content, links, and screenshots included in each case.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Reporting facilitation only</h3>
+              <p>
+                Where the site generates a prefilled email or other draft to help users report a case to a platform, that draft is a convenience feature. AB Jail does not submit reports on a user's behalf in the MVP, does not guarantee any outcome, and does not represent any user before any platform or authority.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Uploader representations</h3>
+              <p>
+                By submitting content, uploaders represent and warrant that they have the right to share the materials; that submissions do not include sensitive personal data beyond what is necessary for reporting; and that any personal information of private individuals has been removed or will be redacted. Uploaders agree not to submit malware, illegal content, or knowingly false materials.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Takedown, corrections, and disputes</h3>
+              <p>
+                If you are a referenced individual or organization and believe a case is inaccurate, incomplete, contains privileged or private information, or infringes your rights, contact us at <a href="mailto:democratdonor+legal@gmail.com" className="underline hover:no-underline">democratdonor+legal@gmail.com</a> with the case URL and specific concerns. AB Jail will review good-faith requests and may annotate, correct, redact, or remove content at its discretion. Providing clarifying documentation may expedite resolution.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Trademarks and nominative fair use</h3>
+              <p>
+                "ActBlue" and other names and logos on this site may be trademarks of their respective owners. AB Jail uses such marks solely to identify the platforms or policies referenced, consistent with nominative fair use. No sponsorship or endorsement is claimed.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">No legal advice</h3>
+              <p>
+                Nothing on this site is legal, financial, or compliance advice. For advice about your specific situation, consult qualified counsel. AB Jail's contributors and maintainers are not your lawyers.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">No warranties</h3>
+              <p>
+                The site and all content are provided "as is" and "as available" – without warranties of any kind, express or implied, including accuracy, completeness, reliability, or fitness for a particular purpose. AB Jail does not guarantee that any platform will take action on any report.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Limitation of liability</h3>
+              <p>
+                To the maximum extent permitted by law, AB Jail, its contributors, and maintainers are not liable for any indirect, incidental, special, consequential, or exemplary damages, or for any lost profits, goodwill, or data, arising from or related to use of the site or reliance on its content.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Indemnification</h3>
+              <p>
+                By using this site, you agree to indemnify and hold harmless AB Jail, its contributors, and maintainers from any claims, liabilities, damages, losses, and expenses (including reasonable attorneys' fees) arising from your submissions or your use or misuse of the site.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Content moderation</h3>
+              <p>
+                AB Jail may refuse, remove, or restrict content that is abusive, unlawful, defamatory, deceptive, spam, malware, or otherwise inconsistent with the project's purpose or applicable policies. Moderation decisions are discretionary and may change as new information becomes available.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Governing Law and Venue</h3>
+              <p>
+                These terms and any dispute arising out of or relating to this site are governed by the laws of the District of Columbia, without regard to its conflicts-of-law rules. The exclusive venue for any permitted action shall be the Superior Court of the District of Columbia or, where federal jurisdiction is mandatory, the U.S. District Court for the District of Columbia, and the parties consent to personal jurisdiction in those courts.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-slate-900 mb-2">Contact</h3>
+              <p>
+                For legal, takedown, or correction requests: <a href="mailto:democratdonor+legal@gmail.com" className="underline hover:no-underline">democratdonor+legal@gmail.com</a><br />
+                For press: <a href="mailto:democratdonor+press@gmail.com" className="underline hover:no-underline">democratdonor+press@gmail.com</a>
+              </p>
+            </div>
+          </div>
         </section>
 
         <section id="terms" className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
