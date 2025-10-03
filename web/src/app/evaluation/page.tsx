@@ -355,7 +355,7 @@ export default function EvaluationPage() {
             <li className="flex items-center gap-2">
               <button
                 onClick={handleNavigateHome}
-                className="text-base font-medium text-slate-800 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
+                className="text-base font-medium text-slate-800 transition-all hover:text-slate-950 hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
               >
                 Home
               </button>
