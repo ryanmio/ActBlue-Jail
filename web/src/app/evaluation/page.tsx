@@ -224,7 +224,15 @@ export default function EvaluationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div 
+        className="min-h-screen bg-white flex items-center justify-center p-4"
+        style={{
+          background:
+            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+        }}
+      >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading evaluation samples...</p>
@@ -235,7 +243,15 @@ export default function EvaluationPage() {
 
   if (error && samples.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div 
+        className="min-h-screen bg-white flex items-center justify-center p-4"
+        style={{
+          background:
+            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+        }}
+      >
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md">
           <h2 className="text-xl font-bold text-red-600 mb-4">Error</h2>
           <p className="text-gray-700 mb-4">{error}</p>
@@ -252,7 +268,15 @@ export default function EvaluationPage() {
 
   if (!currentSample && samples.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div 
+        className="min-h-screen bg-white flex items-center justify-center p-4"
+        style={{
+          background:
+            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+        }}
+      >
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md">
           <h2 className="text-xl font-bold mb-4">No Samples Available</h2>
           <p className="text-gray-700">
@@ -267,7 +291,15 @@ export default function EvaluationPage() {
   const hasLanding = currentSample?.landingScreenshotUrl !== null && currentSample?.landingScreenshotUrl !== undefined;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-6">
+    <div 
+      className="min-h-screen bg-white py-6"
+      style={{
+        background:
+          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+      }}
+    >
       {/* Completion Modal */}
       {showCompletionModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
