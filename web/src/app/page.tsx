@@ -5,6 +5,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assertSupabaseBrowser } from "@/lib/supabase";
 import { cachedJsonFetch } from "@/lib/client-cache";
 import Footer from "@/components/Footer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type SubmissionRow = {
   id: string;
@@ -158,9 +167,87 @@ export default function Home() {
     >
       <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-10">
         {/* Header */}
-        <header className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">ActBlue Jail</h1>
-          <p className="text-sm text-slate-700">Upload a screenshot or paste to begin. Not affiliated with ActBlue.</p>
+        <header className="relative">
+          {/* Menu Button - Top Right */}
+          <div className="absolute top-0 right-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                  <span className="ml-2">Menu</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel>AB Jail</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/about" className="cursor-pointer">About</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/cases" className="cursor-pointer">All Cases</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    Stats (coming soon)
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuLabel>Help Improve</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/evaluation" className="cursor-pointer">AI Training</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a href="https://github.com/ryanmio/ActBlue-Jail/issues/new" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                      Bug Report
+                      <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a href="https://github.com/ryanmio/ActBlue-Jail/issues/new" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                      Feature Request
+                      <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a href="https://github.com/ryanmio/ActBlue-Jail" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                      Edit Code
+                      <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuLabel>Contact</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <a href="https://github.com/ryanmio/ActBlue-Jail/discussions" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                      GitHub
+                      <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
+          {/* Title - Centered */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">ActBlue Jail</h1>
+            <p className="text-sm text-slate-700">Upload a screenshot or paste to begin. Not affiliated with ActBlue.</p>
+          </div>
         </header>
 
         {/* Upload card */}
