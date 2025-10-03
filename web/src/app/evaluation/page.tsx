@@ -481,9 +481,9 @@ export default function EvaluationPage() {
                   }`}
                 >
                   📸 Image
-                  {hasImage && (
-                    <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                  )}
+                  <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                    currentSample.aiViolations.length > 0 ? "bg-red-500" : "bg-green-500"
+                  }`}></span>
                 </button>
                 <button
                   onClick={() => setActiveTab("text")}
@@ -494,7 +494,9 @@ export default function EvaluationPage() {
                   }`}
                 >
                   📄 Text
-                  <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                    currentSample.aiViolations.length > 0 ? "bg-red-500" : "bg-green-500"
+                  }`}></span>
                 </button>
                 <button
                   onClick={() => hasLanding && setActiveTab("landing")}
@@ -508,9 +510,9 @@ export default function EvaluationPage() {
                   }`}
                 >
                   🌐 Landing
-                  {hasLanding && (
-                    <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                  )}
+                  <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                    currentSample.aiViolations.length > 0 ? "bg-red-500" : "bg-green-500"
+                  }`}></span>
                 </button>
               </div>
 
