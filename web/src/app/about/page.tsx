@@ -13,7 +13,9 @@ export default function AboutPage() {
           "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
       }}
     >
-      <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-8 md:space-y-10">
+      <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-8 md:space-y-10 relative">
+        <PageHeader />
+        
         <Breadcrumb
           items={[
             { label: "Home", href: "/" },
@@ -22,8 +24,7 @@ export default function AboutPage() {
           className="mb-2"
         />
 
-        <header className="relative text-center space-y-2">
-          <PageHeader />
+        <header className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">About</h1>
           <p className="text-sm text-slate-700">Not affiliated with ActBlue.</p>
         </header>

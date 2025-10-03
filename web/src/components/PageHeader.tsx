@@ -13,7 +13,7 @@ import {
 
 export function PageHeader() {
   return (
-    <div className="absolute top-0 right-0">
+    <div className="absolute top-6 right-6 md:top-10 md:right-10">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button 
