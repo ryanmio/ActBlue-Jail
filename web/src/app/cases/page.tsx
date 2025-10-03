@@ -100,7 +100,15 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const q = (qParam || "").toString();
   const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes);
   return (
-    <main className="min-h-[calc(100vh+160px)]" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
+    <main 
+      className="min-h-[calc(100vh+160px)] bg-white"
+      style={{
+        background:
+          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+      }}
+    >
       <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8 relative">
         <PageHeader />
         
