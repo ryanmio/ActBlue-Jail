@@ -101,7 +101,8 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes);
   return (
     <main className="min-h-[calc(100vh+160px)]" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
-      <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8">
+      <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8 relative">
+        <PageHeader />
         <Breadcrumb
           items={[
             { label: "Home", href: "/" },
@@ -111,8 +112,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
         />
 
         <section className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-          <div className="mb-6 relative">
-            <PageHeader />
+          <div className="mb-6">
             <div className="flex items-center justify-between mb-4 md:mb-0">
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900">All cases</h1>
               <div className="text-sm text-slate-600 md:hidden">{total} total</div>
