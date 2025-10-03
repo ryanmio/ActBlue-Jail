@@ -204,16 +204,19 @@ export default function EvaluationPage() {
   };
 
   const handleNavigateHome = (e: React.MouseEvent) => {
+    e.preventDefault(); // Always prevent default navigation
+    
     // If user has made progress, confirm before leaving
     if (evaluatedIds.length > 0 && evaluatedIds.length < REQUIRED_EVALUATIONS) {
-      e.preventDefault();
       const confirmed = confirm(
         `You've completed ${evaluatedIds.length} of ${REQUIRED_EVALUATIONS} evaluations. Are you sure you want to leave? Your progress will be saved.`
       );
       if (confirmed) {
         router.push("/");
       }
+      // If not confirmed, do nothing (stay on page)
     } else {
+      // No progress yet or completed, navigate immediately
       router.push("/");
     }
   };
