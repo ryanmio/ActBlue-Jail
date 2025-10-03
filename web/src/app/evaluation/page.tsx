@@ -9,7 +9,6 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
-import { Breadcrumb } from "@/components/breadcrumb";
 
 const REQUIRED_EVALUATIONS = 20;
 
@@ -203,9 +202,7 @@ export default function EvaluationPage() {
     }
   };
 
-  const handleNavigateHome = (e: React.MouseEvent) => {
-    e.preventDefault(); // Always prevent default navigation
-    
+  const handleNavigateHome = () => {
     // If user has made progress, confirm before leaving
     if (evaluatedIds.length > 0 && evaluatedIds.length < REQUIRED_EVALUATIONS) {
       const confirmed = confirm(
@@ -320,21 +317,27 @@ export default function EvaluationPage() {
       )}
 
       <div className="max-w-6xl mx-auto px-4">
-        {/* Breadcrumb */}
-        <div className="mb-4" onClick={(e) => {
-          // Intercept clicks on links within the breadcrumb
-          const target = e.target as HTMLElement;
-          if (target.tagName === 'A' && target.textContent === 'Home') {
-            handleNavigateHome(e);
-          }
-        }}>
-          <Breadcrumb
-            items={[
-              { label: "Home", href: "/" },
-              { label: "AI Training" },
-            ]}
-          />
-        </div>
+        {/* Breadcrumb - Custom navigation with confirmation */}
+        <nav aria-label="Breadcrumb" className="mb-4">
+          <ol className="flex items-center gap-2">
+            <li className="flex items-center gap-2">
+              <button
+                onClick={handleNavigateHome}
+                className="text-base font-medium text-slate-800 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
+              >
+                Home
+              </button>
+              <svg className="h-4 w-4 text-slate-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </li>
+            <li>
+              <span className="text-base font-medium px-1 -mx-1 text-slate-950" aria-current="page">
+                AI Training
+              </span>
+            </li>
+          </ol>
+        </nav>
 
         {/* Header */}
         <div className="mb-4">
