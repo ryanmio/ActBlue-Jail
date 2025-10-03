@@ -68,7 +68,15 @@ function ResultsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-4">
+      <div 
+        className="min-h-screen bg-white flex items-center justify-center p-4"
+        style={{
+          background:
+            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+        }}
+      >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading results...</p>
@@ -79,7 +87,15 @@ function ResultsContent() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-4">
+      <div 
+        className="min-h-screen bg-white flex items-center justify-center p-4"
+        style={{
+          background:
+            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+        }}
+      >
         <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md border border-gray-200">
           <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +118,15 @@ function ResultsContent() {
   const { sessionMetrics, aggregateMetrics } = data;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div 
+      className="min-h-screen bg-white"
+      style={{
+        background:
+          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+      }}
+    >
       {/* Compact Hero Section */}
       <div className="border-b border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -337,7 +361,15 @@ export default function EvaluationResultsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+        <div 
+          className="min-h-screen bg-white flex items-center justify-center"
+          style={{
+            background:
+              "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+              "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+              "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+          }}
+        >
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading...</p>
