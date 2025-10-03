@@ -53,24 +53,10 @@ export async function POST(req: NextRequest) {
       return xmlResponse(`<Response></Response>`, 500);
     }
 
-    // For fundraising, run policy classification synchronously to ensure status flips to done
+    // For fundraising, trigger async pipelines (classify + sender extraction)
     if (result.isFundraising) {
-      const base = process.env.NEXT_PUBLIC_SITE_URL || "";
-      try {
-        const resp = await fetch(`${base}/api/classify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ submissionId: result.id }),
-        });
-        const txt = await resp.text().catch(() => "");
-        console.log("/api/inbound-sms:classify_sync", { submissionId: result.id, status: resp.status, body: txt.slice(0, 200) });
-      } catch (e) {
-        console.error("/api/inbound-sms:classify_sync_error", String(e));
-      }
-
-      // Fire-and-forget sender extraction
       triggerPipelines(result.id);
-      console.log("/api/inbound-sms:triggered_sender", { submissionId: result.id });
+      console.log("/api/inbound-sms:triggered_pipelines", { submissionId: result.id });
     } else {
       console.log("/api/inbound-sms:skipped_triggers_non_fundraising", { submissionId: result.id });
     }
