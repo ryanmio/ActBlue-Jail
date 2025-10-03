@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BugReportDialog } from "@/components/bug-report-dialog";
 
 export function PageHeader() {
   return (
@@ -46,22 +47,16 @@ export function PageHeader() {
             <DropdownMenuItem asChild>
               <Link href="/evaluation" className="cursor-pointer text-slate-900 hover:bg-slate-100">AI Training</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a href="https://github.com/ryanmio/ActBlue-Jail/issues/new" target="_blank" rel="noopener noreferrer" className="cursor-pointer text-slate-900 hover:bg-slate-100">
+            <BugReportDialog type="bug">
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-slate-900 hover:bg-slate-100">
                 Bug Report
-                <svg className="w-3 h-3 ml-auto text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a href="https://github.com/ryanmio/ActBlue-Jail/issues/new" target="_blank" rel="noopener noreferrer" className="cursor-pointer text-slate-900 hover:bg-slate-100">
+              </DropdownMenuItem>
+            </BugReportDialog>
+            <BugReportDialog type="feature">
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-slate-900 hover:bg-slate-100">
                 Feature Request
-                <svg className="w-3 h-3 ml-auto text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+            </BugReportDialog>
             <DropdownMenuItem asChild>
               <a href="https://github.com/ryanmio/ActBlue-Jail" target="_blank" rel="noopener noreferrer" className="cursor-pointer text-slate-900 hover:bg-slate-100">
                 Edit Code
