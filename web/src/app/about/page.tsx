@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -62,7 +61,7 @@ export default function AboutPage() {
             <div>
               <h3 className="font-medium text-slate-900 mb-2">User-submitted and automatically processed content</h3>
               <p>
-                Materials on this site may include user uploads and messages received by AB Jail via seeded "honeytrap" phone numbers and email addresses. AB Jail uses automated tools to extract text, identify senders, and label potential policy issues. Automated labels are probabilistic, may be incomplete or incorrect, and should be treated as leads for further review – not as definitive findings.
+                Materials on this site may include user uploads and messages received by AB Jail via seeded &ldquo;honeytrap&rdquo; phone numbers and email addresses. AB Jail uses automated tools to extract text, identify senders, and label potential policy issues. Automated labels are probabilistic, may be incomplete or incorrect, and should be treated as leads for further review – not as definitive findings.
               </p>
             </div>
             
@@ -76,7 +75,7 @@ export default function AboutPage() {
             <div>
               <h3 className="font-medium text-slate-900 mb-2">Reporting facilitation only</h3>
               <p>
-                Where the site generates a prefilled email or other draft to help users report a case to a platform, that draft is a convenience feature. AB Jail does not submit reports on a user's behalf in the MVP, does not guarantee any outcome, and does not represent any user before any platform or authority.
+                Where the site generates a prefilled email or other draft to help users report a case to a platform, that draft is a convenience feature. AB Jail does not submit reports on a user&apos;s behalf in the MVP, does not guarantee any outcome, and does not represent any user before any platform or authority.
               </p>
             </div>
             
@@ -97,21 +96,21 @@ export default function AboutPage() {
             <div>
               <h3 className="font-medium text-slate-900 mb-2">Trademarks and nominative fair use</h3>
               <p>
-                "ActBlue" and other names and logos on this site may be trademarks of their respective owners. AB Jail uses such marks solely to identify the platforms or policies referenced, consistent with nominative fair use. No sponsorship or endorsement is claimed.
+                &ldquo;ActBlue&rdquo; and other names and logos on this site may be trademarks of their respective owners. AB Jail uses such marks solely to identify the platforms or policies referenced, consistent with nominative fair use. No sponsorship or endorsement is claimed.
               </p>
             </div>
             
             <div>
               <h3 className="font-medium text-slate-900 mb-2">No legal advice</h3>
               <p>
-                Nothing on this site is legal, financial, or compliance advice. For advice about your specific situation, consult qualified counsel. AB Jail's contributors and maintainers are not your lawyers.
+                Nothing on this site is legal, financial, or compliance advice. For advice about your specific situation, consult qualified counsel. AB Jail&apos;s contributors and maintainers are not your lawyers.
               </p>
             </div>
             
             <div>
               <h3 className="font-medium text-slate-900 mb-2">No warranties</h3>
               <p>
-                The site and all content are provided "as is" and "as available" – without warranties of any kind, express or implied, including accuracy, completeness, reliability, or fitness for a particular purpose. AB Jail does not guarantee that any platform will take action on any report.
+                The site and all content are provided &ldquo;as is&rdquo; and &ldquo;as available&rdquo; – without warranties of any kind, express or implied, including accuracy, completeness, reliability, or fitness for a particular purpose. AB Jail does not guarantee that any platform will take action on any report.
               </p>
             </div>
             
@@ -125,14 +124,14 @@ export default function AboutPage() {
             <div>
               <h3 className="font-medium text-slate-900 mb-2">Indemnification</h3>
               <p>
-                By using this site, you agree to indemnify and hold harmless AB Jail, its contributors, and maintainers from any claims, liabilities, damages, losses, and expenses (including reasonable attorneys' fees) arising from your submissions or your use or misuse of the site.
+                By using this site, you agree to indemnify and hold harmless AB Jail, its contributors, and maintainers from any claims, liabilities, damages, losses, and expenses (including reasonable attorneys&apos; fees) arising from your submissions or your use or misuse of the site.
               </p>
             </div>
             
             <div>
               <h3 className="font-medium text-slate-900 mb-2">Content moderation</h3>
               <p>
-                AB Jail may refuse, remove, or restrict content that is abusive, unlawful, defamatory, deceptive, spam, malware, or otherwise inconsistent with the project's purpose or applicable policies. Moderation decisions are discretionary and may change as new information becomes available.
+                AB Jail may refuse, remove, or restrict content that is abusive, unlawful, defamatory, deceptive, spam, malware, or otherwise inconsistent with the project&apos;s purpose or applicable policies. Moderation decisions are discretionary and may change as new information becomes available.
               </p>
             </div>
             
