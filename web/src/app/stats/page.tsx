@@ -358,8 +358,8 @@ function ViolationMixPieChart({
 }) {
   if (violations.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+        <h3 className="text-lg font-semibold text-slate-900 mb-3">
           Violation Mix
         </h3>
         <div className="py-12 text-center text-sm text-slate-500">
@@ -377,20 +377,20 @@ function ViolationMixPieChart({
   }));
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+      <h3 className="text-lg font-semibold text-slate-900 mb-3">
         Violation Mix
       </h3>
-      <div className="h-[300px] flex items-center justify-center">
+      <div className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+          <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
               labelLine={false}
               label={(entry) => `${entry.name} (${entry.percentage}%)`}
-              outerRadius={80}
+              outerRadius={96}
               dataKey="value"
             >
               {chartData.map((entry, index) => (
@@ -428,7 +428,7 @@ function ViolationMixPieChart({
         </ResponsiveContainer>
       </div>
       {/* Legend with Hover Cards */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         {violations.map((v, idx) => {
           const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
           return (
@@ -494,18 +494,18 @@ function SourceSplitPieChart({
   }));
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Source Split</h3>
-      <div className="h-[300px] flex items-center justify-center">
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+      <h3 className="text-lg font-semibold text-slate-900 mb-3">Source Split</h3>
+      <div className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+          <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
               labelLine={false}
               label={(entry) => `${entry.name} (${entry.percentage}%)`}
-              outerRadius={80}
+              outerRadius={96}
               dataKey="value"
             >
               {chartData.map((entry, index) => (
@@ -534,7 +534,7 @@ function SourceSplitPieChart({
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-4 flex justify-center gap-6">
+      <div className="mt-3 flex justify-center gap-6">
         {chartData.map((s) => (
           <div key={s.name} className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: s.fill }} />
