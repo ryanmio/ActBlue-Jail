@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
 import Footer from "@/components/Footer";
 import { PageHeader } from "@/components/PageHeader";
@@ -561,6 +561,7 @@ function TopSendersTable({
   showAll: boolean;
   onToggleShowAll: () => void;
 }) {
+  const router = useRouter();
   const displayedSenders = showAll ? senders : senders.slice(0, 10);
   const hasMore = senders.length > 10;
 
@@ -593,12 +594,14 @@ function TopSendersTable({
                 {displayedSenders.map((s, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="py-2 pr-4 text-slate-900 truncate max-w-[250px]">
-                      <Link
-                        href={`/cases?q=${encodeURIComponent(s.sender)}`}
-                        className="text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-slate-300 rounded"
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/cases?q=${encodeURIComponent(s.sender)}`)}
+                        className="text-slate-900 hover:bg-slate-50 rounded px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                        aria-label={`View cases for ${s.sender}`}
                       >
                         {s.sender}
-                      </Link>
+                      </button>
                     </td>
                     <td className="py-2 pr-4 text-slate-900 tabular-nums text-right">
                       {s.total_captures}
