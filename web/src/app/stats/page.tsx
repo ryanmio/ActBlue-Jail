@@ -21,6 +21,7 @@ import {
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Check } from "lucide-react";
 
 type StatsData = {
   period: {
@@ -90,6 +91,7 @@ export default function StatsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showAllSenders, setShowAllSenders] = useState(false);
   const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
@@ -169,58 +171,77 @@ export default function StatsPage() {
                 </button>
               ))}
 
-              {/* Sender filter: shadcn combobox */}
-              <Popover>
+              {/* Sender filter - Combobox */}
+              <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                 <PopoverTrigger asChild>
                   <button
-                    className="ml-1 inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50"
-                    aria-label="Filter by sender"
+                    role="combobox"
+                    aria-expanded={filterOpen}
+                    className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 min-w-[150px]"
                   >
-                    Filter
-                    {selectedSenders.length > 0 && (
-                      <span className="ml-1 rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">{selectedSenders.length}</span>
+                    {selectedSenders.length === 0 ? (
+                      "Filter senders..."
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
+                          {selectedSenders.length}
+                        </span>
+                        selected
+                      </span>
                     )}
+                    <svg className="w-3 h-3 opacity-50 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                    </svg>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                <PopoverContent className="w-[280px] p-0" align="end">
                   <Command>
-                    <CommandInput placeholder="Search sender..." className="h-9" />
+                    <CommandInput placeholder="Search senders..." className="h-9" />
                     <CommandList>
                       <CommandEmpty>No senders found.</CommandEmpty>
                       <CommandGroup>
                         {(data?.top_senders || []).map((s) => {
-                          const isChecked = selectedSenders.includes(s.sender);
+                          const isSelected = selectedSenders.includes(s.sender);
                           return (
                             <CommandItem
-                              key={`sender-${s.sender}`}
+                              key={s.sender}
                               value={s.sender}
-                              onSelect={(val: string) => {
+                              onSelect={(value) => {
                                 setSelectedSenders((prev) =>
-                                  prev.includes(val)
-                                    ? prev.filter((x) => x !== val)
-                                    : [...prev, val]
+                                  prev.includes(value)
+                                    ? prev.filter((x) => x !== value)
+                                    : [...prev, value]
                                 );
                               }}
                             >
-                              <span className="mr-2 h-2 w-2 rounded-sm" style={{ backgroundColor: isChecked ? "#0f172a" : "#cbd5e1" }} />
-                              <span className="truncate max-w-[520px]">{s.sender}</span>
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              <span className="truncate">{s.sender}</span>
                             </CommandItem>
                           );
                         })}
                       </CommandGroup>
                     </CommandList>
+                    {selectedSenders.length > 0 && (
+                      <div className="border-t border-slate-200 p-2 flex items-center justify-between">
+                        <span className="text-xs text-slate-600">
+                          {selectedSenders.length} selected
+                        </span>
+                        <button
+                          className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                          onClick={() => {
+                            setSelectedSenders([]);
+                            setFilterOpen(false);
+                          }}
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                    )}
                   </Command>
-                  {selectedSenders.length > 0 && (
-                    <div className="border-t border-slate-200 p-2 flex items-center justify-between">
-                      <div className="text-xs text-slate-600 truncate max-w-[220px]">{selectedSenders.join(", ")}</div>
-                      <button
-                        className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
-                        onClick={() => setSelectedSenders([])}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  )}
                 </PopoverContent>
               </Popover>
             </div>
