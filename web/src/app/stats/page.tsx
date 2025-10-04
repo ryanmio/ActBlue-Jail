@@ -86,6 +86,7 @@ const PIE_COLORS = [
 export default function StatsPage() {
   const [range, setRange] = useState<RangeOption>("30");
   const [data, setData] = useState<StatsData | null>(null);
+  const [allSenders, setAllSenders] = useState<string[]>([]); // options list (unfiltered)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllSenders, setShowAllSenders] = useState(false);
@@ -115,6 +116,22 @@ export default function StatsPage() {
     }
     void fetchStats();
   }, [range, selectedSenders]);
+
+  // Fetch sender options independent of current selection so list doesn't collapse
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = new URLSearchParams({ range });
+        const resp = await fetch(`/api/stats?${qs.toString()}`); // no sender params
+        if (!resp.ok) return;
+        const json = (await resp.json()) as Partial<StatsData> | undefined;
+        const opts = Array.from(new Set((json?.top_senders || []).map((s: any) => String(s.sender)))) as string[];
+        if (!cancelled) setAllSenders(opts);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [range]);
 
   const rangeLabels: Record<RangeOption, string> = {
     "7": "Last 7 days",
@@ -192,31 +209,31 @@ export default function StatsPage() {
                     </svg>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[320px] p-0 bg-white" align="end">
+                <PopoverContent className="z-50 w-[320px] p-0 bg-white border border-slate-200 shadow-xl" align="end">
                   <div className="p-2 border-b border-slate-200">
                     <input
                       type="text"
                       placeholder="Search senders..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-300"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-300 text-slate-900 placeholder:text-slate-500"
                     />
                   </div>
                   <div className="max-h-[300px] overflow-auto p-2">
-                    {(data?.top_senders || [])
+                    {(allSenders || [])
                       .filter((s) =>
-                        s.sender.toLowerCase().includes(searchQuery.toLowerCase())
+                        s.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((s) => {
-                        const isSelected = selectedSenders.includes(s.sender);
+                        const isSelected = selectedSenders.includes(s);
                         return (
                           <button
-                            key={s.sender}
+                            key={s}
                             onClick={() => {
                               setSelectedSenders((prev) =>
-                                prev.includes(s.sender)
-                                  ? prev.filter((x) => x !== s.sender)
-                                  : [...prev, s.sender]
+                                prev.includes(s)
+                                  ? prev.filter((x) => x !== s)
+                                  : [...prev, s]
                               );
                             }}
                             className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
@@ -230,12 +247,12 @@ export default function StatsPage() {
                             >
                               {isSelected && <Check className="h-3 w-3 text-white" />}
                             </div>
-                            <span className="flex-1 truncate text-slate-900">{s.sender}</span>
+                            <span className="flex-1 truncate text-slate-900">{s}</span>
                           </button>
                         );
                       })}
-                    {(data?.top_senders || []).filter((s) =>
-                      s.sender.toLowerCase().includes(searchQuery.toLowerCase())
+                    {(allSenders || []).filter((s) =>
+                      s.toLowerCase().includes(searchQuery.toLowerCase())
                     ).length === 0 && (
                       <div className="py-6 text-center text-sm text-slate-500">
                         No senders found
