@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/chart";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Check } from "lucide-react";
 
 type StatsData = {
@@ -92,6 +91,7 @@ export default function StatsPage() {
   const [showAllSenders, setShowAllSenders] = useState(false);
   const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function fetchStats() {
@@ -171,13 +171,11 @@ export default function StatsPage() {
                 </button>
               ))}
 
-              {/* Sender filter - Multi-select Combobox */}
+              {/* Sender filter - Simple Multi-select */}
               <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                 <PopoverTrigger asChild>
                   <button
-                    role="combobox"
-                    aria-expanded={filterOpen}
-                    className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 min-w-[150px]"
+                    className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[150px]"
                   >
                     {selectedSenders.length === 0 ? (
                       "Filter senders..."
@@ -186,7 +184,7 @@ export default function StatsPage() {
                         <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
                           {selectedSenders.length}
                         </span>
-                        <span className="text-slate-700">selected</span>
+                        <span>selected</span>
                       </span>
                     )}
                     <svg className="w-3 h-3 opacity-50 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -194,55 +192,64 @@ export default function StatsPage() {
                     </svg>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="end">
-                  <Command className="rounded-lg border shadow-md">
-                    <CommandInput placeholder="Search senders..." />
-                    <CommandList>
-                      <CommandEmpty>No senders found.</CommandEmpty>
-                      <CommandGroup className="p-2">
-                        {(data?.top_senders || []).map((s) => {
-                          const isSelected = selectedSenders.includes(s.sender);
-                          return (
-                            <CommandItem
-                              key={s.sender}
-                              value={s.sender}
-                              onSelect={() => {
-                                // Toggle selection without closing popover
-                                setSelectedSenders((prev) =>
-                                  prev.includes(s.sender)
-                                    ? prev.filter((x) => x !== s.sender)
-                                    : [...prev, s.sender]
-                                );
-                              }}
-                              className="cursor-pointer"
+                <PopoverContent className="w-[320px] p-0 bg-white" align="end">
+                  <div className="p-2 border-b border-slate-200">
+                    <input
+                      type="text"
+                      placeholder="Search senders..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    />
+                  </div>
+                  <div className="max-h-[300px] overflow-auto p-2">
+                    {(data?.top_senders || [])
+                      .filter((s) =>
+                        s.sender.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((s) => {
+                        const isSelected = selectedSenders.includes(s.sender);
+                        return (
+                          <button
+                            key={s.sender}
+                            onClick={() => {
+                              setSelectedSenders((prev) =>
+                                prev.includes(s.sender)
+                                  ? prev.filter((x) => x !== s.sender)
+                                  : [...prev, s.sender]
+                              );
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                          >
+                            <div
+                              className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                isSelected
+                                  ? "bg-slate-900 border-slate-900"
+                                  : "border-slate-300"
+                              }`}
                             >
-                              <div
-                                className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-slate-300 ${
-                                  isSelected
-                                    ? "bg-slate-900 text-white border-slate-900"
-                                    : "opacity-50"
-                                }`}
-                              >
-                                {isSelected && <Check className="h-3 w-3" />}
-                              </div>
-                              <span className="flex-1 truncate">{s.sender}</span>
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
+                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                            <span className="flex-1 truncate text-slate-900">{s.sender}</span>
+                          </button>
+                        );
+                      })}
+                    {(data?.top_senders || []).filter((s) =>
+                      s.sender.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).length === 0 && (
+                      <div className="py-6 text-center text-sm text-slate-500">
+                        No senders found
+                      </div>
+                    )}
+                  </div>
                   {selectedSenders.length > 0 && (
-                    <div className="border-t border-slate-200 bg-white p-2 flex items-center justify-between">
+                    <div className="border-t border-slate-200 p-2 flex items-center justify-between bg-white">
                       <span className="text-xs text-slate-600">
                         {selectedSenders.length} selected
                       </span>
                       <button
                         className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setSelectedSenders([]);
-                        }}
+                        onClick={() => setSelectedSenders([])}
                       >
                         Clear all
                       </button>
