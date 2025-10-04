@@ -19,6 +19,7 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 
 type StatsData = {
   period: {
@@ -87,13 +88,16 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllSenders, setShowAllSenders] = useState(false);
+  const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchStats() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/stats?range=${range}`);
+        const qs = new URLSearchParams({ range });
+        selectedSenders.forEach((s) => qs.append("sender", s));
+        const res = await fetch(`/api/stats?${qs.toString()}`);
         if (!res.ok) {
           throw new Error(`Failed to fetch stats: ${res.status}`);
         }
@@ -107,7 +111,7 @@ export default function StatsPage() {
       }
     }
     void fetchStats();
-  }, [range]);
+  }, [range, selectedSenders]);
 
   const rangeLabels: Record<RangeOption, string> = {
     "7": "Last 7 days",
@@ -149,7 +153,7 @@ export default function StatsPage() {
                 Public statistics on captures, violations, and reports
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               {(["7", "30", "90", "lifetime"] as const).map((r) => (
                 <button
                   key={r}
@@ -163,6 +167,54 @@ export default function StatsPage() {
                   {rangeLabels[r]}
                 </button>
               ))}
+
+              {/* Sender filter */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="ml-1 inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50"
+                    aria-label="Filter by sender"
+                  >
+                    Filter
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M3 4.5a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .4.8L12 12v5a.5.5 0 0 1-.8.4l-2.5-2a.5.5 0 0 1-.2-.4V12L3.1 4.8a.5.5 0 0 1 .4-.8z" clipRule="evenodd" />
+                    </svg>
+                    {selectedSenders.length > 0 && (
+                      <span className="ml-1 rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">{selectedSenders.length}</span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72 bg-white border border-slate-200" align="end">
+                  <DropdownMenuLabel className="text-slate-600">Senders</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-slate-200" />
+                  <div className="max-h-64 overflow-auto p-1">
+                    {(data?.top_senders || []).map((s) => (
+                      <DropdownMenuCheckboxItem
+                        key={`sender-${s.sender}`}
+                        checked={selectedSenders.includes(s.sender)}
+                        onCheckedChange={(checked) => {
+                          setSelectedSenders((prev) =>
+                            checked ? Array.from(new Set([...prev, s.sender])) : prev.filter((x) => x !== s.sender)
+                          );
+                        }}
+                        className="text-sm"
+                      >
+                        <span className="truncate max-w-[220px] inline-block align-middle">{s.sender}</span>
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </div>
+                  {selectedSenders.length > 0 && (
+                    <div className="p-2 pt-1 flex items-center justify-end">
+                      <button
+                        className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        onClick={() => setSelectedSenders([])}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

@@ -4,7 +4,8 @@
 
 create or replace function get_stats(
   start_date timestamptz default null,
-  end_date timestamptz default now()
+  end_date timestamptz default now(),
+  sender_names text[] default null
 )
 returns json
 language plpgsql
@@ -17,6 +18,7 @@ declare
   user_upload_count int;
   honeytrap_count int;
   day_count int;
+  filter_enabled boolean := sender_names is not null and array_length(sender_names, 1) is not null;
 begin
   -- If no start_date provided, use lifetime (earliest submission)
   if start_date is null then
@@ -28,16 +30,22 @@ begin
   -- Basic counts
   select count(*)
   into total_captures
-  from submissions
-  where created_at >= start_date and created_at <= end_date
-    and public = true;
+  from submissions s
+  where s.created_at >= start_date and s.created_at <= end_date
+    and s.public = true
+    and (
+      not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+    );
 
   select count(distinct submission_id)
   into captures_with_violations
   from violations v
   join submissions s on v.submission_id = s.id
   where s.created_at >= start_date and s.created_at <= end_date
-    and s.public = true;
+    and s.public = true
+    and (
+      not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+    );
 
   select count(*)
   into total_reports
@@ -49,9 +57,12 @@ begin
     count(*) filter (where message_type = 'unknown') as user_uploads,
     count(*) filter (where message_type in ('sms', 'email')) as honeytraps
   into user_upload_count, honeytrap_count
-  from submissions
-  where created_at >= start_date and created_at <= end_date
-    and public = true;
+  from submissions s
+  where s.created_at >= start_date and s.created_at <= end_date
+    and s.public = true
+    and (
+      not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+    );
 
   -- Calculate day count for bucket strategy
   select greatest(1, extract(days from end_date - start_date)::int)
@@ -85,9 +96,12 @@ begin
             else date_trunc('week', created_at at time zone 'America/New_York')
           end as bucket_date,
           count(*) as count
-        from submissions
-        where created_at >= start_date and created_at <= end_date
-          and public = true
+        from submissions s
+        where s.created_at >= start_date and s.created_at <= end_date
+          and s.public = true
+          and (
+            not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+          )
         group by bucket_date
         order by bucket_date
       ) buckets
@@ -110,6 +124,9 @@ begin
         join violations v on v.submission_id = s.id
         where s.created_at >= start_date and s.created_at <= end_date
           and s.public = true
+          and (
+            not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+          )
         group by bucket_date
         order by bucket_date
       ) buckets
@@ -132,6 +149,9 @@ begin
         left join violations v on v.submission_id = s.id
         where s.created_at >= start_date and s.created_at <= end_date
           and s.public = true
+          and (
+            not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+          )
         group by sender_name_val
         having count(*) >= 1
         order by capture_count desc
@@ -155,6 +175,9 @@ begin
         join submissions s on v.submission_id = s.id
         where s.created_at >= start_date and s.created_at <= end_date
           and s.public = true
+          and (
+            not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+          )
         group by v.code
         order by violation_count desc
       ) violation_stats

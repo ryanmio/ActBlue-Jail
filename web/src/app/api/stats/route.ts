@@ -4,6 +4,13 @@ import { getSupabaseServer } from "@/lib/supabase-server";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const range = searchParams.get("range") || "30";
+  // Optional sender filter: support repeated or comma-separated `sender` values
+  const sendersMulti = searchParams.getAll("sender");
+  const sendersSingle = (searchParams.get("sender") || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const senderNames = Array.from(new Set([...(sendersMulti || []), ...(sendersSingle || [])])).filter(Boolean);
 
   try {
     const supabase = getSupabaseServer();
@@ -31,6 +38,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase.rpc("get_stats", {
       start_date: startDate,
       end_date: now.toISOString(),
+      sender_names: senderNames.length > 0 ? senderNames : null,
     });
 
     if (error) {
