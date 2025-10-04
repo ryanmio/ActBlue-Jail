@@ -19,7 +19,8 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 
 type StatsData = {
   period: {
@@ -168,43 +169,50 @@ export default function StatsPage() {
                 </button>
               ))}
 
-              {/* Sender filter */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {/* Sender filter: shadcn combobox */}
+              <Popover>
+                <PopoverTrigger asChild>
                   <button
                     className="ml-1 inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50"
                     aria-label="Filter by sender"
                   >
                     Filter
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M3 4.5a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .4.8L12 12v5a.5.5 0 0 1-.8.4l-2.5-2a.5.5 0 0 1-.2-.4V12L3.1 4.8a.5.5 0 0 1 .4-.8z" clipRule="evenodd" />
-                    </svg>
                     {selectedSenders.length > 0 && (
                       <span className="ml-1 rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">{selectedSenders.length}</span>
                     )}
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-72 bg-white border border-slate-200" align="end">
-                  <DropdownMenuLabel className="text-slate-600">Senders</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-slate-200" />
-                  <div className="max-h-64 overflow-auto p-1">
-                    {(data?.top_senders || []).map((s) => (
-                      <DropdownMenuCheckboxItem
-                        key={`sender-${s.sender}`}
-                        checked={selectedSenders.includes(s.sender)}
-                        onCheckedChange={(checked) => {
-                          setSelectedSenders((prev) =>
-                            checked ? Array.from(new Set([...prev, s.sender])) : prev.filter((x) => x !== s.sender)
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <Command>
+                    <CommandInput placeholder="Search sender..." className="h-9" />
+                    <CommandList>
+                      <CommandEmpty>No senders found.</CommandEmpty>
+                      <CommandGroup>
+                        {(data?.top_senders || []).map((s) => {
+                          const isChecked = selectedSenders.includes(s.sender);
+                          return (
+                            <CommandItem
+                              key={`sender-${s.sender}`}
+                              value={s.sender}
+                              onSelect={(val: string) => {
+                                setSelectedSenders((prev) =>
+                                  prev.includes(val)
+                                    ? prev.filter((x) => x !== val)
+                                    : [...prev, val]
+                                );
+                              }}
+                            >
+                              <span className="mr-2 h-2 w-2 rounded-sm" style={{ backgroundColor: isChecked ? "#0f172a" : "#cbd5e1" }} />
+                              <span className="truncate max-w-[520px]">{s.sender}</span>
+                            </CommandItem>
                           );
-                        }}
-                        className="text-sm"
-                      >
-                        <span className="truncate max-w-[220px] inline-block align-middle">{s.sender}</span>
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </div>
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
                   {selectedSenders.length > 0 && (
-                    <div className="p-2 pt-1 flex items-center justify-end">
+                    <div className="border-t border-slate-200 p-2 flex items-center justify-between">
+                      <div className="text-xs text-slate-600 truncate max-w-[220px]">{selectedSenders.join(", ")}</div>
                       <button
                         className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
                         onClick={() => setSelectedSenders([])}
@@ -213,8 +221,8 @@ export default function StatsPage() {
                       </button>
                     </div>
                   )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
