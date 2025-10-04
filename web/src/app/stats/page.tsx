@@ -62,21 +62,23 @@ type StatsData = {
 type RangeOption = "7" | "30" | "90" | "lifetime";
 
 const CHART_COLORS = {
+  // Unified shades of blue for the entire dashboard
   captures: "hsl(217, 91%, 60%)", // blue-500
-  violations: "hsl(0, 84%, 60%)", // red-500
-  userUpload: "hsl(142, 71%, 45%)", // green-600
-  honeytrap: "hsl(262, 83%, 58%)", // purple-500
+  violations: "hsl(224, 76%, 48%)", // blue-600
+  userUpload: "hsl(213, 94%, 68%)", // blue-400
+  honeytrap: "hsl(226, 71%, 40%)", // blue-700
 };
 
+// Blue palette for pie charts
 const PIE_COLORS = [
-  "hsl(217, 91%, 60%)", // blue
-  "hsl(262, 83%, 58%)", // purple
-  "hsl(142, 71%, 45%)", // green
-  "hsl(25, 95%, 53%)", // orange
-  "hsl(340, 82%, 52%)", // pink
-  "hsl(48, 96%, 53%)", // yellow
-  "hsl(199, 89%, 48%)", // cyan
-  "hsl(346, 77%, 50%)", // rose
+  "hsl(213, 94%, 68%)", // blue-400
+  "hsl(217, 91%, 60%)", // blue-500
+  "hsl(224, 76%, 48%)", // blue-600
+  "hsl(226, 71%, 40%)", // blue-700
+  "hsl(224, 64%, 33%)", // blue-800
+  "hsl(222, 47%, 11%)", // slate-900-ish deep blue
+  "hsl(206, 92%, 54%)", // vivid blue
+  "hsl(215, 28%, 17%)", // deep slate blue
 ];
 
 export default function StatsPage() {
@@ -591,7 +593,12 @@ function TopSendersTable({
                 {displayedSenders.map((s, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="py-2 pr-4 text-slate-900 truncate max-w-[250px]">
-                      {s.sender}
+                      <Link
+                        href={`/cases?q=${encodeURIComponent(s.sender)}`}
+                        className="text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-slate-300 rounded"
+                      >
+                        {s.sender}
+                      </Link>
                     </td>
                     <td className="py-2 pr-4 text-slate-900 tabular-nums text-right">
                       {s.total_captures}
