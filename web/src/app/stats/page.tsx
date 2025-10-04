@@ -1,0 +1,629 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Breadcrumb } from "@/components/breadcrumb";
+import Footer from "@/components/Footer";
+import { PageHeader } from "@/components/PageHeader";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
+
+type StatsData = {
+  period: {
+    start: string;
+    end: string;
+    days: number;
+  };
+  kpis: {
+    total_captures: number;
+    captures_with_violations: number;
+    total_reports: number;
+    user_uploads: number;
+    honeytraps: number;
+  };
+  captures_by_bucket: Array<{
+    bucket: string;
+    count: number;
+  }> | null;
+  violations_by_bucket: Array<{
+    bucket: string;
+    count: number;
+  }> | null;
+  top_senders: Array<{
+    sender: string;
+    total_captures: number;
+    captures_with_violations: number;
+    is_repeat_offender: boolean;
+  }> | null;
+  violation_mix: Array<{
+    code: string;
+    count: number;
+    percentage: number;
+  }> | null;
+  source_split: Array<{
+    source: string;
+    count: number;
+    percentage: number;
+  }>;
+};
+
+type RangeOption = "7" | "30" | "90" | "lifetime";
+
+const CHART_COLORS = {
+  captures: "hsl(217, 91%, 60%)", // blue-500
+  violations: "hsl(0, 84%, 60%)", // red-500
+  userUpload: "hsl(142, 71%, 45%)", // green-600
+  honeytrap: "hsl(262, 83%, 58%)", // purple-500
+};
+
+const PIE_COLORS = [
+  "hsl(217, 91%, 60%)", // blue
+  "hsl(262, 83%, 58%)", // purple
+  "hsl(142, 71%, 45%)", // green
+  "hsl(25, 95%, 53%)", // orange
+  "hsl(340, 82%, 52%)", // pink
+  "hsl(48, 96%, 53%)", // yellow
+  "hsl(199, 89%, 48%)", // cyan
+  "hsl(346, 77%, 50%)", // rose
+];
+
+export default function StatsPage() {
+  const [range, setRange] = useState<RangeOption>("30");
+  const [data, setData] = useState<StatsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAllSenders, setShowAllSenders] = useState(false);
+
+  useEffect(() => {
+    async function fetchStats() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/stats?range=${range}`);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch stats: ${res.status}`);
+        }
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+    void fetchStats();
+  }, [range]);
+
+  const rangeLabels: Record<RangeOption, string> = {
+    "7": "Last 7 days",
+    "30": "Last 30 days",
+    "90": "Last 90 days",
+    lifetime: "Lifetime",
+  };
+
+  return (
+    <main
+      className="min-h-[calc(100vh+160px)] bg-white"
+      style={{
+        background:
+          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+      }}
+    >
+      <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8 relative">
+        <PageHeader />
+
+        <div className="mb-8">
+          <Breadcrumb
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Stats" },
+            ]}
+          />
+        </div>
+
+        <section className="space-y-6">
+          {/* Header with range picker */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                Transparent Reporting
+              </h1>
+              <p className="text-sm text-slate-600 mt-1">
+                Public statistics on captures, violations, and reports
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {(["7", "30", "90", "lifetime"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
+                  className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                    range === r
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {rangeLabels[r]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+              <div className="inline-block h-8 w-8 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
+              <p className="mt-4 text-sm text-slate-600">Loading stats...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-white rounded-2xl border border-red-200 p-6 text-center">
+              <p className="text-sm text-red-700">Error: {error}</p>
+            </div>
+          )}
+
+          {!loading && !error && data && (
+            <>
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard
+                  label="Captures"
+                  value={data.kpis.total_captures}
+                  description="Total messages analyzed"
+                />
+                <KpiCard
+                  label="With Violations"
+                  value={data.kpis.captures_with_violations}
+                  description="Flagged potential issues"
+                />
+                <KpiCard
+                  label="Reports Generated"
+                  value={data.kpis.total_reports}
+                  description="Outbound reports sent"
+                />
+                <KpiCard
+                  label="Source Split"
+                  value={`${data.kpis.user_uploads} / ${data.kpis.honeytraps}`}
+                  description="Uploads / Honeytrap"
+                />
+              </div>
+
+              {/* Combined Line Chart */}
+              <CombinedTimelineChart
+                capturesBuckets={data.captures_by_bucket || []}
+                violationsBuckets={data.violations_by_bucket || []}
+                days={data.period.days}
+              />
+
+              {/* Pie Charts Side by Side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ViolationMixPieChart violations={data.violation_mix || []} />
+                <SourceSplitPieChart sources={data.source_split} />
+              </div>
+
+              {/* Top Senders Table */}
+              <TopSendersTable
+                senders={data.top_senders || []}
+                showAll={showAllSenders}
+                onToggleShowAll={() => setShowAllSenders(!showAllSenders)}
+              />
+            </>
+          )}
+        </section>
+
+        <Footer />
+      </div>
+    </main>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: number | string;
+  description: string;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="text-sm text-slate-600 mb-1">{label}</div>
+      <div className="text-3xl font-semibold text-slate-900 mb-1">{value}</div>
+      <div className="text-xs text-slate-500">{description}</div>
+    </div>
+  );
+}
+
+function CombinedTimelineChart({
+  capturesBuckets,
+  violationsBuckets,
+  days,
+}: {
+  capturesBuckets: Array<{ bucket: string; count: number }>;
+  violationsBuckets: Array<{ bucket: string; count: number }>;
+  days: number;
+}) {
+  const useWeeks = days > 14;
+
+  const formatBucket = (bucket: string) => {
+    const d = new Date(bucket);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "America/New_York",
+    });
+  };
+
+  // Merge the two datasets
+  const mergedData = capturesBuckets.map((c) => {
+    const v = violationsBuckets.find((vb) => vb.bucket === c.bucket);
+    return {
+      date: formatBucket(c.bucket),
+      captures: c.count,
+      violations: v?.count || 0,
+    };
+  });
+
+  if (mergedData.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+          Captures & Violations Over Time
+        </h3>
+        <div className="py-12 text-center text-sm text-slate-500">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
+  const chartConfig = {
+    captures: {
+      label: "Captures",
+      color: CHART_COLORS.captures,
+    },
+    violations: {
+      label: "Violations",
+      color: CHART_COLORS.violations,
+    },
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">
+        Captures & Violations Over Time
+      </h3>
+      <ChartContainer config={chartConfig} className="h-[300px] w-full aspect-auto">
+        <LineChart data={mergedData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <XAxis
+            dataKey="date"
+            tick={{ fill: "#64748b", fontSize: 12 }}
+            tickLine={{ stroke: "#cbd5e1" }}
+          />
+          <YAxis
+            tick={{ fill: "#64748b", fontSize: 12 }}
+            tickLine={{ stroke: "#cbd5e1" }}
+          />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Legend content={<ChartLegendContent payload={undefined} />} />
+          <Line
+            type="monotone"
+            dataKey="captures"
+            stroke="var(--color-captures)"
+            strokeWidth={2}
+            dot={{ fill: "var(--color-captures)", r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="violations"
+            stroke="var(--color-violations)"
+            strokeWidth={2}
+            dot={{ fill: "var(--color-violations)", r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+        </LineChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
+function ViolationMixPieChart({
+  violations,
+}: {
+  violations: Array<{
+    code: string;
+    count: number;
+    percentage: number;
+  }>;
+}) {
+  if (violations.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+          Violation Mix
+        </h3>
+        <div className="py-12 text-center text-sm text-slate-500">
+          No violations yet
+        </div>
+      </div>
+    );
+  }
+
+  const chartData = violations.map((v, idx) => ({
+    name: v.code,
+    value: v.count,
+    percentage: v.percentage,
+    fill: PIE_COLORS[idx % PIE_COLORS.length],
+  }));
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">
+        Violation Mix
+      </h3>
+      <div className="h-[300px] flex items-center justify-center">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={(entry) => `${entry.name} (${entry.percentage}%)`}
+              outerRadius={80}
+              dataKey="value"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  const policy = VIOLATION_POLICIES.find((p) => p.code === data.name);
+                  return (
+                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl">
+                      <div className="font-semibold text-slate-900 mb-1">
+                        {data.name} {policy && `- ${policy.title}`}
+                      </div>
+                      <div className="text-slate-700">
+                        Count: <span className="font-mono font-medium">{data.value}</span>
+                      </div>
+                      <div className="text-slate-700">
+                        Share: <span className="font-mono font-medium">{data.percentage}%</span>
+                      </div>
+                      {policy && (
+                        <div className="mt-2 text-slate-600 max-w-xs">
+                          {policy.policy}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      {/* Legend with Hover Cards */}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {violations.map((v, idx) => {
+          const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
+          return (
+            <HoverCard key={v.code} openDelay={200}>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-50 cursor-help">
+                  <div
+                    className="w-3 h-3 rounded-sm"
+                    style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
+                  />
+                  <span className="text-xs font-mono text-slate-700">{v.code}</span>
+                  <span className="text-xs text-slate-500">
+                    ({v.count})
+                  </span>
+                </div>
+              </HoverCardTrigger>
+              {policy && (
+                <HoverCardContent className="w-96 bg-white border-slate-200" side="top">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-mono text-xs text-slate-500">{policy.code}</div>
+                        <div className="font-semibold text-sm text-slate-900">{policy.title}</div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
+                    <a
+                      href={AUP_HELP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                    >
+                      View full policy
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                </HoverCardContent>
+              )}
+            </HoverCard>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SourceSplitPieChart({
+  sources,
+}: {
+  sources: Array<{
+    source: string;
+    count: number;
+    percentage: number;
+  }>;
+}) {
+  const chartData = sources.map((s) => ({
+    name: s.source === "user_upload" ? "User Uploads" : "Honeytrap",
+    value: s.count,
+    percentage: s.percentage,
+    fill: s.source === "user_upload" ? CHART_COLORS.userUpload : CHART_COLORS.honeytrap,
+  }));
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">Source Split</h3>
+      <div className="h-[300px] flex items-center justify-center">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={(entry) => `${entry.name} (${entry.percentage}%)`}
+              outerRadius={80}
+              dataKey="value"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl">
+                      <div className="font-semibold text-slate-900">{data.name}</div>
+                      <div className="text-slate-700">
+                        Count: <span className="font-mono font-medium">{data.value}</span>
+                      </div>
+                      <div className="text-slate-700">
+                        Share: <span className="font-mono font-medium">{data.percentage}%</span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-4 flex justify-center gap-6">
+        {chartData.map((s) => (
+          <div key={s.name} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: s.fill }} />
+            <span className="text-xs text-slate-700">{s.name}</span>
+            <span className="text-xs text-slate-500">({s.value})</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TopSendersTable({
+  senders,
+  showAll,
+  onToggleShowAll,
+}: {
+  senders: Array<{
+    sender: string;
+    total_captures: number;
+    captures_with_violations: number;
+    is_repeat_offender: boolean;
+  }>;
+  showAll: boolean;
+  onToggleShowAll: () => void;
+}) {
+  const displayedSenders = showAll ? senders : senders.slice(0, 10);
+  const hasMore = senders.length > 10;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Senders</h3>
+      {senders.length === 0 ? (
+        <div className="py-12 text-center text-sm text-slate-500">
+          No senders yet
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left border-b border-slate-200">
+                <tr>
+                  <th className="py-2 pr-4 font-medium text-slate-700">Sender</th>
+                  <th className="py-2 pr-4 font-medium text-slate-700 text-right">
+                    Captures
+                  </th>
+                  <th className="py-2 pr-4 font-medium text-slate-700 text-right">
+                    w/ Violations
+                  </th>
+                  <th className="py-2 font-medium text-slate-700 text-center">
+                    Repeat Offender
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {displayedSenders.map((s, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="py-2 pr-4 text-slate-900 truncate max-w-[250px]">
+                      {s.sender}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-900 tabular-nums text-right">
+                      {s.total_captures}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-900 tabular-nums text-right">
+                      {s.captures_with_violations}
+                    </td>
+                    <td className="py-2 text-center">
+                      {s.is_repeat_offender && (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full bg-red-500"
+                          title="Repeat offender (≥3 violations)"
+                        />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {hasMore && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={onToggleShowAll}
+                className="text-sm px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                {showAll ? "Show less" : `Show all ${senders.length} senders`}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
