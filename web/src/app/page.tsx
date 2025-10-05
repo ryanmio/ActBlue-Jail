@@ -75,7 +75,7 @@ export default function Home() {
 
       const ocrResp = await ocrPromise;
       if (ocrResp.status === 409) {
-        const j = (await ocrResp.json().catch(() => null)) as any;
+        const j = (await ocrResp.json().catch(() => null)) as { url?: string; caseId?: string } | null;
         const url = j?.url || (j?.caseId ? `/cases/${j.caseId}` : null);
         setStatus("We already have this case. Opening the original...");
         if (url) {
@@ -154,7 +154,7 @@ export default function Home() {
         body: JSON.stringify({ submissionId, text: value, conf: 1, ms: Date.now() - start }),
       });
       if (resp.status === 409) {
-        const j = (await resp.json().catch(() => null)) as any;
+        const j = (await resp.json().catch(() => null)) as { url?: string; caseId?: string } | null;
         const url = j?.url || (j?.caseId ? `/cases/${j.caseId}` : null);
         setStatus("We already have this case. Opening the original...");
         if (url) {
