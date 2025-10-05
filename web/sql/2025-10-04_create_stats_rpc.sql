@@ -97,7 +97,7 @@ begin
       from (
         select 
           case
-            when day_count <= 14 then date_trunc('day', created_at at time zone 'America/New_York')
+            when day_count <= 45 then date_trunc('day', created_at at time zone 'America/New_York')
             else date_trunc('week', created_at at time zone 'America/New_York')
           end as bucket_date,
           count(*) as count
@@ -121,7 +121,7 @@ begin
       from (
         select 
           case
-            when day_count <= 14 then date_trunc('day', s.created_at at time zone 'America/New_York')
+            when day_count <= 45 then date_trunc('day', s.created_at at time zone 'America/New_York')
             else date_trunc('week', s.created_at at time zone 'America/New_York')
           end as bucket_date,
           count(distinct s.id) as count

@@ -295,10 +295,32 @@ export default function StatsPage() {
           </div>
 
           {loading && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <div className="inline-block h-8 w-8 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
-              <p className="mt-4 text-sm text-slate-600">Loading stats...</p>
-            </div>
+            <>
+              {/* KPI skeletons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1,2,3,4].map((i) => (
+                  <div key={`sk-kpi-${i}`} className="bg-white rounded-2xl border border-slate-200 p-6">
+                    <div className="h-4 w-28 bg-slate-200 rounded mb-4" />
+                    <div className="h-10 w-16 bg-slate-200 rounded mb-2" />
+                    <div className="h-3 w-40 bg-slate-200 rounded" />
+                  </div>
+                ))}
+              </div>
+              {/* Chart skeleton */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <div className="h-5 w-64 bg-slate-200 rounded mb-4" />
+                <div className="h-48 w-full bg-slate-100 rounded" />
+              </div>
+              {/* Table skeleton */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <div className="h-5 w-40 bg-slate-200 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1,2,3,4].map((r) => (
+                    <div key={`sk-row-${r}`} className="h-4 w-full bg-slate-100 rounded" />
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           {error && (
