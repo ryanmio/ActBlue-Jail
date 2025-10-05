@@ -173,12 +173,12 @@ export default function StatsPage() {
                 Public statistics on captures, violations, and reports
               </p>
             </div>
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-wrap gap-2 items-center">
               {(["7", "30", "90", "lifetime"] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setRange(r)}
-                  className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                  className={`shrink-0 px-3 py-1.5 text-sm rounded-md border transition-colors ${
                     range === r
                       ? "bg-slate-900 text-white border-slate-900"
                       : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
@@ -192,10 +192,10 @@ export default function StatsPage() {
               <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                 <PopoverTrigger asChild>
                   <button
-                    className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[150px]"
+                    className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[120px] md:min-w-[150px] shrink-0"
                   >
                     {selectedSenders.length === 0 ? (
-                      "Filter senders..."
+                      "Senders"
                     ) : (
                       <span className="flex items-center gap-1.5">
                         <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
@@ -209,7 +209,7 @@ export default function StatsPage() {
                     </svg>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="z-50 w-[320px] p-0 bg-white border border-slate-200 shadow-xl" align="end">
+                <PopoverContent className="z-50 w-[min(92vw,320px)] max-w-[92vw] p-0 bg-white border border-slate-200 shadow-xl rounded-xl" align="start">
                   <div className="p-2 border-b border-slate-200">
                     <input
                       type="text"
@@ -219,7 +219,7 @@ export default function StatsPage() {
                       className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-300 text-slate-900 placeholder:text-slate-500"
                     />
                   </div>
-                  <div className="max-h-[300px] overflow-auto p-2">
+                  <div className="max-h-[60vh] overflow-y-auto p-2">
                     {(allSenders || [])
                       .filter((s) =>
                         s.toLowerCase().includes(searchQuery.toLowerCase())
