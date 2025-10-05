@@ -174,7 +174,7 @@ export default function StatsPage() {
                 Public statistics on captures, violations, and reports
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-wrap gap-2 items-center justify-end md:justify-start ml-auto md:ml-0">
               {/* Range filter */}
               <Popover>
                 <PopoverTrigger asChild>
