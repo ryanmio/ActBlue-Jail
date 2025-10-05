@@ -16,6 +16,7 @@ type CaseItem = {
   sender_id: string | null;
   sender_name: string | null;
   raw_text: string | null;
+  email_body?: string | null;
   processing_status?: string | null;
   created_at?: string | null;
   ai_confidence?: number | string | null;
@@ -230,6 +231,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                   caseId={id}
                   messageType={item.message_type}
                   rawText={item.raw_text}
+                  emailBody={item.email_body || null}
                   screenshotUrl={imgData.url}
                   screenshotMime={imgData?.mime || null}
                   landingImageUrl={landData?.url || null}

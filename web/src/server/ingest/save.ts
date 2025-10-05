@@ -3,7 +3,8 @@ import { getSupabaseServer } from "@/lib/supabase-server";
 import { buildDedupeFields, findDuplicateCase } from "./dedupe";
 
 export type IngestTextParams = {
-  text: string;
+  text: string; // Cleaned text for AI/heuristics
+  rawText?: string; // Original unprocessed text for storage/audit
   senderId?: string | null;
   messageType: "sms" | "email" | "unknown";
   imageUrlPlaceholder?: string;
@@ -90,9 +91,12 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   const heur = computeHeuristic(params.text || "");
   const isFundraising = heur.isFundraising;
 
+  // Use raw text for duplicate detection if provided, otherwise use cleaned text
+  const textForDedupe = params.rawText || params.text;
+
   // Duplicate detection before insert
   try {
-    const dup = await findDuplicateCase(params.text || "");
+    const dup = await findDuplicateCase(textForDedupe || "");
     if (dup.match && dup.caseId) {
       console.log("ingestTextSubmission:duplicate_detected", { match: dup.match, caseId: dup.caseId, distance: dup.distance });
       return { ok: false, id: dup.caseId, error: "duplicate" };
@@ -104,7 +108,7 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   const insertRow: Record<string, any> = {
     image_url: imageUrl,
     message_type: params.messageType,
-    raw_text: params.text,
+    raw_text: params.text, // Store cleaned text (used by AI)
     sender_id: params.senderId || null,
     processing_status: isFundraising ? "ocr" : "done",
     ocr_method: params.messageType === "sms" ? "sms" : "text",
@@ -120,14 +124,14 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
     insertRow.email_body = params.emailBody;
   }
 
-  // Extract ActBlue landing URL
-  const landingUrl = extractActBlueUrl(params.text || "");
+  // Extract ActBlue landing URL (use raw text to catch all URLs)
+  const landingUrl = extractActBlueUrl(textForDedupe || "");
   if (landingUrl) {
     insertRow.landing_url = landingUrl;
   }
 
   try {
-    const fields = buildDedupeFields(params.text || "");
+    const fields = buildDedupeFields(textForDedupe || "");
     insertRow.normalized_text = fields.normalized_text;
     insertRow.normalized_hash = fields.normalized_hash;
     insertRow.simhash64 = fields.simhash64; // pass as string for int8 safety

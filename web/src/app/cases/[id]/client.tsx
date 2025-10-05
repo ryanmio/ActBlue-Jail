@@ -1212,6 +1212,7 @@ type EvidenceTabsProps = {
   caseId: string;
   messageType: string | null | undefined;
   rawText: string | null | undefined;
+  emailBody?: string | null | undefined;
   screenshotUrl: string | null | undefined;
   screenshotMime?: string | null | undefined;
   landingImageUrl: string | null | undefined;
@@ -1219,7 +1220,7 @@ type EvidenceTabsProps = {
   landingStatus?: string | null | undefined;
 };
 
-export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
+export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
   const [tab, setTab] = useState<"primary" | "landing">("primary");
   const [scanUrl, setScanUrl] = useState("");
   const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
@@ -1328,7 +1329,12 @@ export function EvidenceTabs({ caseId, messageType, rawText, screenshotUrl, scre
             </div>
           ) : (
             <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
-              {rawText ? (
+              {emailBody ? (
+                <div 
+                  className="prose prose-sm max-w-none text-slate-900 max-h-96 overflow-auto"
+                  dangerouslySetInnerHTML={{ __html: emailBody }}
+                />
+              ) : rawText ? (
                 <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{rawText}</pre>
               ) : (
                 <div className="text-slate-600 text-sm">No primary evidence available.</div>
