@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 import { cleanTextForAI } from "@/server/ingest/text-cleaner";
+import { sanitizeEmailHtml } from "@/server/ingest/html-sanitizer";
 
 // Mailgun sends POST with application/x-www-form-urlencoded by default
 export async function POST(req: NextRequest) {
@@ -48,6 +49,9 @@ export async function POST(req: NextRequest) {
     // Clean text for AI (removes tracking links, invisible chars, excessive whitespace)
     const cleanedText = cleanTextForAI(rawText);
     
+    // Sanitize HTML body (remove non-ActBlue links to protect honeytrap email)
+    const sanitizedHtml = bodyHtml ? sanitizeEmailHtml(bodyHtml) : null;
+    
     // Attempt to detect original sender from forwarded emails (use raw text)
     // Best-effort: look for "From:" lines in body, otherwise use envelope sender
     const detectedSender = extractOriginalSender(rawText) || sender;
@@ -61,7 +65,7 @@ export async function POST(req: NextRequest) {
       messageType: "email",
       imageUrlPlaceholder: "email://no-image",
       emailSubject: subject || null,
-      emailBody: bodyHtml || null,
+      emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links)
     });
     
     console.log("/api/inbound-email:ingested", {
