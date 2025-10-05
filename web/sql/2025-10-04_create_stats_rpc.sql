@@ -90,16 +90,19 @@ begin
     'captures_by_bucket', (
       select json_agg(
         json_build_object(
-          'bucket', bucket_date,
+          'bucket', bucket_key,
           'count', count
-        ) order by bucket_date
+        ) order by bucket_key
       )
       from (
         select 
-          case
-            when day_count <= 45 then date_trunc('day', created_at at time zone 'America/New_York')
-            else date_trunc('week', created_at at time zone 'America/New_York')
-          end as bucket_date,
+          to_char(
+            case
+              when day_count <= 45 then date_trunc('day', created_at at time zone 'America/New_York')
+              else date_trunc('week', created_at at time zone 'America/New_York')
+            end,
+            'YYYY-MM-DD'
+          ) as bucket_key,
           count(*) as count
         from submissions s
         where s.created_at >= start_date and s.created_at <= end_date
@@ -107,23 +110,26 @@ begin
           and (
             not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
           )
-        group by bucket_date
-        order by bucket_date
+        group by bucket_key
+        order by bucket_key
       ) buckets
     ),
     'violations_by_bucket', (
       select json_agg(
         json_build_object(
-          'bucket', bucket_date,
+          'bucket', bucket_key,
           'count', count
-        ) order by bucket_date
+        ) order by bucket_key
       )
       from (
         select 
-          case
-            when day_count <= 45 then date_trunc('day', s.created_at at time zone 'America/New_York')
-            else date_trunc('week', s.created_at at time zone 'America/New_York')
-          end as bucket_date,
+          to_char(
+            case
+              when day_count <= 45 then date_trunc('day', s.created_at at time zone 'America/New_York')
+              else date_trunc('week', s.created_at at time zone 'America/New_York')
+            end,
+            'YYYY-MM-DD'
+          ) as bucket_key,
           count(distinct s.id) as count
         from submissions s
         join violations v on v.submission_id = s.id
@@ -132,8 +138,8 @@ begin
           and (
             not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
           )
-        group by bucket_date
-        order by bucket_date
+        group by bucket_key
+        order by bucket_key
       ) buckets
     ),
     'top_senders', (

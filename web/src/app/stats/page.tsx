@@ -486,8 +486,14 @@ function CombinedTimelineChart({
       return capturesBuckets.map((b) => nyDateKey(new Date(b.bucket)));
     }
   }
-  const cap = new Map(capturesBuckets.map((b) => [nyDateKey(new Date(b.bucket)), Number(b.count || 0)] as const));
-  const vio = new Map(violationsBuckets.map((b) => [nyDateKey(new Date(b.bucket)), Number(b.count || 0)] as const));
+  // Server now returns buckets as 'YYYY-MM-DD' strings; fall back to converting if needed
+  function normalizeKey(v: string): string {
+    // Already normalized
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    return nyDateKey(new Date(v));
+  }
+  const cap = new Map(capturesBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
+  const vio = new Map(violationsBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
   const mergedData = buildKeys().map((k) => ({
     date: k.replace(/^\d{4}-/, (y) => ""), // short display (MM-DD)
     captures: cap.get(k) || 0,
