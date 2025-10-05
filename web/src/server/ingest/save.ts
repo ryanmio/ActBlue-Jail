@@ -7,6 +7,8 @@ export type IngestTextParams = {
   senderId?: string | null;
   messageType: "sms" | "email" | "unknown";
   imageUrlPlaceholder?: string;
+  emailSubject?: string | null;
+  emailBody?: string | null;
 };
 
 export type IngestResult = {
@@ -50,6 +52,38 @@ function computeHeuristic(text: string): { isFundraising: boolean; score: number
   return { isFundraising, score: score + (hasDollar ? 1 : 0), hits };
 }
 
+function extractActBlueUrl(text: string): string | null {
+  const urlPattern = /https?:\/\/[^\s<>"'\)]+/g;
+  const matches = text.match(urlPattern) || [];
+  const actBlueUrls: string[] = [];
+
+  for (const rawUrl of matches) {
+    try {
+      // Clean trailing punctuation
+      const cleaned = rawUrl.replace(/[.,;:)\]]+$/, "");
+      const parsed = new URL(cleaned);
+      const host = parsed.hostname.toLowerCase();
+
+      // Validate ActBlue domain
+      if (host === "actblue.com" || host.endsWith(".actblue.com")) {
+        actBlueUrls.push(cleaned);
+      }
+    } catch {
+      continue; // Invalid URL, skip
+    }
+  }
+
+  if (actBlueUrls.length === 0) return null;
+  if (actBlueUrls.length === 1) return actBlueUrls[0];
+
+  // Pick URL with most query parameters (best landing page candidate)
+  return actBlueUrls.reduce((best, url) => {
+    const bestParams = new URL(best).searchParams.toString().length;
+    const urlParams = new URL(url).searchParams.toString().length;
+    return urlParams > bestParams ? url : best;
+  });
+}
+
 export async function ingestTextSubmission(params: IngestTextParams): Promise<IngestResult> {
   const supabase = getSupabaseServer();
   const imageUrl = params.imageUrlPlaceholder || "sms://no-image";
@@ -77,6 +111,20 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
     is_fundraising: isFundraising,
     public: isFundraising, // hide non-fundraising by default
   };
+
+  // Add email-specific fields
+  if (params.emailSubject) {
+    insertRow.email_subject = params.emailSubject;
+  }
+  if (params.emailBody) {
+    insertRow.email_body = params.emailBody;
+  }
+
+  // Extract ActBlue landing URL
+  const landingUrl = extractActBlueUrl(params.text || "");
+  if (landingUrl) {
+    insertRow.landing_url = landingUrl;
+  }
 
   try {
     const fields = buildDedupeFields(params.text || "");

@@ -1,0 +1,14 @@
+-- Enable inbound email ingestion pipeline
+-- No schema changes required - all necessary fields already exist:
+--   - message_type enum includes 'email'
+--   - email_subject text
+--   - email_body text
+--   - landing_url text
+--   - sender_id text
+--   - raw_text text
+--
+-- This migration serves as documentation that the inbound email
+-- feature was enabled on this date and uses the existing schema.
+--
+-- To activate: Configure Mailgun route to POST to /api/inbound-email
+
