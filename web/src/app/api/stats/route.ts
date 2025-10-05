@@ -49,34 +49,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // debug logging for verification
-    console.log("/api/stats params", {
-      range,
-      startDate,
-      endDate: now.toISOString(),
-      senderNames,
-    });
-    try {
-      const payload = data || {};
-      // compute a simple sum from top_senders to compare to KPIs
-      const ts = Array.isArray(payload?.top_senders) ? payload.top_senders : [];
-      const sums = ts.reduce(
-        (acc: any, s: any) => {
-          acc.captures += Number(s?.total_captures || 0);
-          acc.violations += Number(s?.captures_with_violations || 0);
-          return acc;
-        },
-        { captures: 0, violations: 0 }
-      );
-      console.log("/api/stats summary", {
-        total_captures: payload?.kpis?.total_captures ?? null,
-        captures_with_violations: payload?.kpis?.captures_with_violations ?? null,
-        total_reports: payload?.kpis?.total_reports ?? null,
-        top_senders_sum: sums,
-        top_senders_sample: ts.slice(0, 3),
-      });
-    } catch {}
-
     return NextResponse.json(data || {});
   } catch (err) {
     console.error("/api/stats unexpected error:", err);
