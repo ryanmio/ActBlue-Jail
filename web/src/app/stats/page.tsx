@@ -139,6 +139,7 @@ export default function StatsPage() {
     "90": "Last 90 days",
     lifetime: "Lifetime",
   };
+  const rangeOrder: Array<RangeOption> = ["7", "30", "90", "lifetime"];
 
   return (
     <main
@@ -174,19 +175,35 @@ export default function StatsPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
-              {(["7", "30", "90", "lifetime"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRange(r)}
-                  className={`shrink-0 px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                    range === r
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  {rangeLabels[r]}
-                </button>
-              ))}
+              {/* Range filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className="inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[150px] shrink-0"
+                    aria-label="Select date range"
+                  >
+                    {rangeLabels[range]}
+                    <svg className="w-3 h-3 opacity-50 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="z-50 w-[min(92vw,220px)] max-w-[92vw] p-1 bg-white border border-slate-200 shadow-xl rounded-xl" align="start">
+                  <div className="py-1">
+                    {rangeOrder.map((opt) => (
+                      <button
+                        key={`range-${opt}`}
+                        onClick={() => setRange(opt)}
+                        className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-100 ${
+                          range === opt ? "bg-slate-900 text-white hover:bg-slate-900" : "text-slate-800"
+                        }`}
+                      >
+                        {rangeLabels[opt]}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               {/* Sender filter - Simple Multi-select */}
               <Popover open={filterOpen} onOpenChange={setFilterOpen}>
