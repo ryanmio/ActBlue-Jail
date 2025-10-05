@@ -538,7 +538,14 @@ function CombinedTimelineChart({
             tick={{ fill: "#64748b", fontSize: 12 }}
             tickLine={{ stroke: "#cbd5e1" }}
           />
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                labelFormatter={(label: string) => (useWeeks ? `Week of ${label}` : label)}
+                labelClassName="text-slate-900"
+              />
+            }
+          />
           <Legend content={<ChartLegendContent payload={undefined} />} />
           <Line
             type="monotone"
