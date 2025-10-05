@@ -31,9 +31,9 @@ export function sha256Base64(s: string): string {
 function hashToken64(token: string): bigint {
   const h = createHash("sha256").update(token).digest();
   // Take first 8 bytes as unsigned 64-bit
-  let v = 0n;
+  let v = BigInt(0);
   for (let i = 0; i < 8; i++) {
-    v = (v << 8n) | BigInt(h[i]);
+    v = (v << BigInt(8)) | BigInt(h[i]);
   }
   return v;
 }
@@ -55,14 +55,14 @@ export function computeSimhash64(text: string): bigint {
     const hv = hashToken64(t);
     const weight = 1; // simple equal weighting
     for (let bit = 0; bit < 64; bit++) {
-      const mask = 1n << BigInt(bit);
-      const isOne = (hv & mask) !== 0n;
+      const mask = BigInt(1) << BigInt(bit);
+      const isOne = (hv & mask) !== BigInt(0);
       acc[bit] += isOne ? weight : -weight;
     }
   }
-  let out = 0n;
+  let out = BigInt(0);
   for (let bit = 0; bit < 64; bit++) {
-    if (acc[bit] > 0) out |= 1n << BigInt(bit);
+    if (acc[bit] > 0) out |= BigInt(1) << BigInt(bit);
   }
   return out;
 }
@@ -70,8 +70,8 @@ export function computeSimhash64(text: string): bigint {
 export function hammingDistance64(a: bigint, b: bigint): number {
   let x = a ^ b;
   let count = 0;
-  while (x !== 0n) {
-    x &= x - 1n; // clear lowest set bit
+  while (x !== BigInt(0)) {
+    x &= x - BigInt(1); // clear lowest set bit
     count++;
   }
   return count;
@@ -105,7 +105,7 @@ export async function findDuplicateCase(rawText: string): Promise<DuplicateMatch
   const sim = toSignedBigInt(computeSimhash64(norm));
   const threshold = getDistanceThreshold();
   // Prefilter window: +/- 2^24 as rough bucket window (tunable but wide)
-  const window = 1n << 24n;
+  const window = BigInt(1) << BigInt(24);
   const lower = sim - window;
   const upper = sim + window;
 
@@ -123,8 +123,8 @@ export async function findDuplicateCase(rawText: string): Promise<DuplicateMatch
     if (sv === null || sv === undefined) continue;
     const other = typeof sv === "string" ? BigInt(sv) : BigInt(sv);
     // Both are signed now, convert back to unsigned for distance calc
-    const simUnsigned = sim < 0n ? sim + (1n << 64n) : sim;
-    const otherUnsigned = other < 0n ? other + (1n << 64n) : other;
+    const simUnsigned = sim < BigInt(0) ? sim + (BigInt(1) << BigInt(64)) : sim;
+    const otherUnsigned = other < BigInt(0) ? other + (BigInt(1) << BigInt(64)) : other;
     const dist = hammingDistance64(simUnsigned, otherUnsigned);
     if (dist <= threshold && (!best || dist < best.dist)) {
       best = { id: String(r.id), dist };
@@ -138,9 +138,9 @@ export async function findDuplicateCase(rawText: string): Promise<DuplicateMatch
 
 function toSignedBigInt(unsigned: bigint): bigint {
   // Convert unsigned 64-bit to signed by wrapping values > MAX_SIGNED
-  const MAX_SIGNED = 9223372036854775807n; // 2^63 - 1
+  const MAX_SIGNED = BigInt("9223372036854775807"); // 2^63 - 1
   if (unsigned > MAX_SIGNED) {
-    return unsigned - (1n << 64n); // wrap to negative
+    return unsigned - (BigInt(1) << BigInt(64)); // wrap to negative
   }
   return unsigned;
 }
