@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { headers } from "next/headers";
@@ -39,6 +40,72 @@ type CaseData = {
   reports?: Array<{ id: string }>;
   hasReport?: boolean;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  
+  try {
+    const hdrs = await headers();
+    const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
+    const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+    const base = `${proto}://${host}`;
+    
+    const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
+    
+    if (!res.ok) {
+      return {
+        title: "Case Not Found - AB Jail",
+        description: "This case could not be found",
+      };
+    }
+    
+    const data = (await res.json()) as CaseData;
+    const item = data.item;
+    
+    if (!item) {
+      return {
+        title: "Case Not Found - AB Jail",
+        description: "This case could not be found",
+      };
+    }
+    
+    const senderName = item.sender_name || item.sender_id || "Unknown Sender";
+    const createdAt = item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { 
+      month: "short", 
+      day: "numeric", 
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short"
+    }) : "Date Unknown";
+    
+    const violationCount = data.violations?.length || 0;
+    const violationText = violationCount === 1 ? "violation" : "violations";
+    
+    const title = `${senderName} - Case ${id.slice(0, 8)}`;
+    const description = `Submitted ${createdAt} • ${violationCount} ${violationText} detected`;
+    
+    return {
+      title: `${title}`,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
+    };
+  } catch (error) {
+    return {
+      title: "Case Details",
+      description: "View case details and policy violations",
+    };
+  }
+}
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
