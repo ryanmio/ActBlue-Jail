@@ -20,21 +20,21 @@ export function cleanTextForAI(text: string): string {
   // Remove "From:" forwarding header lines (keep content after)
   cleaned = cleaned.replace(/^-+\s*Forwarded message\s*-+.*?\n(?:From:.*?\n|Date:.*?\n|Subject:.*?\n|To:.*?\n)+/gim, "");
 
-  // Strip non-ActBlue URLs but keep ActBlue ones
+  // Strip non-ActBlue URLs but keep ActBlue ones (base URL only, no params)
   // Match URLs and replace non-ActBlue with placeholder
   cleaned = cleaned.replace(/(https?:\/\/[^\s<>"'\)]+)/g, (url) => {
     try {
       const parsed = new URL(url);
       const host = parsed.hostname.toLowerCase();
       
-      // Keep ActBlue URLs (needed for landing page detection)
+      // Keep ActBlue URLs but strip query parameters (reduce tokens)
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
-        return url;
+        return `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`;
       }
       
-      // Keep secure.actblue.com links
+      // Keep secure.actblue.com links (base URL only)
       if (host.includes("actblue")) {
-        return url;
+        return `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`;
       }
       
       // Remove tracking/redirect URLs
@@ -45,12 +45,12 @@ export function cleanTextForAI(text: string): string {
   });
 
   // Remove "Click here to unsubscribe" and similar boilerplate
-  cleaned = cleaned.replace(/click here to (unsubscribe|receive fewer emails|donate).*?\n/gi, "");
+  cleaned = cleaned.replace(/click here to (unsubscribe|receive fewer emails).*?\n/gi, "");
   cleaned = cleaned.replace(/^unsubscribe.*?$/gim, "");
   
   // Remove footer boilerplate patterns
   cleaned = cleaned.replace(/^-{5,}$/gm, ""); // Separator lines
-  cleaned = cleaned.replace(/Paid for by .+? and not authorized by .+?$/gim, "");
+  // Keep "Paid for by" - important for sender extraction!
   cleaned = cleaned.replace(/P\.O\. Box \d+.*?\n.*?\d{5}/gi, "");
   
   // Remove image alt text markers
