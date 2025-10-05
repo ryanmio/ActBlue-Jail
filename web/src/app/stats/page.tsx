@@ -531,7 +531,7 @@ function CombinedTimelineChart({
             tick={{ fill: "#64748b", fontSize: 12 }}
             tickLine={{ stroke: "#cbd5e1" }}
             tickFormatter={(v: string) => (useWeeks ? `Wk of ${v}` : v)}
-            padding={{ right: 24 }}
+            padding={{ left: 10, right: 28 }}
             tickMargin={10}
             interval="preserveStartEnd"
           />
