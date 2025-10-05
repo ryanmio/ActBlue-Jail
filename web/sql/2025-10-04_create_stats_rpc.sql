@@ -47,10 +47,15 @@ begin
       not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
     );
 
+  -- Reports: filter by sender as well so KPIs match
   select count(*)
   into total_reports
-  from reports
-  where created_at >= start_date and created_at <= end_date;
+  from reports r
+  join submissions s on s.id = r.case_id
+  where r.created_at >= start_date and r.created_at <= end_date
+    and (
+      not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names)
+    );
 
   -- Source split: unknown = user_upload, sms/email = honeytrap
   select 

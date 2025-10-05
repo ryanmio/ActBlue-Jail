@@ -49,6 +49,25 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // debug logging for verification
+    console.log("/api/stats params", {
+      range,
+      startDate,
+      endDate: now.toISOString(),
+      senderNames,
+    });
+    try {
+      const payload = data || {};
+      // summarize key numbers for quick inspection
+      console.log("/api/stats summary", {
+        total_captures: payload?.kpis?.total_captures ?? null,
+        captures_with_violations: payload?.kpis?.captures_with_violations ?? null,
+        total_reports: payload?.kpis?.total_reports ?? null,
+        source_split: payload?.source_split ?? null,
+        top_senders: Array.isArray(payload?.top_senders) ? payload.top_senders.slice(0, 3) : null,
+      });
+    } catch {}
+
     return NextResponse.json(data || {});
   } catch (err) {
     console.error("/api/stats unexpected error:", err);
