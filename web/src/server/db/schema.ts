@@ -120,3 +120,24 @@ export const evaluationResponses = pgTable(
   }
 );
 
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id").notNull(),
+    toEmail: text("to_email").notNull(),
+    ccEmail: text("cc_email"),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    screenshotUrl: text("screenshot_url"),
+    landingUrl: text("landing_url").notNull(),
+    status: text("status").notNull(), // enum in SQL: sent, failed, responded
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => {
+    return {
+      caseIdx: index("reports_case_idx").on(table.caseId),
+    };
+  }
+);
+

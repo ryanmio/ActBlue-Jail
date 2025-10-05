@@ -189,8 +189,8 @@ export default function Home() {
                   <DropdownMenuItem asChild>
                     <Link href="/cases" className="cursor-pointer text-slate-900 hover:bg-slate-100">All Cases</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem disabled className="text-slate-400">
-                    Stats (coming soon)
+                  <DropdownMenuItem asChild>
+                    <Link href="/stats" className="cursor-pointer text-slate-900 hover:bg-slate-100">Stats</Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 
