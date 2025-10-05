@@ -538,7 +538,7 @@ function CombinedTimelineChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                labelFormatter={(label: string) => (useWeeks ? `Week of ${label}` : label)}
+                labelFormatter={(label: unknown) => (useWeeks ? `Week of ${String(label)}` : String(label))}
                 labelClassName="text-slate-900"
               />
             }
