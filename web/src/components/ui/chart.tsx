@@ -193,14 +193,15 @@ const ChartTooltipContent = React.forwardRef<
         {!nestLabel ? tooltipLabel : null}
         <div className="grid gap-1.5">
           {payload.map((item: unknown, index: number) => {
-            const rec = item as Record<string, any>
-            const key = `${nameKey || rec.name || rec.dataKey || "value"}`
+            const rec = item as Record<string, unknown>
+            const key = `${nameKey || (rec.name as string | undefined) || (rec.dataKey as string | undefined) || "value"}`
             const itemConfig = config[key as keyof typeof config]
-            const indicatorColor = color || rec.payload?.fill || rec.color
+            const indicatorColor =
+              color || ((rec.payload as { fill?: string } | undefined)?.fill) || (rec.color as string | undefined)
 
             return (
               <div
-                key={rec.dataKey}
+                key={String(rec.dataKey ?? key)}
                 className={cn(
                   "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-slate-500",
                   indicator === "dot" && "items-center"
@@ -212,42 +213,22 @@ const ChartTooltipContent = React.forwardRef<
                   <>
                     {itemConfig?.icon ? (
                       <itemConfig.icon />
+                    ) : indicator === "line" ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12h6l3-8 4 16 3-8h4" />
+                      </svg>
                     ) : (
-                      !hideIndicator && (
-                        <div
-                          className={cn(
-                            "shrink-0 rounded-[2px] border-[--color-border] bg-[--color-bg]",
-                            indicator === "dot" && "h-2.5 w-2.5",
-                            indicator === "line" && "w-1",
-                            indicator === "dashed" && "w-0 border-[1.5px] border-dashed bg-transparent",
-                            nestLabel && indicator === "dashed" && "my-0.5"
-                          )}
-                          style={
-                            {
-                              "--color-bg": indicatorColor,
-                              "--color-border": indicatorColor,
-                            } as React.CSSProperties
-                          }
-                        />
-                      )
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="text-slate-500">
+                        <circle cx="12" cy="12" r="4" />
+                      </svg>
                     )}
-                    <div
-                      className={cn(
-                        "flex flex-1 justify-between leading-none",
-                        nestLabel ? "items-end" : "items-center"
-                      )}
-                    >
-                      <div className="grid gap-1.5">
-                        {nestLabel ? tooltipLabel : null}
-                        <span className="text-slate-500">
-                          {itemConfig?.label || item.name}
-                        </span>
-                      </div>
-                      {item.value && (
-                        <span className="font-mono font-medium tabular-nums text-slate-900">
-                          {item.value.toLocaleString()}
-                        </span>
-                      )}
+                    <div className="grid auto-cols-[max-content] grid-flow-col gap-2">
+                      <span className="text-slate-600">
+                        {itemConfig?.label || (rec.name as string | number | undefined) || "Value"}
+                      </span>
+                      <span className="font-mono font-medium text-slate-900">
+                        {String(rec.value ?? "0")}
+                      </span>
                     </div>
                   </>
                 )}
@@ -292,23 +273,23 @@ const ChartLegendContent = React.forwardRef<
         )}
       >
         {payload.map((item: unknown) => {
-          const rec = item as Record<string, any>
-          const key = `${nameKey || rec.dataKey || "value"}`
+          const rec = item as Record<string, unknown>
+          const key = `${nameKey || (rec.dataKey as string | undefined) || "value"}`
           const itemConfig = config[key as keyof typeof config]
 
           return (
             <div
-              key={rec.value}
+              key={String(rec.value)}
               className={cn(
                 "flex items-center gap-1.5",
                 hideIcon && "-ml-3"
               )}
             >
               {!hideIcon && (
-                <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: itemConfig?.color }} />
+                <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: (itemConfig as { color?: string } | undefined)?.color }} />
               )}
               <span className="text-[0.8125rem] text-slate-600">
-                {itemConfig?.label || rec.value}
+                {itemConfig?.label || (rec.value as string | number | undefined)}
               </span>
             </div>
           )
