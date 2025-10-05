@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
+import { cleanTextForAI } from "@/server/ingest/text-cleaner";
 
 // Mailgun sends POST with application/x-www-form-urlencoded by default
 export async function POST(req: NextRequest) {
@@ -42,15 +43,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Use plain text for classification, HTML for display
-    const textForClassification = bodyPlain || stripHtml(bodyHtml);
+    const rawText = bodyPlain || stripHtml(bodyHtml);
     
-    // Attempt to detect original sender from forwarded emails
+    // Clean text for AI (removes tracking links, invisible chars, excessive whitespace)
+    const cleanedText = cleanTextForAI(rawText);
+    
+    // Attempt to detect original sender from forwarded emails (use raw text)
     // Best-effort: look for "From:" lines in body, otherwise use envelope sender
-    const detectedSender = extractOriginalSender(textForClassification) || sender;
+    const detectedSender = extractOriginalSender(rawText) || sender;
 
     // Insert into Supabase (with duplicate detection inside ingestTextSubmission)
+    // Use cleaned text for heuristics and AI, but store raw text for reference
     const result = await ingestTextSubmission({
-      text: textForClassification || "",
+      text: cleanedText || "",
+      rawText: rawText || "", // Store original for audit
       senderId: detectedSender || null,
       messageType: "email",
       imageUrlPlaceholder: "email://no-image",
@@ -63,7 +69,8 @@ export async function POST(req: NextRequest) {
       id: result.id || null,
       from: detectedSender || null,
       subject: subject ? subject.slice(0, 50) : null,
-      bodyLen: textForClassification ? textForClassification.length : 0,
+      rawLen: rawText ? rawText.length : 0,
+      cleanedLen: cleanedText ? cleanedText.length : 0,
       isFundraising: result.isFundraising ?? null,
       heuristic: result.heuristic || null,
     });
