@@ -311,6 +311,17 @@ export default function StatsPage() {
                 <div className="h-5 w-64 bg-slate-200 rounded mb-4" />
                 <div className="h-48 w-full bg-slate-100 rounded" />
               </div>
+              {/* Pie skeletons */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {[1,2].map((i) => (
+                  <div key={`sk-pie-${i}`} className="bg-white rounded-2xl border border-slate-200 p-6">
+                    <div className="h-5 w-40 bg-slate-200 rounded mb-4" />
+                    <div className="h-[260px] flex items-center justify-center">
+                      <div className="h-40 w-40 rounded-full bg-slate-100" />
+                    </div>
+                  </div>
+                ))}
+              </div>
               {/* Table skeleton */}
               <div className="bg-white rounded-2xl border border-slate-200 p-6">
                 <div className="h-5 w-40 bg-slate-200 rounded mb-4" />
@@ -360,6 +371,8 @@ export default function StatsPage() {
                 capturesBuckets={data.captures_by_bucket || []}
                 violationsBuckets={data.violations_by_bucket || []}
                 days={data.period.days}
+                periodStart={data.period.start}
+                periodEnd={data.period.end}
               />
 
               {/* Pie Charts Side by Side */}
@@ -406,10 +419,14 @@ function CombinedTimelineChart({
   capturesBuckets,
   violationsBuckets,
   days,
+  periodStart,
+  periodEnd,
 }: {
   capturesBuckets: Array<{ bucket: string; count: number }>;
   violationsBuckets: Array<{ bucket: string; count: number }>;
   days: number;
+  periodStart?: string;
+  periodEnd?: string;
 }) {
   const useWeeks = days > 14;
 
@@ -422,15 +439,34 @@ function CombinedTimelineChart({
     });
   };
 
-  // Merge the two datasets
-  const mergedData = capturesBuckets.map((c) => {
-    const v = violationsBuckets.find((vb) => vb.bucket === c.bucket);
-    return {
-      date: formatBucket(c.bucket),
-      captures: c.count,
-      violations: v?.count || 0,
-    };
-  });
+  // Build a complete sequence of keys to ensure chart reaches end of period
+  function buildKeys(): string[] {
+    try {
+      if (!periodStart || !periodEnd) return capturesBuckets.map((b) => b.bucket);
+      const keys: string[] = [];
+      const start = new Date(periodStart);
+      const end = new Date(periodEnd);
+      if (days <= 45) {
+        for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+          keys.push(new Date(d).toISOString());
+        }
+      } else {
+        for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 7)) {
+          keys.push(new Date(d).toISOString());
+        }
+      }
+      return keys;
+    } catch {
+      return capturesBuckets.map((b) => b.bucket);
+    }
+  }
+  const cap = new Map(capturesBuckets.map((b) => [new Date(b.bucket).toISOString(), Number(b.count || 0)] as const));
+  const vio = new Map(violationsBuckets.map((b) => [new Date(b.bucket).toISOString(), Number(b.count || 0)] as const));
+  const mergedData = buildKeys().map((k) => ({
+    date: formatBucket(k),
+    captures: cap.get(k) || 0,
+    violations: vio.get(k) || 0,
+  }));
 
   if (mergedData.length === 0) {
     return (
