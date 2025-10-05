@@ -428,7 +428,7 @@ function CombinedTimelineChart({
   periodStart?: string;
   periodEnd?: string;
 }) {
-  const useWeeks = days > 14;
+  const useWeeks = days > 45;
 
   const formatBucket = (bucket: string) => {
     const d = new Date(bucket);
@@ -439,31 +439,57 @@ function CombinedTimelineChart({
     });
   };
 
+  // Helpers to build stable NY-local keys (YYYY-MM-DD)
+  function nyDateKey(d: Date): string {
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    // en-CA yields YYYY-MM-DD
+    return fmt.format(d);
+  }
+
+  function startOfWeekNY(d: Date): Date {
+    // Postgres date_trunc('week', ...) starts Monday
+    const ny = new Date(d);
+    // normalize to NY date by creating new Date with same absolute time; we'll adjust by weekday in NY via formatter below
+    const dow = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).formatToParts(ny).find(p => p.type === "weekday")?.value || "Mon";
+    const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const w = map[dow] ?? 1;
+    // convert to Monday index (1)
+    const daysFromMonday = (w + 6) % 7; // Mon->0, Sun->6
+    const out = new Date(ny);
+    out.setUTCDate(out.getUTCDate() - daysFromMonday);
+    return out;
+  }
+
   // Build a complete sequence of keys to ensure chart reaches end of period
   function buildKeys(): string[] {
     try {
-      if (!periodStart || !periodEnd) return capturesBuckets.map((b) => b.bucket);
+      if (!periodStart || !periodEnd) return capturesBuckets.map((b) => nyDateKey(new Date(b.bucket)));
       const keys: string[] = [];
       const start = new Date(periodStart);
       const end = new Date(periodEnd);
-      if (days <= 45) {
+      if (!useWeeks) {
         for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-          keys.push(new Date(d).toISOString());
+          keys.push(nyDateKey(d));
         }
       } else {
-        for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 7)) {
-          keys.push(new Date(d).toISOString());
+        for (let d = startOfWeekNY(start); d <= end; d.setUTCDate(d.getUTCDate() + 7)) {
+          keys.push(nyDateKey(d));
         }
       }
       return keys;
     } catch {
-      return capturesBuckets.map((b) => b.bucket);
+      return capturesBuckets.map((b) => nyDateKey(new Date(b.bucket)));
     }
   }
-  const cap = new Map(capturesBuckets.map((b) => [new Date(b.bucket).toISOString(), Number(b.count || 0)] as const));
-  const vio = new Map(violationsBuckets.map((b) => [new Date(b.bucket).toISOString(), Number(b.count || 0)] as const));
+  const cap = new Map(capturesBuckets.map((b) => [nyDateKey(new Date(b.bucket)), Number(b.count || 0)] as const));
+  const vio = new Map(violationsBuckets.map((b) => [nyDateKey(new Date(b.bucket)), Number(b.count || 0)] as const));
   const mergedData = buildKeys().map((k) => ({
-    date: formatBucket(k),
+    date: k.replace(/^\d{4}-/, (y) => ""), // short display (MM-DD)
     captures: cap.get(k) || 0,
     violations: vio.get(k) || 0,
   }));
