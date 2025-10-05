@@ -17,8 +17,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
-  title: "ActBlue Jail",
-  description: "Public ledger for potential policy violations (MVP)",
+  title: { default: "AB Jail", template: "%s - AB Jail" },
+  description:
+    "Upload a screenshot or paste text. AI flags potential ActBlue AUP violations and adds a public record. Not affiliated with ActBlue.",
   manifest: "/site.webmanifest",
   icons: {
     icon: "/favicon.ico",
@@ -26,18 +27,21 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "ActBlue Jail",
-    description: "Public ledger for potential policy violations (MVP)",
+    title: "AB Jail",
+    description:
+      "Upload a screenshot or paste text. AI flags potential ActBlue AUP violations and adds a public record.",
     url: "/",
-    siteName: "ActBlue Jail",
+    siteName: "AB Jail",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActBlue Jail",
-    description: "Public ledger for potential policy violations (MVP)",
+    title: "AB Jail",
+    description:
+      "Upload a screenshot or paste text. AI flags potential ActBlue AUP violations and adds a public record.",
   },
+  alternates: { canonical: "/" },
 };
 
 export default function RootLayout({

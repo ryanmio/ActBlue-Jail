@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { headers } from "next/headers";
@@ -8,6 +9,7 @@ import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, Comment
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 import Footer from "@/components/Footer";
+import { getSupabaseServer } from "@/lib/supabase-server";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -39,6 +41,110 @@ type CaseData = {
   reports?: Array<{ id: string }>;
   hasReport?: boolean;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+
+  try {
+    // Query Supabase directly to avoid depending on internal API/host headers during metadata fetch
+    const supabase = getSupabaseServer();
+    type Row = { id: string; created_at: string | null; sender_id: string | null; sender_name: string | null };
+    const { data: rows } = await supabase
+      .from("submissions")
+      .select("id, created_at, sender_id, sender_name, public")
+      .eq("id", id)
+      .eq("public", true)
+      .limit(1);
+
+    let item = (rows?.[0] as Row | undefined) || null;
+    // Fallback: try internal API with site URL if direct DB read didn't return
+    if (!item) {
+      try {
+        const base = env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "";
+        const apiRes = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
+        if (apiRes.ok) {
+          const json = (await apiRes.json()) as { item?: Row | null };
+          if (json?.item) item = json.item as Row;
+        }
+      } catch {}
+    }
+    if (!item) {
+      const title = "Case Not Found";
+      const description = "This case could not be found";
+      const urlPath = `/cases/${id}`;
+      return {
+        title,
+        description,
+        alternates: { canonical: urlPath },
+        openGraph: {
+          title,
+          description,
+          type: "website",
+          url: urlPath,
+          images: ["/opengraph-image.png"],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description,
+          images: ["/twitter-image.png"],
+        },
+      };
+    }
+
+    const { data: vioRows } = await supabase
+      .from("violations")
+      .select("id")
+      .eq("submission_id", id);
+
+    const senderName = item.sender_name || item.sender_id || "Unknown Sender";
+    const createdAt = item.created_at
+      ? new Date(item.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZoneName: "short",
+        })
+      : "Date Unknown";
+
+    const violationCount = Array.isArray(vioRows) ? vioRows.length : 0;
+    const violationText = violationCount === 1 ? "violation" : "violations";
+
+    const title = `${senderName} - Case ${id.slice(0, 8)}`;
+    const description = `Submitted ${createdAt} • ${violationCount} ${violationText} detected`;
+    const urlPath = `/cases/${id}`;
+    return {
+      title,
+      description,
+      alternates: { canonical: urlPath },
+      openGraph: {
+        title,
+        description,
+        type: "website",
+        url: urlPath,
+        images: ["/opengraph-image.png"],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: ["/twitter-image.png"],
+      },
+    };
+  } catch {
+    const title = "Case Details";
+    const description = "View case details and policy violations";
+    return {
+      title,
+      description,
+      alternates: { canonical: `/cases/${id}` },
+      openGraph: { title, description, type: "website", url: `/cases/${id}`, images: ["/opengraph-image.png"] },
+      twitter: { card: "summary_large_image", title, description, images: ["/twitter-image.png"] },
+    };
+  }
+}
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
