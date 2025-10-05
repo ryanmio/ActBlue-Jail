@@ -148,7 +148,7 @@ begin
       from (
         select 
           coalesce(sender_name, sender_id, 'Unknown') as sender_name_val,
-          count(*) as capture_count,
+          count(distinct s.id) as capture_count,
           count(distinct v.submission_id) as violation_count
         from submissions s
         left join violations v on v.submission_id = s.id

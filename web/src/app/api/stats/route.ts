@@ -58,13 +58,22 @@ export async function GET(req: NextRequest) {
     });
     try {
       const payload = data || {};
-      // summarize key numbers for quick inspection
+      // compute a simple sum from top_senders to compare to KPIs
+      const ts = Array.isArray(payload?.top_senders) ? payload.top_senders : [];
+      const sums = ts.reduce(
+        (acc: any, s: any) => {
+          acc.captures += Number(s?.total_captures || 0);
+          acc.violations += Number(s?.captures_with_violations || 0);
+          return acc;
+        },
+        { captures: 0, violations: 0 }
+      );
       console.log("/api/stats summary", {
         total_captures: payload?.kpis?.total_captures ?? null,
         captures_with_violations: payload?.kpis?.captures_with_violations ?? null,
         total_reports: payload?.kpis?.total_reports ?? null,
-        source_split: payload?.source_split ?? null,
-        top_senders: Array.isArray(payload?.top_senders) ? payload.top_senders.slice(0, 3) : null,
+        top_senders_sum: sums,
+        top_senders_sample: ts.slice(0, 3),
       });
     } catch {}
 
