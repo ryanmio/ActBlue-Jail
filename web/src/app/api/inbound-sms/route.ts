@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       return xmlResponse(`<Response></Response>`, 400);
     }
 
-    // Insert into Supabase
+    // Insert into Supabase (with duplicate detection inside ingestTextSubmission)
     const result = await ingestTextSubmission({
       text: bodyText || "",
       senderId: fromNumber || null,
@@ -48,13 +48,19 @@ export async function POST(req: NextRequest) {
       isFundraising: result.isFundraising ?? null,
       heuristic: result.heuristic || null,
     });
-    if (!result.ok || !result.id) {
+    if (!result.ok) {
+      if (result.error === "duplicate") {
+        console.log("/api/inbound-sms:duplicate", { existingId: result.id || null, from: fromNumber || null });
+        return xmlResponse(`<Response></Response>`, 200);
+      }
+      if (!result.id) {
       console.error("/api/inbound-sms:ingest_failed", result);
       return xmlResponse(`<Response></Response>`, 500);
+      }
     }
 
     // For fundraising, trigger async pipelines (classify + sender extraction)
-    if (result.isFundraising) {
+    if (result.isFundraising && result.id) {
       triggerPipelines(result.id);
       console.log("/api/inbound-sms:triggered_pipelines", { submissionId: result.id });
     } else {

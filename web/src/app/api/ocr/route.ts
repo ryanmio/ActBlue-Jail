@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import { env } from "@/lib/env";
+import { buildDedupeFields, findDuplicateCase } from "@/server/ingest/dedupe";
 import sharp from "sharp";
 
 export async function POST(req: NextRequest) {
@@ -156,10 +157,42 @@ export async function POST(req: NextRequest) {
   console.log("/api/ocr:success", { textLen: text.length, conf });
 
   const ocrMs = Date.now() - start;
-  await supabase
+
+  // Duplicate detection before updating DB and triggering pipelines
+  try {
+    const dup = await findDuplicateCase(text || "");
+    if (dup.match && dup.caseId) {
+      await supabase.from("submissions").delete().eq("id", submissionId);
+      return NextResponse.json({
+        duplicate: true,
+        match: dup.match,
+        caseId: dup.caseId,
+        url: `/cases/${dup.caseId}`,
+        similarity: { distance: dup.distance ?? 0 }
+      }, { status: 409 });
+    }
+  } catch (e) {
+    console.warn("/api/ocr:dedupe_failed", String(e));
+  }
+
+  const fields = buildDedupeFields(text || "");
+  const { error: updateError } = await supabase
     .from("submissions")
-    .update({ raw_text: text, ocr_method: ocrMethod, ocr_confidence: conf, ocr_ms: ocrMs, processing_status: "ocr" })
+    .update({
+      raw_text: text,
+      ocr_method: ocrMethod,
+      ocr_confidence: conf,
+      ocr_ms: ocrMs,
+      processing_status: "ocr",
+      normalized_text: fields.normalized_text,
+      normalized_hash: fields.normalized_hash,
+      simhash64: fields.simhash64,
+    })
     .eq("id", submissionId);
+  if (updateError) {
+    console.error("/api/ocr:db_update_failed", { submissionId, error: updateError });
+    return NextResponse.json({ error: "db_update_failed", detail: updateError.message }, { status: 500 });
+  }
   console.log("/api/ocr:db_update_ok", { submissionId, ocrMs });
 
   // Fire-and-forget classify (absolute URL). Log failures.

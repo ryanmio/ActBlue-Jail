@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { buildDedupeFields, findDuplicateCase } from "./dedupe";
 
 export type IngestTextParams = {
   text: string;
@@ -55,6 +56,17 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   const heur = computeHeuristic(params.text || "");
   const isFundraising = heur.isFundraising;
 
+  // Duplicate detection before insert
+  try {
+    const dup = await findDuplicateCase(params.text || "");
+    if (dup.match && dup.caseId) {
+      console.log("ingestTextSubmission:duplicate_detected", { match: dup.match, caseId: dup.caseId, distance: dup.distance });
+      return { ok: false, id: dup.caseId, error: "duplicate" };
+    }
+  } catch (e) {
+    console.warn("ingestTextSubmission:dedupe_failed", String(e));
+  }
+
   const insertRow: Record<string, any> = {
     image_url: imageUrl,
     message_type: params.messageType,
@@ -65,6 +77,15 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
     is_fundraising: isFundraising,
     public: isFundraising, // hide non-fundraising by default
   };
+
+  try {
+    const fields = buildDedupeFields(params.text || "");
+    insertRow.normalized_text = fields.normalized_text;
+    insertRow.normalized_hash = fields.normalized_hash;
+    insertRow.simhash64 = fields.simhash64; // pass as string for int8 safety
+  } catch (e) {
+    console.warn("ingestTextSubmission:build_fields_failed", String(e));
+  }
 
   const { data, error } = await supabase
     .from("submissions")
