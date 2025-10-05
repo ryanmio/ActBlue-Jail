@@ -56,15 +56,39 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .eq("public", true)
       .limit(1);
 
-    const item = (rows?.[0] as Row | undefined) || null;
+    let item = (rows?.[0] as Row | undefined) || null;
+    // Fallback: try internal API with site URL if direct DB read didn't return
+    if (!item) {
+      try {
+        const base = env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "";
+        const apiRes = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
+        if (apiRes.ok) {
+          const json = (await apiRes.json()) as { item?: Row | null };
+          if (json?.item) item = json.item as Row;
+        }
+      } catch {}
+    }
     if (!item) {
       const title = "Case Not Found";
       const description = "This case could not be found";
+      const urlPath = `/cases/${id}`;
       return {
         title,
         description,
-        openGraph: { title, description, type: "website" },
-        twitter: { card: "summary_large_image", title, description },
+        alternates: { canonical: urlPath },
+        openGraph: {
+          title,
+          description,
+          type: "website",
+          url: urlPath,
+          images: ["/opengraph-image.png"],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description,
+          images: ["/twitter-image.png"],
+        },
       };
     }
 
@@ -90,12 +114,24 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
     const title = `${senderName} - Case ${id.slice(0, 8)}`;
     const description = `Submitted ${createdAt} • ${violationCount} ${violationText} detected`;
-
+    const urlPath = `/cases/${id}`;
     return {
       title,
       description,
-      openGraph: { title, description, type: "website" },
-      twitter: { card: "summary_large_image", title, description },
+      alternates: { canonical: urlPath },
+      openGraph: {
+        title,
+        description,
+        type: "website",
+        url: urlPath,
+        images: ["/opengraph-image.png"],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: ["/twitter-image.png"],
+      },
     };
   } catch {
     const title = "Case Details";
@@ -103,8 +139,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return {
       title,
       description,
-      openGraph: { title, description, type: "website" },
-      twitter: { card: "summary_large_image", title, description },
+      alternates: { canonical: `/cases/${id}` },
+      openGraph: { title, description, type: "website", url: `/cases/${id}`, images: ["/opengraph-image.png"] },
+      twitter: { card: "summary_large_image", title, description, images: ["/twitter-image.png"] },
     };
   }
 }
