@@ -74,6 +74,16 @@ export default function Home() {
       setStepIndex(1); // Uploading image -> Extracting text
 
       const ocrResp = await ocrPromise;
+      if (ocrResp.status === 409) {
+        const j = (await ocrResp.json().catch(() => null)) as { url?: string; caseId?: string } | null;
+        const url = j?.url || (j?.caseId ? `/cases/${j.caseId}` : null);
+        setStatus("We already have this case. Opening the original...");
+        if (url) {
+          window.location.href = url;
+          return;
+        }
+        throw new Error("Duplicate detected but no URL provided");
+      }
       if (!ocrResp.ok) {
         const body = await ocrResp.text().catch(() => "");
         throw new Error(`/api/ocr failed ${ocrResp.status}: ${body}`);
@@ -143,6 +153,16 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ submissionId, text: value, conf: 1, ms: Date.now() - start }),
       });
+      if (resp.status === 409) {
+        const j = (await resp.json().catch(() => null)) as { url?: string; caseId?: string } | null;
+        const url = j?.url || (j?.caseId ? `/cases/${j.caseId}` : null);
+        setStatus("We already have this case. Opening the original...");
+        if (url) {
+          window.location.href = url;
+          return;
+        }
+        throw new Error("Duplicate detected but no URL provided");
+      }
       if (!resp.ok) {
         const body = await resp.text().catch(() => "");
         throw new Error(`/api/ocr-text failed ${resp.status}: ${body}`);

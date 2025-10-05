@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { buildDedupeFields, findDuplicateCase } from "@/server/ingest/dedupe";
 
 export async function POST(req: NextRequest) {
   const supabase = getSupabaseServer();
@@ -33,9 +34,37 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Duplicate detection before updating text/classification
+    try {
+      const dup = await findDuplicateCase(text || "");
+      if (dup.match && dup.caseId) {
+        // Delete placeholder submission row since we will not use it
+        await supabase.from("submissions").delete().eq("id", submissionId);
+        return NextResponse.json({
+          duplicate: true,
+          match: dup.match,
+          caseId: dup.caseId,
+          url: `/cases/${dup.caseId}`,
+          similarity: { distance: dup.distance ?? 0 }
+        }, { status: 409 });
+      }
+    } catch (e) {
+      console.warn("/api/ocr-text:dedupe_failed", String(e));
+    }
+
+    const fields = buildDedupeFields(text || "");
     const { error } = await supabase
       .from("submissions")
-      .update({ raw_text: text, ocr_method: "browser", ocr_confidence: conf ?? null, ocr_ms: ms ?? null, processing_status: "ocr" })
+      .update({
+        raw_text: text,
+        ocr_method: "browser",
+        ocr_confidence: conf ?? null,
+        ocr_ms: ms ?? null,
+        processing_status: "ocr",
+        normalized_text: fields.normalized_text,
+        normalized_hash: fields.normalized_hash,
+        simhash64: fields.simhash64,
+      })
       .eq("id", submissionId);
 
     if (error) {
