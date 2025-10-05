@@ -9,6 +9,7 @@ import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, Comment
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 import Footer from "@/components/Footer";
+import { getSupabaseServer } from "@/lib/supabase-server";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -43,66 +44,67 @@ type CaseData = {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  
+
   try {
-    const hdrs = await headers();
-    const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
-    const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
-    const base = `${proto}://${host}`;
-    
-    const res = await fetch(`${base}/api/cases/${id}`, { cache: "no-store" });
-    
-    if (!res.ok) {
-      return {
-        title: "Case Not Found - AB Jail",
-        description: "This case could not be found",
-      };
-    }
-    
-    const data = (await res.json()) as CaseData;
-    const item = data.item;
-    
+    // Query Supabase directly to avoid depending on internal API/host headers during metadata fetch
+    const supabase = getSupabaseServer();
+    type Row = { id: string; created_at: string | null; sender_id: string | null; sender_name: string | null };
+    const { data: rows } = await supabase
+      .from("submissions")
+      .select("id, created_at, sender_id, sender_name, public")
+      .eq("id", id)
+      .eq("public", true)
+      .limit(1);
+
+    const item = (rows?.[0] as Row | undefined) || null;
     if (!item) {
+      const title = "Case Not Found";
+      const description = "This case could not be found";
       return {
-        title: "Case Not Found - AB Jail",
-        description: "This case could not be found",
+        title,
+        description,
+        openGraph: { title, description, type: "website" },
+        twitter: { card: "summary_large_image", title, description },
       };
     }
-    
+
+    const { data: vioRows } = await supabase
+      .from("violations")
+      .select("id")
+      .eq("submission_id", id);
+
     const senderName = item.sender_name || item.sender_id || "Unknown Sender";
-    const createdAt = item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short"
-    }) : "Date Unknown";
-    
-    const violationCount = data.violations?.length || 0;
+    const createdAt = item.created_at
+      ? new Date(item.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZoneName: "short",
+        })
+      : "Date Unknown";
+
+    const violationCount = Array.isArray(vioRows) ? vioRows.length : 0;
     const violationText = violationCount === 1 ? "violation" : "violations";
-    
+
     const title = `${senderName} - Case ${id.slice(0, 8)}`;
     const description = `Submitted ${createdAt} • ${violationCount} ${violationText} detected`;
-    
+
     return {
-      title: `${title}`,
+      title,
       description,
-      openGraph: {
-        title,
-        description,
-        type: "website",
-      },
-      twitter: {
-        card: "summary_large_image",
-        title,
-        description,
-      },
+      openGraph: { title, description, type: "website" },
+      twitter: { card: "summary_large_image", title, description },
     };
-  } catch (error) {
+  } catch {
+    const title = "Case Details";
+    const description = "View case details and policy violations";
     return {
-      title: "Case Details",
-      description: "View case details and policy violations",
+      title,
+      description,
+      openGraph: { title, description, type: "website" },
+      twitter: { card: "summary_large_image", title, description },
     };
   }
 }
