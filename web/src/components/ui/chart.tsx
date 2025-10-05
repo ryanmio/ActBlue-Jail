@@ -145,7 +145,8 @@ const ChartTooltipContent = React.forwardRef<
       }
 
       const [item] = payload
-      const key = `${labelKey || item.dataKey || item.name || "value"}`
+      const rec = item as Record<string, unknown>
+      const key = `${labelKey || rec.dataKey || rec.name || "value"}`
       const itemConfig = config[key as keyof typeof config]
       const value =
         !labelKey && typeof label === "string"
@@ -192,20 +193,21 @@ const ChartTooltipContent = React.forwardRef<
         {!nestLabel ? tooltipLabel : null}
         <div className="grid gap-1.5">
           {payload.map((item: unknown, index: number) => {
-            const key = `${nameKey || item.name || item.dataKey || "value"}`
+            const rec = item as Record<string, any>
+            const key = `${nameKey || rec.name || rec.dataKey || "value"}`
             const itemConfig = config[key as keyof typeof config]
-            const indicatorColor = color || item.payload.fill || item.color
+            const indicatorColor = color || rec.payload?.fill || rec.color
 
             return (
               <div
-                key={item.dataKey}
+                key={rec.dataKey}
                 className={cn(
                   "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-slate-500",
                   indicator === "dot" && "items-center"
                 )}
               >
-                {formatter && item?.value !== undefined && item.name ? (
-                  formatter(item.value, item.name, item, index, item.payload)
+                {formatter && rec?.value !== undefined && rec.name ? (
+                  formatter(rec.value, rec.name, rec, index, rec.payload)
                 ) : (
                   <>
                     {itemConfig?.icon ? (
@@ -290,27 +292,24 @@ const ChartLegendContent = React.forwardRef<
         )}
       >
         {payload.map((item: unknown) => {
-          const key = `${nameKey || item.dataKey || "value"}`
+          const rec = item as Record<string, any>
+          const key = `${nameKey || rec.dataKey || "value"}`
           const itemConfig = config[key as keyof typeof config]
 
           return (
             <div
-              key={item.value}
+              key={rec.value}
               className={cn(
-                "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-slate-500"
+                "flex items-center gap-1.5",
+                hideIcon && "-ml-3"
               )}
             >
-              {itemConfig?.icon && !hideIcon ? (
-                <itemConfig.icon />
-              ) : (
-                <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
-                />
+              {!hideIcon && (
+                <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: itemConfig?.color }} />
               )}
-              <span className="text-slate-500">{itemConfig?.label || item.value}</span>
+              <span className="text-[0.8125rem] text-slate-600">
+                {itemConfig?.label || rec.value}
+              </span>
             </div>
           )
         })}
