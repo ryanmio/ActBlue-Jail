@@ -15,7 +15,6 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
@@ -126,7 +125,7 @@ export default function StatsPage() {
         const resp = await fetch(`/api/stats?${qs.toString()}`); // no sender params
         if (!resp.ok) return;
         const json = (await resp.json()) as Partial<StatsData> | undefined;
-        const opts = Array.from(new Set((json?.top_senders || []).map((s: any) => String(s.sender)))) as string[];
+        const opts = Array.from(new Set((json?.top_senders || []).map((s: { sender: string }) => String(s.sender)))) as string[];
         if (!cancelled) setAllSenders(opts);
       } catch { /* ignore */ }
     })();
@@ -430,14 +429,6 @@ function CombinedTimelineChart({
 }) {
   const useWeeks = days > 45;
 
-  const formatBucket = (bucket: string) => {
-    const d = new Date(bucket);
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      timeZone: "America/New_York",
-    });
-  };
 
   // Helpers to build stable NY-local keys (YYYY-MM-DD)
   function nyDateKey(d: Date): string {
@@ -495,7 +486,7 @@ function CombinedTimelineChart({
   const cap = new Map(capturesBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
   const vio = new Map(violationsBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
   const mergedData = buildKeys().map((k) => ({
-    date: k.replace(/^\d{4}-/, (y) => ""), // short display (MM-DD)
+    date: k.replace(/^\d{4}-/, () => ""), // short display (MM-DD)
     captures: cap.get(k) || 0,
     violations: vio.get(k) || 0,
   }));
