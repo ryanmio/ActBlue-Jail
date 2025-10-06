@@ -147,16 +147,6 @@ export async function POST(req: NextRequest) {
       try { await browser.close(); } catch {}
     }
     
-    // Even on screenshot failure, trigger classify so we don't leave the case stuck
-    try {
-      const base = env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-      void fetch(`${base}/api/classify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionId: caseId }),
-      }).catch(() => undefined);
-    } catch {}
-    
     return NextResponse.json({ ok: false, error: "screenshot_failed", step }, { status: 502 });
   }
 
