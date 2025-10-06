@@ -95,10 +95,16 @@ export async function POST(req: NextRequest) {
 
     // For fundraising, trigger async pipelines (classify + sender extraction)
     if (result.isFundraising && result.id) {
-      triggerPipelines(result.id);
-      console.log("/api/inbound-email:triggered_pipelines", { submissionId: result.id });
+      // If ActBlue landing URL detected, skip immediate classify (screenshot route will trigger it)
+      const skipClassify = !!result.landingUrl;
+      triggerPipelines(result.id, { skipClassify });
+      console.log("/api/inbound-email:triggered_pipelines", { 
+        submissionId: result.id, 
+        skipClassify,
+        reason: skipClassify ? "landing_page_screenshot_will_classify" : "no_landing_page"
+      });
       
-      // If ActBlue landing URL detected, trigger screenshot capture
+      // If ActBlue landing URL detected, trigger screenshot capture (which will trigger classify)
       if (result.landingUrl) {
         const base = process.env.NEXT_PUBLIC_SITE_URL || "";
         void fetch(`${base}/api/screenshot-actblue`, {

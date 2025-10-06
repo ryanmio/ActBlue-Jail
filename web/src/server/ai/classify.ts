@@ -55,6 +55,21 @@ export async function runClassification(submissionId: string, opts: RunClassific
     }
   }
 
+  // Helper: fetch a remote image URL and embed as data URL for OpenAI
+  async function toDataUrlFromUrl(url: string): Promise<string | null> {
+    try {
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) return null;
+      const mime = resp.headers.get("content-type") || "image/png";
+      const ab = await resp.arrayBuffer();
+      // Node Buffer is available in this runtime
+      const b64 = Buffer.from(ab).toString("base64");
+      return `data:${mime};base64,${b64}`;
+    } catch {
+      return null;
+    }
+  }
+
   // Build messages (shared across initial and reclassify)
   const system = `Role: Political Fundraising Compliance Assistant\n\nInstructions:\n- Accept OCR text and an optional screenshot image of the message. Use BOTH sources: read the text carefully and visually inspect the image when present.\n- Evaluate only for the provided 5 violation codes:\n  AB001: Misrepresentation/Impersonation\n  AB003: Missing Full Entity Name\n  AB004: Entity Clarity (Org vs Candidate)\n  AB007: False/Unsubstantiated Claims\n  AB008: Unverified Matching Program\n\n- Output STRICT JSON with these top-level keys, in order:\n  1. violations (array)\n  2. summary (string)\n  3. overall_confidence (float, 0–1 inclusive)\n- Each violation is returned as a single object with these keys: code (string), title (string), rationale (string), evidence_span_indices (array of integers), severity (int 1–5), confidence (float 0–1 inclusive).\n- Emit at most one violation object per code; if multiple findings, merge rationales and union indices for that code.\n\nSpecific rules and disambiguation:\n- AB001 (Misrepresentation/Impersonation):\n  - Use the screenshot image and body text as evidence. If the image prominently features candidate(s) who are unaffiliated with the sending entity and the text does not clearly state an affiliation to those candidates, RETURN AB001.\n  - Example pattern: image contains Amy Klobuchar, Jamie Raskin, Adam Schiff; text ends with an org name like \"Let America Vote\" without clarifying affiliation — RETURN AB001.\n  - Do NOT return AB001 when the sending entity is that candidate or an affiliated campaign/committee is clearly stated. Do not flag cases where the candidate IS affiliated or when a celebrity lends their likeness (e.g., Beto sending for Powered By People; Bradley Whitford sending for a PAC). Do not flag cases where a politician's image is used to represent the opposition or to attribute a quote or action to them.\n- AB003 (Missing Full Entity Name): Only flag when NO full entity name appears anywhere in the message. If any full entity name is present (e.g., \"Let America Vote\"), DO NOT return AB003. Do not flag commonly accepted committee abbreviations such as DCCC, DLCC, or DSCC.\n- AB007 (False/Unsubstantiated Claims):\n  - Flag only for bullshit gimmicks that trick donors, like fake voting records or insinuating expiration of non-existent memberships/subscriptions. Do NOT flag political rhetoric or news claims.\n\n- AB008 (Unverified Matching Program):\n  - Use when the message advertises a matching program (e.g., \"500% match\").\n  - Rationale text should clearly state that political committees almost never run genuine donor matching programs, and that such claims are highly improbable and misleading to donors.\n  - Do NOT say \"unsupported\" or \"not documented,\" since we cannot know whether documentation exists.\n  - Use direct phrasing such as:\n    \"This solicitation advertises a ‘500%-MATCH.’ Political committees almost never run genuine donor matching programs, making this claim highly improbable and misleading to donors.\"\n- AB007 & AB008: Merge contributing lines into one object per code.\n\n- All confidence values must be floats (0–1).\n- evidence_span_indices must point to text spans; if the evidence is image-only, use an empty array and explain in the rationale (e.g., \"image shows unaffiliated candidates\").\n- If the message is malformed or incomplete, return: {\"violations\": [], \"summary\": \"Input message is malformed or incomplete.\", \"overall_confidence\": 0.1}\n- If no policy violations are found, return: {\"violations\": [], \"summary\": \"No clear violations.\", \"overall_confidence\": 0.3}\n\nOutput Format:\n- Output JSON only—no commentary or markdown.\n- Structure: { \"violations\": [ ... ], \"summary\": \"...\", \"overall_confidence\": ... }\n- Maintain the exact specified ordering of top-level keys and the strict schema.`;
 
@@ -64,11 +79,25 @@ export async function runClassification(submissionId: string, opts: RunClassific
     { role: "user", content: [ { type: "text", text: String(sub.raw_text || "").trim() || "(none)" } ] },
   ];
   if (signedUrl) {
-    (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>).push({ type: "image_url", image_url: { url: signedUrl } });
+    const dataUrl = await toDataUrlFromUrl(signedUrl);
+    (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>).push({ type: "image_url", image_url: { url: dataUrl || signedUrl } });
   }
   if (landingSignedUrl) {
-    (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>).push({ type: "text", text: `Landing page URL: ${sub.landing_url || "(unknown)"}` });
-    (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>).push({ type: "image_url", image_url: { url: landingSignedUrl } });
+    // Strip query params from landing_url when showing context
+    let landingBase = sub.landing_url || null;
+    try {
+      if (sub.landing_url) {
+        const u = new URL(sub.landing_url);
+        landingBase = `${u.protocol}//${u.hostname}${u.pathname}`;
+      }
+    } catch {}
+    if (landingBase) {
+      (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>)
+        .push({ type: "text", text: `Landing page URL: ${landingBase}` });
+    }
+    const dataUrl = await toDataUrlFromUrl(landingSignedUrl);
+    (messages[1].content as Array<{ type: string; image_url?: any; text?: string }>)
+      .push({ type: "image_url", image_url: { url: dataUrl || landingSignedUrl } });
   }
 
   // Gather reviewer comments as additional context when requested

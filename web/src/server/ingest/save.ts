@@ -155,19 +155,24 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   return { ok: true, id, isFundraising, heuristic: heur, landingUrl: landingUrl || null };
 }
 
-export function triggerPipelines(submissionId: string) {
+export function triggerPipelines(submissionId: string, options?: { skipClassify?: boolean }) {
   try {
     const base = process.env.NEXT_PUBLIC_SITE_URL || "";
-    void fetch(`${base}/api/classify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ submissionId }),
-    }).then(async (r) => {
-      const text = await r.text().catch(() => "");
-      console.log("triggerPipelines:classify", { status: r.status, body: text?.slice(0, 200) });
-    }).catch((e) => {
-      console.error("triggerPipelines:classify_error", String(e));
-    });
+    
+    // Only trigger classify if not explicitly skipped (e.g., when landing page screenshot will trigger it)
+    if (!options?.skipClassify) {
+      void fetch(`${base}/api/classify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId }),
+      }).then(async (r) => {
+        const text = await r.text().catch(() => "");
+        console.log("triggerPipelines:classify", { status: r.status, body: text?.slice(0, 200) });
+      }).catch((e) => {
+        console.error("triggerPipelines:classify_error", String(e));
+      });
+    }
+    
     void fetch(`${base}/api/sender`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
