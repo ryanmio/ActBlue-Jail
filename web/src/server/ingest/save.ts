@@ -18,6 +18,7 @@ export type IngestResult = {
   error?: string;
   isFundraising?: boolean;
   heuristic?: { score: number; hits: string[] };
+  landingUrl?: string | null;
 };
 
 function computeHeuristic(text: string): { isFundraising: boolean; score: number; hits: string[] } {
@@ -150,8 +151,8 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
     return { ok: false, error: error.message };
   }
   const id = (data as any)?.id as string | undefined;
-  console.log("ingestTextSubmission:inserted", { id: id || null, isFundraising, score: heur.score, hits: heur.hits });
-  return { ok: true, id, isFundraising, heuristic: heur };
+  console.log("ingestTextSubmission:inserted", { id: id || null, isFundraising, score: heur.score, hits: heur.hits, landingUrl: landingUrl || null });
+  return { ok: true, id, isFundraising, heuristic: heur, landingUrl: landingUrl || null };
 }
 
 export function triggerPipelines(submissionId: string) {

@@ -63,6 +63,26 @@ export async function POST(req: NextRequest) {
     if (result.isFundraising && result.id) {
       triggerPipelines(result.id);
       console.log("/api/inbound-sms:triggered_pipelines", { submissionId: result.id });
+      
+      // If ActBlue landing URL detected, trigger screenshot capture
+      if (result.landingUrl) {
+        const base = process.env.NEXT_PUBLIC_SITE_URL || "";
+        void fetch(`${base}/api/screenshot-actblue`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId: result.id, url: result.landingUrl }),
+        }).then(async (r) => {
+          const text = await r.text().catch(() => "");
+          console.log("/api/inbound-sms:screenshot_triggered", { 
+            status: r.status, 
+            caseId: result.id,
+            url: result.landingUrl,
+            response: text?.slice(0, 200) 
+          });
+        }).catch((e) => {
+          console.error("/api/inbound-sms:screenshot_error", String(e));
+        });
+      }
     } else {
       console.log("/api/inbound-sms:skipped_triggers_non_fundraising", { submissionId: result.id });
     }
