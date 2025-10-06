@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
     if (browser) {
       try { await browser.close(); } catch {}
     }
+    
     return NextResponse.json({ ok: false, error: "screenshot_failed", step }, { status: 502 });
   }
 

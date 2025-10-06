@@ -61,10 +61,11 @@ export async function POST(req: NextRequest) {
 
     // For fundraising, trigger async pipelines (classify + sender extraction)
     if (result.isFundraising && result.id) {
+      // Always trigger classify and sender immediately
       triggerPipelines(result.id);
       console.log("/api/inbound-sms:triggered_pipelines", { submissionId: result.id });
       
-      // If ActBlue landing URL detected, trigger screenshot capture
+      // If ActBlue landing URL detected, trigger screenshot (which will re-classify with landing context)
       if (result.landingUrl) {
         const base = process.env.NEXT_PUBLIC_SITE_URL || "";
         void fetch(`${base}/api/screenshot-actblue`, {
