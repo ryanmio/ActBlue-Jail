@@ -44,14 +44,29 @@ export async function POST(req: NextRequest) {
     }
 
     // Use plain text for classification, HTML for display
-    const rawText = bodyPlain || stripHtml(bodyHtml);
+    let rawText = bodyPlain || stripHtml(bodyHtml);
+    
+    // Strip forwarded message header from raw text BEFORE storing
+    // This removes the header block from what users see
+    rawText = rawText.replace(/^-+\s*Forwarded message\s*-+\s*\n(?:From:.*\n|Date:.*\n|Subject:.*\n|To:.*\n)+/i, "");
+    
+    // Redact honeytrap email address everywhere (democratdonor@gmail.com)
+    const HONEYTRAP_EMAIL = "democratdonor@gmail.com";
+    const redactHoneytrap = (text: string) => text.replace(new RegExp(HONEYTRAP_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '*******@*******.com');
+    rawText = redactHoneytrap(rawText);
     
     // Clean text for AI (removes tracking links, invisible chars, excessive whitespace)
     // Note: cleanTextForAI also strips forwarded message headers
     const cleanedText = cleanTextForAI(rawText);
     
     // Sanitize HTML body (remove non-ActBlue links to protect honeytrap email)
-    const sanitizedHtml = bodyHtml ? sanitizeEmailHtml(bodyHtml) : null;
+    let sanitizedHtml = bodyHtml ? sanitizeEmailHtml(bodyHtml) : null;
+    
+    // Also strip forwarded header and redact honeytrap from HTML
+    if (sanitizedHtml) {
+      sanitizedHtml = sanitizedHtml.replace(/^-+\s*Forwarded message\s*-+\s*<br\s*\/?>(?:From:.*?<br\s*\/?>|Date:.*?<br\s*\/?>|Subject:.*?<br\s*\/?>|To:.*?<br\s*\/?>)+/i, "");
+      sanitizedHtml = redactHoneytrap(sanitizedHtml);
+    }
     
     // Attempt to detect original sender from forwarded emails (use raw text)
     // Best-effort: look for "From:" lines in body, otherwise use envelope sender
