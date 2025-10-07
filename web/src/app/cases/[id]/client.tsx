@@ -1244,6 +1244,33 @@ type EvidenceTabsProps = {
 };
 
 export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
+  const redactEmailsInText = (text: string): string => {
+    return text.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
+      try {
+        const parts = email.split("@");
+        const domain = parts[1] || "";
+        const tld = domain.includes(".") ? domain.split(".").pop() || "com" : "com";
+        return `${"*".repeat(7)}@${"*".repeat(7)}.${tld}`;
+      } catch {
+        return "****@****.***";
+      }
+    });
+  };
+
+  // If we render sanitized HTML, also defensively mask any emails that slipped through
+  const redactEmailsInHtml = (html: string): string => {
+    return html.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
+      try {
+        const parts = email.split("@");
+        const domain = parts[1] || "";
+        const tld = domain.includes(".") ? domain.split(".").pop() || "com" : "com";
+        return `${"*".repeat(7)}@${"*".repeat(7)}.${tld}`;
+      } catch {
+        return "****@****.***";
+      }
+    });
+  };
+
   const [tab, setTab] = useState<"primary" | "landing">("primary");
   const [scanUrl, setScanUrl] = useState("");
   const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
@@ -1355,10 +1382,10 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
               {emailBody ? (
                 <div 
                   className="prose prose-sm max-w-none text-slate-900 max-h-96 overflow-auto"
-                  dangerouslySetInnerHTML={{ __html: emailBody }}
+                  dangerouslySetInnerHTML={{ __html: redactEmailsInHtml(emailBody) }}
                 />
               ) : rawText ? (
-                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{rawText}</pre>
+                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{redactEmailsInText(rawText)}</pre>
               ) : (
                 <div className="text-slate-600 text-sm">No primary evidence available.</div>
               )}

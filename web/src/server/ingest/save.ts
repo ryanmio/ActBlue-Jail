@@ -156,11 +156,13 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   return { ok: true, id, isFundraising, heuristic: heur, landingUrl: landingUrl || null };
 }
 
-export function triggerPipelines(submissionId: string) {
+export async function triggerPipelines(submissionId: string) {
   try {
     const base = env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     console.log("triggerPipelines:start", { submissionId, base });
-    void fetch(`${base}/api/classify`, {
+    
+    // Fire both requests in parallel and await them (serverless needs this)
+    const classifyPromise = fetch(`${base}/api/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ submissionId }),
@@ -170,7 +172,8 @@ export function triggerPipelines(submissionId: string) {
     }).catch((e) => {
       console.error("triggerPipelines:classify_error", String(e));
     });
-    void fetch(`${base}/api/sender`, {
+    
+    const senderPromise = fetch(`${base}/api/sender`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ submissionId }),
@@ -180,6 +183,9 @@ export function triggerPipelines(submissionId: string) {
     }).catch((e) => {
       console.error("triggerPipelines:sender_error", String(e));
     });
+    
+    // Await both to ensure they complete (Vercel serverless requirement)
+    await Promise.all([classifyPromise, senderPromise]);
   } catch (e) {
     console.error("triggerPipelines:exception", String(e));
   }
