@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { env } from "@/lib/env";
 import { buildDedupeFields, findDuplicateCase } from "./dedupe";
 
 export type IngestTextParams = {
@@ -157,7 +158,8 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
 
 export function triggerPipelines(submissionId: string) {
   try {
-    const base = process.env.NEXT_PUBLIC_SITE_URL || "";
+    const base = env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    console.log("triggerPipelines:start", { submissionId, base });
     void fetch(`${base}/api/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -178,8 +180,8 @@ export function triggerPipelines(submissionId: string) {
     }).catch((e) => {
       console.error("triggerPipelines:sender_error", String(e));
     });
-  } catch {
-    // best-effort fire-and-forget
+  } catch (e) {
+    console.error("triggerPipelines:exception", String(e));
   }
 }
 
