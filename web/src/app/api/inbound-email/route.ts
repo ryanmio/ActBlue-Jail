@@ -44,12 +44,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Use plain text for classification, HTML for display
-    let rawText = bodyPlain || stripHtml(bodyHtml);
-    // Strip top-level forwarded header block if present at the start
-    // Matches lines like: "---------- Forwarded message ---------" and following standard header fields
-    rawText = rawText.replace(/^[-\s>*]+Forwarded message[-\s>*]+\n([\s\S]*?\n){0,10}(?=\n|$)/i, "");
+    const rawText = bodyPlain || stripHtml(bodyHtml);
     
     // Clean text for AI (removes tracking links, invisible chars, excessive whitespace)
+    // Note: cleanTextForAI also strips forwarded message headers
     const cleanedText = cleanTextForAI(rawText);
     
     // Sanitize HTML body (remove non-ActBlue links to protect honeytrap email)
