@@ -574,6 +574,7 @@ function WorstOffenders() {
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-900">Worst Offenders</h2>
+        <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/stats">All Stats</Link>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -595,8 +596,16 @@ function WorstOffenders() {
               ))
             )}
             {!loading && offenders.map((o) => (
-              <tr key={o.name} className="border-t">
-                <td className="py-2 pr-4 text-slate-900">{o.name}</td>
+              <tr key={o.name} className="border-t hover:bg-slate-50">
+                <td className="py-2 pr-4 text-slate-900">
+                  <Link
+                    href={`/cases?q=${encodeURIComponent(o.name)}`}
+                    className="text-slate-900 hover:bg-slate-50 rounded px-1"
+                    aria-label={`View cases for ${o.name}`}
+                  >
+                    {o.name}
+                  </Link>
+                </td>
                 <td className="py-2 pr-4 tabular-nums text-slate-900">{o.count}</td>
                 <td className="py-2 pr-4 text-slate-800">{formatWhen(o.latest)}</td>
               </tr>
