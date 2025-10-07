@@ -44,7 +44,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Use plain text for classification, HTML for display
-    const rawText = bodyPlain || stripHtml(bodyHtml);
+    let rawText = bodyPlain || stripHtml(bodyHtml);
+    // Strip top-level forwarded header block if present at the start
+    // Matches lines like: "---------- Forwarded message ---------" and following standard header fields
+    rawText = rawText.replace(/^[-\s>*]+Forwarded message[-\s>*]+\n([\s\S]*?\n){0,10}(?=\n|$)/i, "");
     
     // Clean text for AI (removes tracking links, invisible chars, excessive whitespace)
     const cleanedText = cleanTextForAI(rawText);
@@ -96,7 +99,7 @@ export async function POST(req: NextRequest) {
     // For fundraising, trigger async pipelines (classify + sender extraction)
     if (result.isFundraising && result.id) {
       // Always trigger classify and sender immediately
-      triggerPipelines(result.id);
+      await triggerPipelines(result.id);
       console.log("/api/inbound-email:triggered_pipelines", { submissionId: result.id });
       
       // If ActBlue landing URL detected, trigger screenshot (which will re-classify with landing context)

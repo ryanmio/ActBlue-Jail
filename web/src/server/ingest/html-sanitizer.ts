@@ -13,6 +13,45 @@
 export function sanitizeEmailHtml(html: string): string {
   let sanitized = html;
 
+  const emailRegex = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+  const maskEmail = (email: string) => {
+    try {
+      const [local, domainFull] = email.split("@");
+      const lastDot = domainFull.lastIndexOf(".");
+      if (lastDot <= 0) return "****@****.***";
+      const tld = domainFull.slice(lastDot + 1);
+      return `${"*".repeat(7)}@${"*".repeat(7)}.${tld}`;
+    } catch {
+      return "****@****.***";
+    }
+  };
+  
+  // Extract From: email to preserve it
+  let fromEmail: string | null = null;
+  const fromMatch = sanitized.match(/\bFrom:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
+  if (fromMatch) {
+    fromEmail = fromMatch[1];
+  }
+  
+  // Strip names from To: lines and redact the email: "To: Name <email>" => "To: <*******@*******.com>"
+  sanitized = sanitized.replace(/(\bTo:\s*)([^<\n]*?)(<[^>]+>)/gi, (match, prefix, name, angleEmail) => {
+    const redactedEmail = angleEmail.replace(emailRegex, maskEmail);
+    return `${prefix}${redactedEmail}`;
+  });
+  
+  // Also handle To: without angle brackets: "To: name@example.com" => "To: *******@*******.com"
+  sanitized = sanitized.replace(/(\bTo:\s*)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/gi, (match, prefix, email) => {
+    return `${prefix}${maskEmail(email)}`;
+  });
+  
+  // Redact all other emails in body (but preserve the From: email)
+  sanitized = sanitized.replace(emailRegex, (email) => {
+    if (fromEmail && email.toLowerCase() === fromEmail.toLowerCase()) {
+      return email; // Keep From: email
+    }
+    return maskEmail(email);
+  });
+
   // Remove dangerous attributes that could execute JavaScript
   sanitized = sanitized.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "");
   

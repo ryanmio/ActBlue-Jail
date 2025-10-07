@@ -225,6 +225,7 @@ type LiveSenderProps = {
 export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSenderProps) {
   const [senderName, setSenderName] = useState<string | null>(initialSenderName);
   const [senderId, setSenderId] = useState<string | null>(initialSenderId);
+  const [isDone, setIsDone] = useState<boolean>(false);
 
   useEffect(() => {
     if (senderName) return; // nothing to poll if we already have it
@@ -234,13 +235,19 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        const item = data.item as { sender_name: string | null; sender_id: string | null } | null;
+        const item = data.item as { sender_name: string | null; sender_id: string | null; processing_status?: string | null } | null;
         if (!cancelled && item) {
           if (item.sender_name) {
             setSenderName(item.sender_name);
             clearInterval(interval);
+            setIsDone(true);
           } else if (item.sender_id && !senderId) {
             setSenderId(item.sender_id);
+          }
+          // If processing is done and we still don't have sender info, stop spinning
+          if (item.processing_status === "done" && !item.sender_name && !item.sender_id) {
+            setIsDone(true);
+            clearInterval(interval);
           }
         }
       } catch {}
@@ -248,6 +255,8 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
     const timeout = setTimeout(() => {
       cancelled = true;
       clearInterval(interval);
+      // After timeout, show unknown if we still don't have sender info
+      setIsDone(true);
     }, 120000);
     return () => {
       cancelled = true;
@@ -258,6 +267,7 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
 
   if (senderName) return <>{senderName}</>;
   if (senderId) return <>{senderId}</>;
+  if (isDone) return <>Unknown Sender</>;
   return (
     <span className="inline-flex items-center gap-2 text-slate-700">
       <span className="h-4 w-4 inline-block rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" aria-label="Loading" />
@@ -636,7 +646,6 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const router = useRouter();
 
   const remaining = 240 - content.length;
   const atLimit = comments.length >= 10;
@@ -652,33 +661,47 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   };
 
   const onSubmit = async () => {
+    const submittedContent = content.trim();
+    if (submittedContent.length === 0) return;
     setSubmitting(true);
     setError(null);
     setInfo(null);
+
+    // Optimistically add the comment so the user sees it immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Comment = { id: tempId, content: submittedContent, kind: "user", created_at: new Date().toISOString() };
+    setComments((prev) => [...prev, optimistic]);
+    setContent("");
+
+    // Immediate user feedback and start reclassification visuals without waiting on network
+    setInfo("Comment added. Re-running AI with comments considered…");
+    setToast("AI is re-running with your comment");
+    setTimeout(() => setToast(null), 4000);
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id } }));
+      } catch {}
+    }
+
+    // Do not keep the UI in a submitting state while the network call is in-flight
+    setSubmitting(false);
+
     try {
       const res = await fetch(`/api/cases/${id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: submittedContent }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || "Failed to add comment");
       }
-      setContent("");
-      setInfo("Comment added. Re-running AI with comments considered…");
-      setToast("AI is re-running with your comment");
-      // Refresh the page data to ensure latest server-side state is shown
-      router.refresh();
-      // Also refresh local comments list
-      await refreshComments();
-      setTimeout(() => setToast(null), 2500);
-      if (typeof window !== "undefined") {
-        try {
-          window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id } }));
-        } catch {}
-      }
+      // Replace optimistic state with server truth after a short delay (handles DB replication lag)
+      setTimeout(() => { void refreshComments(); }, 1500);
     } catch (e: unknown) {
+      // Roll back optimistic update on error
+      setComments((prev) => prev.filter((c) => c.id !== tempId));
+      setContent(submittedContent);
       const msg = e instanceof Error ? e.message : "Failed to add comment";
       setError(msg);
     } finally {
@@ -1221,6 +1244,46 @@ type EvidenceTabsProps = {
 };
 
 export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
+  const redactEmailsInText = (text: string): string => {
+    // Extract From: email to preserve it
+    const fromMatch = text.match(/\bFrom:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
+    const fromEmail = fromMatch ? fromMatch[1].toLowerCase() : null;
+    
+    return text.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
+      if (fromEmail && email.toLowerCase() === fromEmail) {
+        return email; // Preserve From: email
+      }
+      try {
+        const parts = email.split("@");
+        const domain = parts[1] || "";
+        const tld = domain.includes(".") ? domain.split(".").pop() || "com" : "com";
+        return `${"*".repeat(7)}@${"*".repeat(7)}.${tld}`;
+      } catch {
+        return "****@****.***";
+      }
+    });
+  };
+
+  const redactEmailsInHtml = (html: string): string => {
+    // Extract From: email to preserve it
+    const fromMatch = html.match(/\bFrom:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
+    const fromEmail = fromMatch ? fromMatch[1].toLowerCase() : null;
+    
+    return html.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
+      if (fromEmail && email.toLowerCase() === fromEmail) {
+        return email; // Preserve From: email
+      }
+      try {
+        const parts = email.split("@");
+        const domain = parts[1] || "";
+        const tld = domain.includes(".") ? domain.split(".").pop() || "com" : "com";
+        return `${"*".repeat(7)}@${"*".repeat(7)}.${tld}`;
+      } catch {
+        return "****@****.***";
+      }
+    });
+  };
+
   const [tab, setTab] = useState<"primary" | "landing">("primary");
   const [scanUrl, setScanUrl] = useState("");
   const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
@@ -1332,10 +1395,10 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
               {emailBody ? (
                 <div 
                   className="prose prose-sm max-w-none text-slate-900 max-h-96 overflow-auto"
-                  dangerouslySetInnerHTML={{ __html: emailBody }}
+                  dangerouslySetInnerHTML={{ __html: redactEmailsInHtml(emailBody) }}
                 />
               ) : rawText ? (
-                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{rawText}</pre>
+                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{redactEmailsInText(rawText)}</pre>
               ) : (
                 <div className="text-slate-600 text-sm">No primary evidence available.</div>
               )}
