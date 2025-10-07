@@ -636,7 +636,6 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const router = useRouter();
 
   const remaining = 240 - content.length;
   const atLimit = comments.length >= 10;
@@ -652,33 +651,47 @@ export function CommentsSection({ id, initialComments }: CommentsSectionProps) {
   };
 
   const onSubmit = async () => {
+    const submittedContent = content.trim();
+    if (submittedContent.length === 0) return;
     setSubmitting(true);
     setError(null);
     setInfo(null);
+
+    // Optimistically add the comment so the user sees it immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Comment = { id: tempId, content: submittedContent, kind: "user", created_at: new Date().toISOString() };
+    setComments((prev) => [...prev, optimistic]);
+    setContent("");
+
+    // Immediate user feedback and start reclassification visuals without waiting on network
+    setInfo("Comment added. Re-running AI with comments considered…");
+    setToast("AI is re-running with your comment");
+    setTimeout(() => setToast(null), 4000);
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id } }));
+      } catch {}
+    }
+
+    // Do not keep the UI in a submitting state while the network call is in-flight
+    setSubmitting(false);
+
     try {
       const res = await fetch(`/api/cases/${id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: submittedContent }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || "Failed to add comment");
       }
-      setContent("");
-      setInfo("Comment added. Re-running AI with comments considered…");
-      setToast("AI is re-running with your comment");
-      // Refresh the page data to ensure latest server-side state is shown
-      router.refresh();
-      // Also refresh local comments list
-      await refreshComments();
-      setTimeout(() => setToast(null), 2500);
-      if (typeof window !== "undefined") {
-        try {
-          window.dispatchEvent(new CustomEvent("reclassify-started", { detail: { id } }));
-        } catch {}
-      }
+      // Replace optimistic state with server truth after a short delay (handles DB replication lag)
+      setTimeout(() => { void refreshComments(); }, 1500);
     } catch (e: unknown) {
+      // Roll back optimistic update on error
+      setComments((prev) => prev.filter((c) => c.id !== tempId));
+      setContent(submittedContent);
       const msg = e instanceof Error ? e.message : "Failed to add comment";
       setError(msg);
     } finally {
