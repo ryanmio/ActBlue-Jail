@@ -1246,7 +1246,7 @@ type EvidenceTabsProps = {
 export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
   const redactEmailsInText = (text: string): string => {
     // Extract From: email to preserve it
-    const fromMatch = text.match(/\bFrom:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
+    const fromMatch = text.match(/From:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
     const fromEmail = fromMatch ? fromMatch[1].toLowerCase() : null;
     
     return text.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
@@ -1266,7 +1266,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
 
   const redactEmailsInHtml = (html: string): string => {
     // Extract From: email to preserve it
-    const fromMatch = html.match(/\bFrom:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
+    const fromMatch = html.match(/From:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
     const fromEmail = fromMatch ? fromMatch[1].toLowerCase() : null;
     
     return html.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
