@@ -225,6 +225,7 @@ type LiveSenderProps = {
 export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSenderProps) {
   const [senderName, setSenderName] = useState<string | null>(initialSenderName);
   const [senderId, setSenderId] = useState<string | null>(initialSenderId);
+  const [isDone, setIsDone] = useState<boolean>(false);
 
   useEffect(() => {
     if (senderName) return; // nothing to poll if we already have it
@@ -234,13 +235,19 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        const item = data.item as { sender_name: string | null; sender_id: string | null } | null;
+        const item = data.item as { sender_name: string | null; sender_id: string | null; processing_status?: string | null } | null;
         if (!cancelled && item) {
           if (item.sender_name) {
             setSenderName(item.sender_name);
             clearInterval(interval);
+            setIsDone(true);
           } else if (item.sender_id && !senderId) {
             setSenderId(item.sender_id);
+          }
+          // If processing is done and we still don't have sender info, stop spinning
+          if (item.processing_status === "done" && !item.sender_name && !item.sender_id) {
+            setIsDone(true);
+            clearInterval(interval);
           }
         }
       } catch {}
@@ -248,6 +255,8 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
     const timeout = setTimeout(() => {
       cancelled = true;
       clearInterval(interval);
+      // After timeout, show unknown if we still don't have sender info
+      setIsDone(true);
     }, 120000);
     return () => {
       cancelled = true;
@@ -258,6 +267,7 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
 
   if (senderName) return <>{senderName}</>;
   if (senderId) return <>{senderId}</>;
+  if (isDone) return <>Unknown Sender</>;
   return (
     <span className="inline-flex items-center gap-2 text-slate-700">
       <span className="h-4 w-4 inline-block rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" aria-label="Loading" />
