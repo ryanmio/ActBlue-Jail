@@ -13,7 +13,6 @@
 export function sanitizeEmailHtml(html: string): string {
   let sanitized = html;
 
-  // Redact email addresses, but preserve From: emails
   const emailRegex = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
   const maskEmail = (email: string) => {
     try {
@@ -27,6 +26,13 @@ export function sanitizeEmailHtml(html: string): string {
     }
   };
   
+  // Extract From: email to preserve it
+  let fromEmail: string | null = null;
+  const fromMatch = sanitized.match(/\bFrom:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
+  if (fromMatch) {
+    fromEmail = fromMatch[1];
+  }
+  
   // Strip names from To: lines and redact the email: "To: Name <email>" => "To: <*******@*******.com>"
   sanitized = sanitized.replace(/(\bTo:\s*)([^<\n]*?)(<[^>]+>)/gi, (match, prefix, name, angleEmail) => {
     const redactedEmail = angleEmail.replace(emailRegex, maskEmail);
@@ -38,15 +44,12 @@ export function sanitizeEmailHtml(html: string): string {
     return `${prefix}${maskEmail(email)}`;
   });
   
-  // Redact emails in body content (but From: is preserved by not matching it)
-  // Match emails NOT preceded by "From:" to preserve sender
-  sanitized = sanitized.replace(/(?<!From:\s{0,20})([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/gi, (match, email) => {
-    // Double-check we're not in a From: line
-    const beforeContext = sanitized.substring(Math.max(0, sanitized.indexOf(match) - 30), sanitized.indexOf(match));
-    if (/From:\s*$/i.test(beforeContext)) {
-      return match; // Keep From: emails
+  // Redact all other emails in body (but preserve the From: email)
+  sanitized = sanitized.replace(emailRegex, (email) => {
+    if (fromEmail && email.toLowerCase() === fromEmail.toLowerCase()) {
+      return email; // Keep From: email
     }
-    return maskEmail(match);
+    return maskEmail(email);
   });
 
   // Remove dangerous attributes that could execute JavaScript

@@ -158,8 +158,10 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
 
 export async function triggerPipelines(submissionId: string) {
   try {
-    const base = env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    console.log("triggerPipelines:start", { submissionId, base });
+    // For local development, always use localhost even if NEXT_PUBLIC_SITE_URL is set to production
+    const isLocal = process.env.NODE_ENV === "development" || !env.NEXT_PUBLIC_SITE_URL || env.NEXT_PUBLIC_SITE_URL.includes("localhost");
+    const base = isLocal ? "http://localhost:3000" : env.NEXT_PUBLIC_SITE_URL;
+    console.log("triggerPipelines:start", { submissionId, base, isLocal });
     
     // Fire both requests in parallel and await them (serverless needs this)
     const classifyPromise = fetch(`${base}/api/classify`, {
