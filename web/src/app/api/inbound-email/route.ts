@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 import { cleanTextForAI } from "@/server/ingest/text-cleaner";
 import { sanitizeEmailHtml } from "@/server/ingest/html-sanitizer";
@@ -48,6 +49,9 @@ export async function POST(req: NextRequest) {
       bodyHtml = params.get("body-html") || params.get("stripped-html") || params.get("html") || "";
     }
 
+    // Store envelope sender (forwarder's email) for reply feature
+    const envelopeSender = sender;
+
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error("/api/inbound-email:error service_key_missing");
       return NextResponse.json({ error: "service_key_missing" }, { status: 400 });
@@ -86,6 +90,9 @@ export async function POST(req: NextRequest) {
     // Best-effort: look for "From:" lines in body, otherwise use envelope sender
     const detectedSender = extractOriginalSender(rawText) || sender;
 
+    // Generate secure token for one-time report submission via email
+    const submissionToken = randomBytes(32).toString("base64url");
+
     // Insert into Supabase (with duplicate detection inside ingestTextSubmission)
     // Use cleaned text for heuristics and AI, but store raw text for reference
     const result = await ingestTextSubmission({
@@ -96,6 +103,8 @@ export async function POST(req: NextRequest) {
       imageUrlPlaceholder: "email://no-image",
       emailSubject: subject || null,
       emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links)
+      forwarderEmail: envelopeSender || null, // Email of person who forwarded
+      submissionToken: submissionToken, // Secure token for email submission
     });
     
     console.log("/api/inbound-email:ingested", {

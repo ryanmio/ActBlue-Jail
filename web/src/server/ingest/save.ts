@@ -11,6 +11,8 @@ export type IngestTextParams = {
   imageUrlPlaceholder?: string;
   emailSubject?: string | null;
   emailBody?: string | null;
+  forwarderEmail?: string | null;
+  submissionToken?: string | null;
 };
 
 export type IngestResult = {
@@ -124,6 +126,12 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   }
   if (params.emailBody) {
     insertRow.email_body = params.emailBody;
+  }
+  if (params.forwarderEmail) {
+    insertRow.forwarder_email = params.forwarderEmail;
+  }
+  if (params.submissionToken) {
+    insertRow.submission_token = params.submissionToken;
   }
 
   // Extract ActBlue landing URL (use raw text to catch all URLs)

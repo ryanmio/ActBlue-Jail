@@ -34,6 +34,11 @@ export const submissions = pgTable(
     landingScreenshotUrl: text("landing_screenshot_url"),
     landingRenderedAt: timestamp("landing_rendered_at", { withTimezone: true }),
     landingRenderStatus: text("landing_render_status"),
+    forwarderEmail: text("forwarder_email"),
+    submissionToken: text("submission_token"),
+    tokenUsedAt: timestamp("token_used_at", { withTimezone: true }),
+    previewEmailSentAt: timestamp("preview_email_sent_at", { withTimezone: true }),
+    previewEmailStatus: text("preview_email_status"),
   },
   (table) => {
     return {
