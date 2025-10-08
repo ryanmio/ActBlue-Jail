@@ -457,32 +457,39 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
-type RecentCaseRow = SubmissionRow & { issues: Array<{ code: string; title: string }> };
-function useRecentCases(limit = 6) {
-  const [rows, setRows] = useState<RecentCaseRow[]>([]);
+type RecentCase = {
+  id: string;
+  created_at: string;
+  sender_id: string | null;
+  sender_name: string | null;
+  raw_text: string | null;
+  violations: Array<{ code: string; title: string }>;
+};
+
+type WorstOffender = {
+  sender_name: string;
+  violation_count: number;
+  latest_violation_at: string;
+};
+
+type HomepageStats = {
+  recent_cases: RecentCase[];
+  worst_offenders: WorstOffender[];
+};
+
+function useHomepageStats() {
+  const [stats, setStats] = useState<HomepageStats>({ recent_cases: [], worst_offenders: [] });
   const [loading, setLoading] = useState<boolean>(true);
+  
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
       try {
-        const fetchLimit = Math.min(limit * 3, 100);
-        const listUrl = `/api/cases?limit=${fetchLimit}&include=top_violations`;
-        const json = await cachedJsonFetch<{ items: Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null; issues?: Array<{ code: string; title: string }> }> }>(listUrl, 120_000);
-        const items = (json.items || []) as Array<{ id: string; createdAt: string; senderId: string|null; senderName: string|null; rawText: string|null; issues?: Array<{ code: string; title: string }> }>;
-        const withIssues = items.map((r) => {
-          const top = Array.isArray(r.issues) ? r.issues : [];
-          return { ...r, issues: top } as RecentCaseRow;
-        });
-        const onlyWithIssues = withIssues.filter(r => r.issues.length > 0).slice(0, limit);
-        if (!cancelled) setRows(onlyWithIssues.map(r => ({
-          id: r.id,
-          createdAt: r.createdAt,
-          senderId: r.senderId,
-          senderName: r.senderName,
-          rawText: r.rawText,
-          issues: r.issues,
-        })));
+        // Single API call gets both recent cases and worst offenders
+        const url = `/api/homepage-stats?recent=5&offenders=10&days=90`;
+        const json = await cachedJsonFetch<HomepageStats>(url, 300_000); // 5 min cache
+        if (!cancelled) setStats(json || { recent_cases: [], worst_offenders: [] });
       } catch {
         // ignore
       } finally {
@@ -490,12 +497,15 @@ function useRecentCases(limit = 6) {
       }
     })();
     return () => { cancelled = true; };
-  }, [limit]);
-  return { rows, loading };
+  }, []);
+  
+  return { stats, loading };
 }
 
 function RecentCases() {
-  const { rows, loading } = useRecentCases(5);
+  const { stats, loading } = useHomepageStats();
+  const cases = stats.recent_cases || [];
+  
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
@@ -520,13 +530,13 @@ function RecentCases() {
             ))}
           </div>
         )}
-        {!loading && rows.map((r) => (
+        {!loading && cases.map((r) => (
           <div key={r.id} className="py-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-medium truncate max-w-[60vw] text-slate-900">{r.senderName || r.senderId || "Unknown sender"}</div>
+              <div className="font-medium truncate max-w-[60vw] text-slate-900">{r.sender_name || r.sender_id || "Unknown sender"}</div>
               <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
-                {r.issues.length > 0 ? (
-                  r.issues.map((v, idx) => (
+                {r.violations && r.violations.length > 0 ? (
+                  r.violations.slice(0, 3).map((v, idx) => (
                     <span
                       key={`${v.code}-${idx}`}
                       className="inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw]"
@@ -541,12 +551,12 @@ function RecentCases() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <div className="w-16 md:w-20 text-right text-xs text-slate-700 tabular-nums">{formatWhen(r.createdAt)}</div>
+              <div className="w-16 md:w-20 text-right text-xs text-slate-700 tabular-nums">{formatWhen(r.created_at)}</div>
               <Link className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" href={`/cases/${r.id}`}>View</Link>
             </div>
           </div>
         ))}
-        {!loading && rows.length === 0 && (
+        {!loading && cases.length === 0 && (
           <div className="py-8 text-center text-sm text-slate-700">No cases yet.</div>
         )}
       </div>
@@ -555,20 +565,8 @@ function RecentCases() {
 }
 
 function WorstOffenders() {
-  const { rows, loading } = useRecentCases(50);
-  const offenders = useMemo(() => {
-    const map = new Map<string, { name: string; count: number; latest: string }>();
-    for (const r of rows) {
-      const name = r.senderName || r.senderId || "Unknown";
-      const ex = map.get(name);
-      if (!ex) map.set(name, { name, count: 1, latest: r.createdAt });
-      else {
-        ex.count += 1;
-        if (new Date(r.createdAt) > new Date(ex.latest)) ex.latest = r.createdAt;
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 5);
-  }, [rows]);
+  const { stats, loading } = useHomepageStats();
+  const offenders = stats.worst_offenders || [];
 
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
@@ -595,19 +593,19 @@ function WorstOffenders() {
                 </tr>
               ))
             )}
-            {!loading && offenders.map((o) => (
-              <tr key={o.name} className="border-t hover:bg-slate-50">
+            {!loading && offenders.slice(0, 5).map((o) => (
+              <tr key={o.sender_name} className="border-t hover:bg-slate-50">
                 <td className="py-2 pr-4 text-slate-900">
                   <Link
-                    href={`/cases?q=${encodeURIComponent(o.name)}`}
+                    href={`/cases?q=${encodeURIComponent(o.sender_name)}`}
                     className="text-slate-900 hover:bg-slate-50 rounded px-1"
-                    aria-label={`View cases for ${o.name}`}
+                    aria-label={`View cases for ${o.sender_name}`}
                   >
-                    {o.name}
+                    {o.sender_name}
                   </Link>
                 </td>
-                <td className="py-2 pr-4 tabular-nums text-slate-900">{o.count}</td>
-                <td className="py-2 pr-4 text-slate-800">{formatWhen(o.latest)}</td>
+                <td className="py-2 pr-4 tabular-nums text-slate-900">{o.violation_count}</td>
+                <td className="py-2 pr-4 text-slate-800">{formatWhen(o.latest_violation_at)}</td>
               </tr>
             ))}
             {!loading && offenders.length === 0 && (
