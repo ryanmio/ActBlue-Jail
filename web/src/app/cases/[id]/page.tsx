@@ -219,7 +219,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         {/* Main content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left column */}
           <div className="lg:col-span-1 space-y-6">
             {item.message_type === "sms" ? (
@@ -242,8 +242,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             )}
           </div>
 
-          {/* Right pane spans two columns */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Right pane */}
+          <div className="lg:col-span-1 space-y-6">
             {/* Summary */}
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-3">AI Analysis Summary</h2>
