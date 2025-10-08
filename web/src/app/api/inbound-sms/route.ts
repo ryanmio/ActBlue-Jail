@@ -14,18 +14,21 @@ export async function POST(req: NextRequest) {
     let fromNumber = "";
 
     if (contentType.includes("application/x-www-form-urlencoded")) {
-      const form = await req.formData();
-      bodyText = String(form.get("Body") || "");
-      fromNumber = String(form.get("From") || "");
+      // Read raw body as UTF-8 and manually parse to ensure proper encoding
+      const rawBody = await req.text();
+      const params = new URLSearchParams(rawBody);
+      bodyText = params.get("Body") || "";
+      fromNumber = params.get("From") || "";
     } else if (contentType.includes("application/json")) {
       const json = (await req.json().catch(() => ({}))) as Record<string, unknown>;
       bodyText = String(json?.Body || json?.body || "");
       fromNumber = String(json?.From || json?.from || "");
     } else {
-      // Best-effort: try formData anyway
-      const form = await req.formData();
-      bodyText = String(form.get("Body") || "");
-      fromNumber = String(form.get("From") || "");
+      // Best-effort: try reading as text and parsing as URLSearchParams
+      const rawBody = await req.text();
+      const params = new URLSearchParams(rawBody);
+      bodyText = params.get("Body") || "";
+      fromNumber = params.get("From") || "";
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {

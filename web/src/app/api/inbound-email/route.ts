@@ -17,7 +17,16 @@ export async function POST(req: NextRequest) {
     let bodyHtml = "";
 
     // Parse Mailgun webhook payload
-    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      // Read raw body as UTF-8 and manually parse to ensure proper encoding
+      const rawBody = await req.text();
+      const params = new URLSearchParams(rawBody);
+      sender = params.get("sender") || params.get("from") || params.get("From") || "";
+      subject = params.get("subject") || params.get("Subject") || "";
+      bodyPlain = params.get("body-plain") || params.get("stripped-text") || params.get("text") || "";
+      bodyHtml = params.get("body-html") || params.get("stripped-html") || params.get("html") || "";
+    } else if (contentType.includes("multipart/form-data")) {
+      // Use formData for multipart (handles binary attachments correctly)
       const form = await req.formData();
       sender = String(form.get("sender") || form.get("from") || form.get("From") || "");
       subject = String(form.get("subject") || form.get("Subject") || "");
@@ -30,12 +39,13 @@ export async function POST(req: NextRequest) {
       bodyPlain = String(json?.["body-plain"] || json?.["stripped-text"] || json?.text || "");
       bodyHtml = String(json?.["body-html"] || json?.["stripped-html"] || json?.html || "");
     } else {
-      // Best-effort: try formData anyway
-      const form = await req.formData();
-      sender = String(form.get("sender") || form.get("from") || form.get("From") || "");
-      subject = String(form.get("subject") || form.get("Subject") || "");
-      bodyPlain = String(form.get("body-plain") || form.get("stripped-text") || form.get("text") || "");
-      bodyHtml = String(form.get("body-html") || form.get("stripped-html") || form.get("html") || "");
+      // Best-effort: try reading as text and parsing as URLSearchParams
+      const rawBody = await req.text();
+      const params = new URLSearchParams(rawBody);
+      sender = params.get("sender") || params.get("from") || params.get("From") || "";
+      subject = params.get("subject") || params.get("Subject") || "";
+      bodyPlain = params.get("body-plain") || params.get("stripped-text") || params.get("text") || "";
+      bodyHtml = params.get("body-html") || params.get("stripped-html") || params.get("html") || "";
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
