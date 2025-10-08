@@ -36,5 +36,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: result.error, detail: (result as any).detail }, { status: result.status });
   }
   console.log("/api/classify:done", { submissionId, violations: result.violations, ms: result.ms });
+  
+  // Trigger preview email for forwarded submissions (fire-and-forget)
+  try {
+    const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    void fetch(`${base}/api/send-case-preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ submissionId }),
+    }).then(async (r) => {
+      const text = await r.text().catch(() => "");
+      console.log("/api/classify:preview_email_triggered", { 
+        status: r.status, 
+        submissionId,
+        response: text?.slice(0, 200) 
+      });
+    }).catch((e) => {
+      console.error("/api/classify:preview_email_error", String(e));
+    });
+  } catch (e) {
+    console.error("/api/classify:preview_email_exception", String(e));
+  }
+  
   return NextResponse.json({ ok: true, violations: result.violations, ms: result.ms });
 }
