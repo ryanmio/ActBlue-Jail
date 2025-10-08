@@ -57,8 +57,10 @@ export async function POST(req: NextRequest) {
     let rawText = bodyPlain || stripHtml(bodyHtml);
     
     // Strip forwarded message header from raw text BEFORE storing
-    // This removes the header block from what users see
-    rawText = rawText.replace(/^-+\s*Forwarded message\s*-+\s*\n(?:From:.*\n|Date:.*\n|Subject:.*\n|To:.*\n)+/i, "");
+    // Handle cases where the header isn't at the very start; support CRLF; tolerate quotes/indent; remove lone header lines
+    rawText = rawText
+      .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:\r?\n)+(?:\s*(?:From:.*|Date:.*|Subject:.*|To:.*)\s*(?:\r?\n))+?/im, "")
+      .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*$/gim, "");
     
     // Redact honeytrap email address everywhere (democratdonor@gmail.com)
     const HONEYTRAP_EMAIL = "democratdonor@gmail.com";
@@ -74,7 +76,9 @@ export async function POST(req: NextRequest) {
     
     // Also strip forwarded header and redact honeytrap from HTML
     if (sanitizedHtml) {
-      sanitizedHtml = sanitizedHtml.replace(/^-+\s*Forwarded message\s*-+\s*<br\s*\/?>(?:From:.*?<br\s*\/?>|Date:.*?<br\s*\/?>|Subject:.*?<br\s*\/?>|To:.*?<br\s*\/?>)+/i, "");
+      sanitizedHtml = sanitizedHtml
+        .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:<br\s*\/?\s*>|\r?\n)+(?:\s*(?:From:.*?|Date:.*?|Subject:.*?|To:.*?).*?(?:<br\s*\/?\s*>|\r?\n))+?/im, "")
+        .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:<br\s*\/?\s*>)?$/gim, "");
       sanitizedHtml = redactHoneytrap(sanitizedHtml);
     }
     

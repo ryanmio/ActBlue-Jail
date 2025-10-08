@@ -1405,10 +1405,14 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
           ) : (
             <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
               {emailBody ? (
-                <div 
-                  className="prose prose-sm max-w-none text-slate-900 max-h-96 overflow-auto"
-                  dangerouslySetInnerHTML={{ __html: redactEmailsInHtml(emailBody) }}
-                />
+                <div className="max-h-96 overflow-auto">
+                  <div className="origin-top-left scale-[0.5]" style={{ width: "200%" }}>
+                    <div 
+                      className="prose prose-sm max-w-none text-slate-900 text-xs prose-headings:text-sm"
+                      dangerouslySetInnerHTML={{ __html: redactEmailsInHtml(emailBody) }}
+                    />
+                  </div>
+                </div>
               ) : rawText ? (
                 <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{redactEmailsInText(rawText)}</pre>
               ) : (
