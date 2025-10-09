@@ -3,9 +3,9 @@ import { getSupabaseServer } from "@/lib/supabase-server";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await context.params;
   
   if (!id) {
     return new NextResponse("Missing case ID", { status: 400 });
