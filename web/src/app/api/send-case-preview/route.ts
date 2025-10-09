@@ -12,124 +12,125 @@ function parseSupabaseUrl(u: string | null | undefined) {
 }
 
 export async function POST(req: NextRequest) {
-  console.log("/api/send-case-preview:start");
-  
-  if (!env.RESEND_API_KEY) {
-    console.error("/api/send-case-preview:error resend_key_missing");
-    return NextResponse.json({ error: "resend_key_missing" }, { status: 400 });
-  }
+  try {
+    console.log("/api/send-case-preview:start");
+    
+    if (!env.RESEND_API_KEY) {
+      console.error("/api/send-case-preview:error resend_key_missing");
+      return NextResponse.json({ error: "resend_key_missing" }, { status: 400 });
+    }
 
-  const resend = new Resend(env.RESEND_API_KEY);
-  const supabase = getSupabaseServer();
+    const resend = new Resend(env.RESEND_API_KEY);
+    const supabase = getSupabaseServer();
 
-  const body = await req.json().catch(() => null);
-  const submissionId: string | undefined = body?.submissionId;
-  
-  if (!submissionId) {
-    console.error("/api/send-case-preview:error missing_args", { body });
-    return NextResponse.json({ error: "missing_args" }, { status: 400 });
-  }
+    const body = await req.json().catch(() => null);
+    const submissionId: string | undefined = body?.submissionId;
+    
+    if (!submissionId) {
+      console.error("/api/send-case-preview:error missing_args", { body });
+      return NextResponse.json({ error: "missing_args" }, { status: 400 });
+    }
 
-  // Fetch submission data
-  const { data: rows, error: err } = await supabase
+    // Fetch submission data
+    const { data: rows, error: err } = await supabase
     .from("submissions")
     .select("id, sender_name, sender_id, forwarder_email, submission_token, preview_email_sent_at, image_url, landing_url, message_type, email_body")
     .eq("id", submissionId)
     .limit(1);
 
-  if (err) {
-    console.error("/api/send-case-preview:error load_failed", err);
-    return NextResponse.json({ error: "load_failed" }, { status: 500 });
-  }
+    if (err) {
+      console.error("/api/send-case-preview:error load_failed", err);
+      return NextResponse.json({ error: "load_failed" }, { status: 500 });
+    }
 
-  const sub = rows?.[0] as
-    | { id: string; sender_name?: string | null; sender_id?: string | null; forwarder_email?: string | null; submission_token?: string | null; preview_email_sent_at?: string | null; image_url?: string | null; landing_url?: string | null; message_type?: string | null; email_body?: string | null }
-    | undefined;
+    const sub = rows?.[0] as
+      | { id: string; sender_name?: string | null; sender_id?: string | null; forwarder_email?: string | null; submission_token?: string | null; preview_email_sent_at?: string | null; image_url?: string | null; landing_url?: string | null; message_type?: string | null; email_body?: string | null }
+      | undefined;
 
-  if (!sub) {
-    console.error("/api/send-case-preview:error not_found");
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
+    if (!sub) {
+      console.error("/api/send-case-preview:error not_found");
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
 
-  // Skip if no forwarder email (screenshot/paste submissions)
-  if (!sub.forwarder_email) {
-    console.log("/api/send-case-preview:skip no_forwarder_email", { submissionId });
-    return NextResponse.json({ ok: true, skipped: "no_forwarder_email" }, { status: 200 });
-  }
+    // Skip if no forwarder email (screenshot/paste submissions)
+    if (!sub.forwarder_email) {
+      console.log("/api/send-case-preview:skip no_forwarder_email", { submissionId });
+      return NextResponse.json({ ok: true, skipped: "no_forwarder_email" }, { status: 200 });
+    }
 
-  // Skip if already sent (prevent duplicates on re-classification)
-  if (sub.preview_email_sent_at) {
-    console.log("/api/send-case-preview:skip already_sent", { submissionId, sentAt: sub.preview_email_sent_at });
-    return NextResponse.json({ ok: true, skipped: "already_sent" }, { status: 200 });
-  }
+    // Skip if already sent (prevent duplicates on re-classification)
+    if (sub.preview_email_sent_at) {
+      console.log("/api/send-case-preview:skip already_sent", { submissionId, sentAt: sub.preview_email_sent_at });
+      return NextResponse.json({ ok: true, skipped: "already_sent" }, { status: 200 });
+    }
 
-  // Load violations
-  const { data: vioRows } = await supabase
-    .from("violations")
-    .select("code, title, description")
-    .eq("submission_id", sub.id)
-    .order("severity", { ascending: false });
+    // Load violations
+    const { data: vioRows } = await supabase
+      .from("violations")
+      .select("code, title, description")
+      .eq("submission_id", sub.id)
+      .order("severity", { ascending: false });
 
-  const violations = Array.isArray(vioRows) ? vioRows : [];
+    const violations = Array.isArray(vioRows) ? vioRows : [];
 
-  // Get campaign name
-  const campaign = sub.sender_name || sub.sender_id || "(unknown sender)";
+    // Get campaign name
+    const campaign = sub.sender_name || sub.sender_id || "(unknown sender)";
 
-  // Determine evidence type: Email HTML vs Screenshot
-  const isEmailSubmission = sub.message_type === 'email' && sub.email_body;
-  let evidenceUrl: string | null = null;
-  let evidenceLabel = "Screenshot";
+    // Determine evidence type: Email HTML vs Screenshot
+    const isEmailSubmission = sub.message_type === 'email' && sub.email_body;
+    let evidenceUrl: string | null = null;
+    let evidenceLabel = "Screenshot";
 
-  if (isEmailSubmission) {
-    // Email submission: link to email HTML viewer
-    evidenceUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/cases/${sub.id}/email-html`;
-    evidenceLabel = "Email HTML";
-  } else {
-    // Screenshot/paste submission: get screenshot URL
-    let screenshotUrl: string | null = sub.image_url || null;
-    if (screenshotUrl && !screenshotUrl.startsWith("http")) {
-      const parsed = parseSupabaseUrl(screenshotUrl);
-      if (parsed) {
-        try {
-          const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 86400); // 24h expiry
-          screenshotUrl = signed?.signedUrl || screenshotUrl;
-        } catch {
-          screenshotUrl = null;
+    if (isEmailSubmission) {
+      // Email submission: link to email HTML viewer
+      evidenceUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/cases/${sub.id}/email-html`;
+      evidenceLabel = "Email HTML";
+    } else {
+      // Screenshot/paste submission: get screenshot URL
+      let screenshotUrl: string | null = sub.image_url || null;
+      if (screenshotUrl && !screenshotUrl.startsWith("http")) {
+        const parsed = parseSupabaseUrl(screenshotUrl);
+        if (parsed) {
+          try {
+            const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 86400); // 24h expiry
+            screenshotUrl = signed?.signedUrl || screenshotUrl;
+          } catch {
+            screenshotUrl = null;
+          }
         }
       }
+      evidenceUrl = screenshotUrl;
     }
-    evidenceUrl = screenshotUrl;
-  }
 
-  // Build email content
-  const shortId = sub.id.split("-")[0];
-  const caseUrl = `${env.NEXT_PUBLIC_SITE_URL}/cases/${sub.id}`;
-  const submitUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/submit-report-via-email?token=${encodeURIComponent(sub.submission_token || "")}`;
+    // Build email content
+    const shortId = sub.id.split("-")[0];
+    const caseUrl = `${env.NEXT_PUBLIC_SITE_URL}/cases/${sub.id}`;
+    const submitUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/submit-report-via-email?token=${encodeURIComponent(sub.submission_token || "")}`;
 
-  // Format violations as HTML
-  const esc = (s: string) => String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    // Format violations as HTML
+    const esc = (s: string) => String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
-  const vioHtml = violations.length > 0
-    ? `<ul style="margin:0;padding-left:20px">${violations.map((v) => `<li style="margin:4px 0"><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
-    : `<p style="margin:0;color:#64748b">(No violations detected)</p>`;
+    const vioHtml = violations.length > 0
+      ? `<ul style="margin:0;padding-left:20px">${violations.map((v) => `<li style="margin:4px 0"><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
+      : `<p style="margin:0;color:#64748b">(No violations detected)</p>`;
 
-  // Normalize landing URL (strip query params)
-  const landingUrl = sub.landing_url ? (() => {
-    try {
-      const parsed = new URL(sub.landing_url);
-      return `${parsed.origin}${parsed.pathname}`;
-    } catch {
-      return sub.landing_url;
-    }
-  })() : null;
+    // Normalize landing URL (strip query params)
+    const landingUrl = sub.landing_url ? (() => {
+      try {
+        const parsed = new URL(sub.landing_url);
+        return `${parsed.origin}${parsed.pathname}`;
+      } catch {
+        return sub.landing_url;
+      }
+    })() : null;
 
-  // Email HTML with inline styles for email clients
-  const html = `<!doctype html>
+    // Email HTML with inline styles for email clients
+    const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -201,8 +202,8 @@ export async function POST(req: NextRequest) {
 </body>
 </html>`;
 
-  // Plain text version
-  const text = `Your AB Jail Case is Ready - Case #${shortId}
+    // Plain text version
+    const text = `Your AB Jail Case is Ready - Case #${shortId}
 
 Campaign/Organization
 ${campaign}
@@ -220,8 +221,7 @@ Open on AB Jail: ${caseUrl}
 This case was created from your submission to submit@abjail.org
 Case UUID: ${sub.id}`;
 
-  // Send email
-  try {
+    // Send email
     await resend.emails.send({
       from: "AB Jail <notifications@abjail.org>",
       to: sub.forwarder_email,
@@ -242,18 +242,8 @@ Case UUID: ${sub.id}`;
     console.log("/api/send-case-preview:success", { submissionId, to: sub.forwarder_email });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
-    console.error("/api/send-case-preview:send_failed", e);
-    
-    // Mark as failed
-    await supabase
-      .from("submissions")
-      .update({
-        preview_email_sent_at: new Date().toISOString(),
-        preview_email_status: "failed",
-      })
-      .eq("id", submissionId);
-
-    return NextResponse.json({ error: "send_failed" }, { status: 500 });
+    console.error("/api/send-case-preview:exception", e);
+    return NextResponse.json({ error: "exception", details: String(e) }, { status: 500 });
   }
 }
 
