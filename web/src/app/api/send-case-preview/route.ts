@@ -256,7 +256,7 @@ Case UUID: ${sub.id}`;
     console.log("/api/send-case-preview:email_sent", { 
       submissionId, 
       to: sub.forwarder_email,
-      emailId: (emailResult as any)?.id || null
+      emailId: emailResult && typeof emailResult === 'object' && 'id' in emailResult ? emailResult.id : null
     });
 
     // Mark as sent
