@@ -81,12 +81,34 @@ function extractActBlueUrl(text: string): string | null {
   if (actBlueUrls.length === 0) return null;
   if (actBlueUrls.length === 1) return actBlueUrls[0];
 
-  // Pick URL with most query parameters (best landing page candidate)
-  return actBlueUrls.reduce((best, url) => {
-    const bestParams = new URL(best).searchParams.toString().length;
-    const urlParams = new URL(url).searchParams.toString().length;
-    return urlParams > bestParams ? url : best;
-  });
+  // Strip query params and count frequency of each base URL
+  // Landing pages appear multiple times in email body, footer links appear once
+  const baseUrlCounts = new Map<string, { count: number; fullUrl: string }>();
+  
+  for (const url of actBlueUrls) {
+    try {
+      const parsed = new URL(url);
+      const baseUrl = `${parsed.origin}${parsed.pathname}`;
+      
+      if (baseUrlCounts.has(baseUrl)) {
+        baseUrlCounts.get(baseUrl)!.count++;
+      } else {
+        baseUrlCounts.set(baseUrl, { count: 1, fullUrl: url });
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  // Return the most common base URL (with original query params from first occurrence)
+  let mostCommon: { count: number; fullUrl: string } | null = null;
+  for (const entry of baseUrlCounts.values()) {
+    if (!mostCommon || entry.count > mostCommon.count) {
+      mostCommon = entry;
+    }
+  }
+
+  return mostCommon?.fullUrl || null;
 }
 
 export async function ingestTextSubmission(params: IngestTextParams): Promise<IngestResult> {

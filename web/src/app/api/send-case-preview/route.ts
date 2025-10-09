@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   // Fetch submission data
   const { data: rows, error: err } = await supabase
     .from("submissions")
-    .select("id, sender_name, sender_id, forwarder_email, submission_token, preview_email_sent_at, image_url, landing_url")
+    .select("id, sender_name, sender_id, forwarder_email, submission_token, preview_email_sent_at, image_url, landing_url, message_type, email_body")
     .eq("id", submissionId)
     .limit(1);
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sub = rows?.[0] as
-    | { id: string; sender_name?: string | null; sender_id?: string | null; forwarder_email?: string | null; submission_token?: string | null; preview_email_sent_at?: string | null; image_url?: string | null; landing_url?: string | null }
+    | { id: string; sender_name?: string | null; sender_id?: string | null; forwarder_email?: string | null; submission_token?: string | null; preview_email_sent_at?: string | null; image_url?: string | null; landing_url?: string | null; message_type?: string | null; email_body?: string | null }
     | undefined;
 
   if (!sub) {
@@ -75,18 +75,30 @@ export async function POST(req: NextRequest) {
   // Get campaign name
   const campaign = sub.sender_name || sub.sender_id || "(unknown sender)";
 
-  // Get screenshot URL (create signed URL if needed)
-  let screenshotUrl: string | null = sub.image_url || null;
-  if (screenshotUrl && !screenshotUrl.startsWith("http")) {
-    const parsed = parseSupabaseUrl(screenshotUrl);
-    if (parsed) {
-      try {
-        const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 86400); // 24h expiry
-        screenshotUrl = signed?.signedUrl || screenshotUrl;
-      } catch {
-        screenshotUrl = null;
+  // Determine evidence type: Email HTML vs Screenshot
+  const isEmailSubmission = sub.message_type === 'email' && sub.email_body;
+  let evidenceUrl: string | null = null;
+  let evidenceLabel = "Screenshot";
+
+  if (isEmailSubmission) {
+    // Email submission: link to email HTML viewer
+    evidenceUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/cases/${sub.id}/email-html`;
+    evidenceLabel = "Email HTML";
+  } else {
+    // Screenshot/paste submission: get screenshot URL
+    let screenshotUrl: string | null = sub.image_url || null;
+    if (screenshotUrl && !screenshotUrl.startsWith("http")) {
+      const parsed = parseSupabaseUrl(screenshotUrl);
+      if (parsed) {
+        try {
+          const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 86400); // 24h expiry
+          screenshotUrl = signed?.signedUrl || screenshotUrl;
+        } catch {
+          screenshotUrl = null;
+        }
       }
     }
+    evidenceUrl = screenshotUrl;
   }
 
   // Build email content
@@ -106,7 +118,15 @@ export async function POST(req: NextRequest) {
     ? `<ul style="margin:0;padding-left:20px">${violations.map((v) => `<li style="margin:4px 0"><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
     : `<p style="margin:0;color:#64748b">(No violations detected)</p>`;
 
-  const landingUrl = sub.landing_url || null;
+  // Normalize landing URL (strip query params)
+  const landingUrl = sub.landing_url ? (() => {
+    try {
+      const parsed = new URL(sub.landing_url);
+      return `${parsed.origin}${parsed.pathname}`;
+    } catch {
+      return sub.landing_url;
+    }
+  })() : null;
 
   // Email HTML with inline styles for email clients
   const html = `<!doctype html>
@@ -149,11 +169,11 @@ export async function POST(req: NextRequest) {
       </div>
       ` : ""}
 
-      <!-- Screenshot -->
-      ${screenshotUrl ? `
+      <!-- Evidence (Email HTML or Screenshot) -->
+      ${evidenceUrl ? `
       <div style="margin-bottom:24px">
-        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Screenshot</h2>
-        <p style="margin:0;font-size:14px"><a href="${esc(screenshotUrl)}" style="color:#3b82f6;text-decoration:underline">View Screenshot</a></p>
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">${evidenceLabel}</h2>
+        <p style="margin:0;font-size:14px"><a href="${esc(evidenceUrl)}" style="color:#3b82f6;text-decoration:underline">View ${evidenceLabel}</a></p>
       </div>
       ` : ""}
 
@@ -191,7 +211,7 @@ Detected Violations
 ${violations.length > 0 ? violations.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(No violations detected)"}
 
 ${landingUrl ? `Landing Page\n${landingUrl}\n` : ""}
-${screenshotUrl ? `Screenshot\n${screenshotUrl}\n` : ""}
+${evidenceUrl ? `${evidenceLabel}\n${evidenceUrl}\n` : ""}
 
 Submit to ActBlue: ${submitUrl}
 Open on AB Jail: ${caseUrl}
