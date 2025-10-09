@@ -253,10 +253,11 @@ Case UUID: ${sub.id}`;
       html,
     });
     
+    const emailId = emailResult?.data?.id || null;
     console.log("/api/send-case-preview:email_sent", { 
       submissionId, 
       to: sub.forwarder_email,
-      emailId: emailResult && typeof emailResult === 'object' && 'id' in emailResult ? emailResult.id : null
+      emailId
     });
 
     // Mark as sent
