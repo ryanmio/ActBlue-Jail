@@ -93,11 +93,13 @@ export async function POST(req: NextRequest) {
   const isEmailSubmission = sub.message_type === 'email' && sub.email_body;
   let evidenceUrl: string | null = null;
   let evidenceLabel = "Screenshot";
+  let evidenceLinkText = "View Screenshot";
 
   if (isEmailSubmission) {
     // Email submission: link to email HTML viewer
     evidenceUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/cases/${sub.id}/email-html`;
     evidenceLabel = "Email HTML";
+    evidenceLinkText = "The email I received is linked here";
   } else {
     // Screenshot/paste submission: get screenshot URL
     let screenshotUrl: string | null = sub.image_url || null;
@@ -187,7 +189,7 @@ export async function POST(req: NextRequest) {
       ${evidenceUrl ? `
       <div style="margin-bottom:24px">
         <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">${evidenceLabel}</h2>
-        <p style="margin:0;font-size:14px"><a href="${esc(evidenceUrl)}" style="color:#3b82f6;text-decoration:underline">View ${evidenceLabel}</a></p>
+        <p style="margin:0;font-size:14px"><a href="${esc(evidenceUrl)}" style="color:#3b82f6;text-decoration:underline">${esc(evidenceLinkText)}</a></p>
       </div>
       ` : ""}
 
@@ -253,10 +255,11 @@ Case UUID: ${sub.id}`;
       html,
     });
     
+    const emailId = emailResult?.data?.id || null;
     console.log("/api/send-case-preview:email_sent", { 
       submissionId, 
       to: sub.forwarder_email,
-      emailId: emailResult && typeof emailResult === 'object' && 'id' in emailResult ? emailResult.id : null
+      emailId
     });
 
     // Mark as sent
