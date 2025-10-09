@@ -37,25 +37,52 @@ export async function POST(req: NextRequest) {
   }
   console.log("/api/classify:done", { submissionId, violations: result.violations, ms: result.ms });
   
-  // Trigger preview email for forwarded submissions (fire-and-forget)
+  // Trigger preview email for forwarded submissions (await to ensure it completes)
   try {
     const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    void fetch(`${base}/api/send-case-preview`, {
+    console.log("/api/classify:triggering_preview", { 
+      base, 
+      submissionId,
+      endpoint: `${base}/api/send-case-preview`,
+      timestamp: new Date().toISOString()
+    });
+    
+    const fetchStart = Date.now();
+    const r = await fetch(`${base}/api/send-case-preview`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ submissionId }),
-    }).then(async (r) => {
-      const text = await r.text().catch(() => "");
-      console.log("/api/classify:preview_email_triggered", { 
-        status: r.status, 
-        submissionId,
-        response: text?.slice(0, 200) 
-      });
-    }).catch((e) => {
-      console.error("/api/classify:preview_email_error", String(e));
     });
+    const fetchElapsed = Date.now() - fetchStart;
+    
+    const text = await r.text().catch(() => "");
+    const isJson = r.headers.get("content-type")?.includes("application/json");
+    const responseData = isJson ? JSON.parse(text || "{}") : { text };
+    
+    console.log("/api/classify:preview_email_response", { 
+      status: r.status,
+      ok: r.ok,
+      submissionId,
+      elapsedMs: fetchElapsed,
+      responseData,
+      responseText: text?.slice(0, 500)
+    });
+    
+    if (!r.ok) {
+      console.error("/api/classify:preview_email_failed", {
+        submissionId,
+        status: r.status,
+        response: text
+      });
+    }
   } catch (e) {
-    console.error("/api/classify:preview_email_exception", String(e));
+    console.error("/api/classify:preview_email_error", { 
+      submissionId,
+      error: String(e),
+      errorType: e instanceof Error ? e.constructor.name : typeof e,
+      errorMessage: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : null
+    });
   }
   
   return NextResponse.json({ ok: true, violations: result.violations, ms: result.ms });
