@@ -12,23 +12,24 @@ function parseSupabaseUrl(u: string | null | undefined) {
 }
 
 export async function POST(req: NextRequest) {
-  console.log("/api/send-case-preview:start");
-  
-  if (!env.RESEND_API_KEY) {
-    console.error("/api/send-case-preview:error resend_key_missing");
-    return NextResponse.json({ error: "resend_key_missing" }, { status: 400 });
-  }
+  try {
+    console.log("/api/send-case-preview:start");
+    
+    if (!env.RESEND_API_KEY) {
+      console.error("/api/send-case-preview:error resend_key_missing");
+      return NextResponse.json({ error: "resend_key_missing" }, { status: 400 });
+    }
 
-  const resend = new Resend(env.RESEND_API_KEY);
-  const supabase = getSupabaseServer();
+    const resend = new Resend(env.RESEND_API_KEY);
+    const supabase = getSupabaseServer();
 
-  const body = await req.json().catch(() => null);
-  const submissionId: string | undefined = body?.submissionId;
-  
-  if (!submissionId) {
-    console.error("/api/send-case-preview:error missing_args", { body });
-    return NextResponse.json({ error: "missing_args" }, { status: 400 });
-  }
+    const body = await req.json().catch(() => null);
+    const submissionId: string | undefined = body?.submissionId;
+    
+    if (!submissionId) {
+      console.error("/api/send-case-preview:error missing_args", { body });
+      return NextResponse.json({ error: "missing_args" }, { status: 400 });
+    }
 
   // Fetch submission data
   const { data: rows, error: err } = await supabase
@@ -242,18 +243,8 @@ Case UUID: ${sub.id}`;
     console.log("/api/send-case-preview:success", { submissionId, to: sub.forwarder_email });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
-    console.error("/api/send-case-preview:send_failed", e);
-    
-    // Mark as failed
-    await supabase
-      .from("submissions")
-      .update({
-        preview_email_sent_at: new Date().toISOString(),
-        preview_email_status: "failed",
-      })
-      .eq("id", submissionId);
-
-    return NextResponse.json({ error: "send_failed" }, { status: 500 });
+    console.error("/api/send-case-preview:exception", e);
+    return NextResponse.json({ error: "exception", details: String(e) }, { status: 500 });
   }
 }
 
