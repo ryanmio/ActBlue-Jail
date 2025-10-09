@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
   // Fetch case
   const { data: rows, error: err } = await supabase
     .from("submissions")
-    .select("id, sender_name, sender_id, raw_text, email_subject, email_body, ai_summary, image_url, landing_url, landing_screenshot_url")
+    .select("id, sender_name, sender_id, raw_text, email_subject, email_body, ai_summary, image_url, landing_url, landing_screenshot_url, message_type")
     .eq("id", caseId)
     .limit(1);
   if (err) return NextResponse.json({ error: "case_load_failed" }, { status: 500 });
   const sub = rows?.[0] as
-    | { id: string; sender_name?: string | null; sender_id?: string | null; raw_text?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null }
+    | { id: string; sender_name?: string | null; sender_id?: string | null; raw_text?: string | null; email_body?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null; image_url?: string | null; message_type?: string | null }
     | undefined;
   if (!sub) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
@@ -48,18 +48,31 @@ export async function POST(req: NextRequest) {
   // Build subject/body
   const shortId = sub.id.split("-")[0];
   const subject = `Reporting Possible Violation - Case #${shortId}`;
-  // Prefer the primary submission screenshot if available (email/SMS evidence)
-  let screenshotUrl: string | null = (sub as unknown as { image_url?: string | null }).image_url || null;
-  if (screenshotUrl && !screenshotUrl.startsWith("http")) {
-    const parsed = parseSupabaseUrl(screenshotUrl);
-    if (parsed) {
-      try {
-        const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
-        screenshotUrl = signed?.signedUrl || screenshotUrl;
-      } catch {}
-    }
-  }
   const campaign = sub.sender_name || sub.sender_id || "(unknown sender)";
+
+  // Determine evidence type: Email HTML vs Screenshot
+  const isEmailSubmission = sub.message_type === 'email' && sub.email_body;
+  let evidenceUrl: string | null = null;
+  let evidenceLabel = "Screenshot";
+
+  if (isEmailSubmission) {
+    // Email submission: link to email HTML viewer
+    evidenceUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/cases/${sub.id}/email-html`;
+    evidenceLabel = "Email HTML";
+  } else {
+    // Screenshot/paste submission: get screenshot URL
+    let screenshotUrl: string | null = sub.image_url || null;
+    if (screenshotUrl && !screenshotUrl.startsWith("http")) {
+      const parsed = parseSupabaseUrl(screenshotUrl);
+      if (parsed) {
+        try {
+          const { data: signed } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
+          screenshotUrl = signed?.signedUrl || screenshotUrl;
+        } catch {}
+      }
+    }
+    evidenceUrl = screenshotUrl;
+  }
 
   // Load violations for this case
   const { data: vioRows } = await supabase
@@ -95,11 +108,11 @@ export async function POST(req: NextRequest) {
   sections.push(`Violations\n----------\n${vioText}`);
   sections.push(`Landing page URL\n-----------------\n${landingUrl}`);
   if (reporterNote) sections.push(`Reporter note\n-------------\n${reporterNote}`);
-  if (screenshotUrl) sections.push(`Screenshot\n---------\n${screenshotUrl}`);
+  if (evidenceUrl) sections.push(`${evidenceLabel}\n---------\n${evidenceUrl}`);
   sections.push(`Meta\n----\nThis report was submitted using AB Jail.\nCase UUID: ${sub.id}\nCase short_id: ${shortId}`);
   const body = sections.join("\n\n");
 
-  // Minimal HTML version for nicer readability (keep simple for ticket systems)
+  // Beautiful HTML email matching preview email design
   const esc = (s: string) => String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -114,46 +127,87 @@ export async function POST(req: NextRequest) {
         .filter((l) => l.length > 0)
         .map((l) => l.replace(/^[-\u2022]\s*/, ""));
       if (ovLines.length > 1) {
-        return `<ul>${ovLines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`;
+        return `<ul style="margin:0;padding-left:20px">${ovLines.map((l) => `<li style="margin:4px 0">${esc(l)}</li>`).join("")}</ul>`;
       }
-      return `<p>${esc(ovLines[0] || "")}</p>`;
+      return `<p style="margin:0">${esc(ovLines[0] || "")}</p>`;
     }
     return (violationsList.length > 0)
-      ? `<ul>${violationsList.map((v: { code: string; title: string; description?: string | null }) => `<li><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
-      : `<p>(none detected)</p>`;
+      ? `<ul style="margin:0;padding-left:20px">${violationsList.map((v: { code: string; title: string; description?: string | null }) => `<li style="margin:4px 0"><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
+      : `<p style="margin:0;color:#64748b">(No violations detected)</p>`;
   })();
-  const html = `<!doctype html><html><body style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.4;color:#0f172a">
-  <div>
-    <p style="margin:0 0 8px 0"><strong>Campaign/Org</strong></p>
-    <p style="margin:0 0 16px 0">${esc(campaign)}</p>
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.5;color:#0f172a;margin:0;padding:0;background-color:#f8fafc">
+  <div style="max-width:600px;margin:0 auto;padding:20px">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#3b82f6,#1e40af);color:white;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+      <h1 style="margin:0;font-size:24px;font-weight:700">ActBlue Violation Report</h1>
+      <p style="margin:8px 0 0 0;opacity:0.9;font-size:14px">Case #${esc(shortId)}</p>
+    </div>
+    
+    <!-- Content -->
+    <div style="background:white;padding:24px;border-radius:0 0 12px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+      <!-- Campaign/Org -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Campaign/Organization</h2>
+        <p style="margin:0;font-size:16px;font-weight:500;color:#0f172a">${esc(campaign)}</p>
+      </div>
 
-    <p style="margin:0 0 8px 0"><strong>Violations</strong></p>
-    <div style="margin:0 0 16px 0">${vioHtml}</div>
+      <!-- Violations -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Violations</h2>
+        ${vioHtml}
+      </div>
 
-    <p style="margin:0 0 8px 0"><strong>Landing page</strong></p>
-    <p style="margin:0 0 16px 0"><a href="${esc(landingUrl)}" target="_blank" rel="noopener noreferrer">${esc(landingUrl)}</a></p>
+      <!-- Landing Page -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Landing Page</h2>
+        <p style="margin:0;font-size:14px"><a href="${esc(landingUrl)}" style="color:#3b82f6;text-decoration:underline" target="_blank" rel="noopener noreferrer">${esc(landingUrl)}</a></p>
+      </div>
 
-    ${reporterNote ? `<p style=\"margin:0 0 8px 0\"><strong>Reporter note</strong></p><p style=\"margin:0 0 16px 0\">${esc(reporterNote)}</p>` : ""}
+      ${reporterNote ? `
+      <!-- Reporter Note -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Reporter Note</h2>
+        <p style="margin:0;font-size:14px;color:#475569">${esc(reporterNote)}</p>
+      </div>
+      ` : ""}
 
-    ${screenshotUrl ? `<p style=\"margin:0 0 8px 0\"><strong>Screenshot</strong></p><p style=\"margin:0 0 16px 0\"><a href=\"${esc(screenshotUrl)}\" target=\"_blank\" rel=\"noopener noreferrer\">Screenshot</a></p>` : ""}
+      ${evidenceUrl ? `
+      <!-- Evidence -->
+      <div style="margin-bottom:24px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">${evidenceLabel}</h2>
+        <p style="margin:0;font-size:14px"><a href="${esc(evidenceUrl)}" style="color:#3b82f6;text-decoration:underline" target="_blank" rel="noopener noreferrer">View ${evidenceLabel}</a></p>
+      </div>
+      ` : ""}
 
-    <p style="margin:16px 0 4px 0"><strong>Meta</strong></p>
-    <p style="margin:0">This report was submitted using AB Jail.</p>
-    <p style="margin:0">Case UUID: <code>${esc(sub.id)}</code></p>
-    <p style="margin:0">Case short_id: <code>${esc(shortId)}</code></p>
+      <!-- Footer Note -->
+      <div style="margin-top:32px;padding-top:20px;border-top:1px solid #e2e8f0">
+        <p style="margin:0;font-size:13px;color:#64748b">This report was submitted using AB Jail.</p>
+        <p style="margin:8px 0 0 0;font-size:12px;color:#94a3b8">Case UUID: ${esc(sub.id)}</p>
+        <p style="margin:4px 0 0 0;font-size:12px;color:#94a3b8">Case short_id: ${esc(shortId)}</p>
+      </div>
+    </div>
   </div>
-  </body></html>`;
+</body>
+</html>`;
 
   // Send email using Resend
   const fromEmail = "reports@abjail.org"; // under verified domain
   try {
     const attachments: Array<{ filename: string; content: string; type?: string }> = [];
-    const fullText = (sub as unknown as { email_body?: string | null; raw_text?: string | null }).email_body
-      || (sub as unknown as { email_body?: string | null; raw_text?: string | null }).raw_text
-      || "";
-    if (fullText) {
-      const base64 = Buffer.from(String(fullText), "utf8").toString("base64");
-      attachments.push({ filename: "original_email.txt", content: base64, type: "text/plain" });
+    
+    // Attach email HTML if available, otherwise attach raw text
+    if (sub.email_body) {
+      const base64 = Buffer.from(String(sub.email_body), "utf8").toString("base64");
+      attachments.push({ filename: "original_email.html", content: base64, type: "text/html" });
+    } else if (sub.raw_text) {
+      const base64 = Buffer.from(String(sub.raw_text), "utf8").toString("base64");
+      attachments.push({ filename: "original_text.txt", content: base64, type: "text/plain" });
     }
 
     await resend.emails.send({
@@ -174,7 +228,7 @@ export async function POST(req: NextRequest) {
       cc_email: ccEmail,
       subject,
       body,
-      screenshot_url: screenshotUrl,
+      screenshot_url: evidenceUrl,
       landing_url: landingUrl,
       status: "failed",
     });
@@ -188,7 +242,7 @@ export async function POST(req: NextRequest) {
     cc_email: ccEmail,
     subject,
     body,
-    screenshot_url: screenshotUrl,
+    screenshot_url: evidenceUrl,
     landing_url: landingUrl,
     status: "sent",
   });
