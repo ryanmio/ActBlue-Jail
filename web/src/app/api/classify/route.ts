@@ -38,8 +38,10 @@ export async function POST(req: NextRequest) {
   console.log("/api/classify:done", { submissionId, violations: result.violations, ms: result.ms });
   
   // Trigger preview email for forwarded submissions (await for serverless)
+  console.log("/api/classify:attempting_preview_trigger", { submissionId });
   try {
     const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    console.log("/api/classify:preview_base_url", { base });
     const previewPromise = fetch(`${base}/api/send-case-preview`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
