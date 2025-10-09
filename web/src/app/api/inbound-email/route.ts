@@ -134,13 +134,28 @@ export async function POST(req: NextRequest) {
 
     // For fundraising, trigger async pipelines (classify + sender extraction)
     if (result.isFundraising && result.id) {
+      console.log("/api/inbound-email:triggering_pipelines", { 
+        submissionId: result.id,
+        hasLandingUrl: !!result.landingUrl,
+        timestamp: new Date().toISOString()
+      });
+      
       // Always trigger classify and sender immediately
+      const pipelinesStart = Date.now();
       await triggerPipelines(result.id);
-      console.log("/api/inbound-email:triggered_pipelines", { submissionId: result.id });
+      const pipelinesElapsed = Date.now() - pipelinesStart;
+      console.log("/api/inbound-email:pipelines_completed", { 
+        submissionId: result.id,
+        elapsedMs: pipelinesElapsed
+      });
       
       // If ActBlue landing URL detected, trigger screenshot (which will re-classify with landing context)
       if (result.landingUrl) {
         const base = process.env.NEXT_PUBLIC_SITE_URL || "";
+        console.log("/api/inbound-email:triggering_screenshot", {
+          submissionId: result.id,
+          url: result.landingUrl
+        });
         void fetch(`${base}/api/screenshot-actblue`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -154,11 +169,17 @@ export async function POST(req: NextRequest) {
             response: text?.slice(0, 200) 
           });
         }).catch((e) => {
-          console.error("/api/inbound-email:screenshot_error", String(e));
+          console.error("/api/inbound-email:screenshot_error", { 
+            submissionId: result.id,
+            error: String(e)
+          });
         });
       }
     } else {
-      console.log("/api/inbound-email:skipped_triggers_non_fundraising", { submissionId: result.id });
+      console.log("/api/inbound-email:skipped_triggers_non_fundraising", { 
+        submissionId: result.id,
+        isFundraising: result.isFundraising
+      });
     }
 
     return NextResponse.json({ ok: true, id: result.id }, { status: 200 });
