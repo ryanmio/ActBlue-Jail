@@ -57,10 +57,32 @@ function computeHeuristic(text: string): { isFundraising: boolean; score: number
   return { isFundraising, score: score + (hasDollar ? 1 : 0), hits };
 }
 
-function extractActBlueUrl(text: string): string | null {
+// Follow redirects to resolve tracking URLs (async helper)
+async function followRedirect(url: string, maxHops = 5): Promise<string | null> {
+  let current = url;
+  for (let i = 0; i < maxHops; i++) {
+    try {
+      const res = await fetch(current, { 
+        method: "HEAD", 
+        redirect: "manual",
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; ABJail/1.0)" },
+        signal: AbortSignal.timeout(3000), // 3s timeout per hop
+      });
+      const location = res.headers.get("location");
+      if (!location) return current; // No more redirects
+      current = new URL(location, current).href; // Resolve relative URLs
+    } catch {
+      return null; // Network error or timeout
+    }
+  }
+  return current; // Max hops reached
+}
+
+async function extractActBlueUrl(text: string): Promise<string | null> {
   const urlPattern = /https?:\/\/[^\s<>"'\)]+/g;
   const matches = text.match(urlPattern) || [];
   const actBlueUrls: string[] = [];
+  const trackingUrls: string[] = [];
 
   for (const rawUrl of matches) {
     try {
@@ -69,13 +91,48 @@ function extractActBlueUrl(text: string): string | null {
       const parsed = new URL(cleaned);
       const host = parsed.hostname.toLowerCase();
 
-      // Validate ActBlue domain
+      // Direct ActBlue domain
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
         actBlueUrls.push(cleaned);
+      }
+      // Potential tracking redirect (common patterns)
+      else if (host.includes("links.") || host.includes("click.") || host.includes("track.") || host.includes("redirect.")) {
+        trackingUrls.push(cleaned);
       }
     } catch {
       continue; // Invalid URL, skip
     }
+  }
+
+  // If we found direct ActBlue links, use those (fast path)
+  if (actBlueUrls.length === 0 && trackingUrls.length > 0) {
+    // Follow redirects for tracking URLs to find ActBlue destinations
+    console.log("extractActBlueUrl:following_redirects", { count: trackingUrls.length });
+    const resolved = await Promise.allSettled(
+      trackingUrls.map(async (url) => {
+        const final = await followRedirect(url);
+        if (!final) return null;
+        try {
+          const u = new URL(final);
+          const host = u.hostname.toLowerCase();
+          if (host === "actblue.com" || host.endsWith(".actblue.com")) {
+            // Filter out unsubscribe/manage links
+            if (u.pathname.includes("unsubscribe") || u.pathname.includes("manage") || u.pathname.includes("preferences")) {
+              return null;
+            }
+            return final;
+          }
+        } catch {}
+        return null;
+      })
+    );
+    
+    for (const result of resolved) {
+      if (result.status === "fulfilled" && result.value) {
+        actBlueUrls.push(result.value);
+      }
+    }
+    console.log("extractActBlueUrl:redirects_resolved", { found: actBlueUrls.length });
   }
 
   if (actBlueUrls.length === 0) return null;
@@ -175,8 +232,8 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
     insertRow.submission_token = params.submissionToken;
   }
 
-  // Extract ActBlue landing URL (use raw text to catch all URLs)
-  const landingUrl = extractActBlueUrl(textForDedupe || "");
+  // Extract ActBlue landing URL (use raw text to catch all URLs, follows redirects if needed)
+  const landingUrl = await extractActBlueUrl(textForDedupe || "");
   if (landingUrl) {
     insertRow.landing_url = landingUrl;
   }
