@@ -260,8 +260,18 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
     insertRow.submission_token = params.submissionToken;
   }
 
-  // Extract ActBlue landing URL (use raw text to catch all URLs, follows redirects if needed)
-  const landingUrl = await extractActBlueUrl(textForDedupe || "");
+  // Extract ActBlue landing URL from text AND email HTML (tracking links often only in HTML)
+  // Combine text + href attributes from HTML
+  let textWithHtmlLinks = textForDedupe || "";
+  if (params.emailBody) {
+    // Extract href URLs from HTML using regex
+    const hrefPattern = /href=["']([^"']+)["']/gi;
+    const hrefMatches = params.emailBody.matchAll(hrefPattern);
+    const hrefUrls = Array.from(hrefMatches, m => m[1]).join(" ");
+    textWithHtmlLinks = textWithHtmlLinks + " " + hrefUrls;
+  }
+  
+  const landingUrl = await extractActBlueUrl(textWithHtmlLinks);
   if (landingUrl) {
     insertRow.landing_url = landingUrl;
   }
