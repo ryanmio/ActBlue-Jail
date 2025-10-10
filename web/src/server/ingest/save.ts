@@ -95,9 +95,28 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
         actBlueUrls.push(cleaned);
       }
-      // Potential tracking redirect (common patterns)
-      else if (host.includes("links.") || host.includes("click.") || host.includes("track.") || host.includes("redirect.")) {
-        trackingUrls.push(cleaned);
+      // Known tracking/redirect platforms (safe to follow - don't trigger actions)
+      else if (
+        host.includes("links.") || 
+        host.includes("click.") || 
+        host.includes("track.") || 
+        host.includes("redirect.") ||
+        host.includes("ngpvan.com") || 
+        host.includes("everyaction.com") ||
+        host.includes("bsd.net") || // Blue State Digital
+        host.includes("actionnetwork.org") ||
+        // Campaign-specific redirect subdomains (common pattern: domain.com/l/...)
+        (parsed.pathname.startsWith("/l/") && parsed.pathname.length > 10)
+      ) {
+        // Only add if URL doesn't contain unsubscribe/manage keywords
+        const urlLower = cleaned.toLowerCase();
+        if (!urlLower.includes("unsubscribe") && 
+            !urlLower.includes("manage") && 
+            !urlLower.includes("preferences") &&
+            !urlLower.includes("optout") &&
+            !urlLower.includes("opt-out")) {
+          trackingUrls.push(cleaned);
+        }
       }
     } catch {
       continue; // Invalid URL, skip
@@ -106,10 +125,16 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
 
   // If we found direct ActBlue links, use those (fast path)
   if (actBlueUrls.length === 0 && trackingUrls.length > 0) {
-    // Follow redirects for tracking URLs to find ActBlue destinations
-    console.log("extractActBlueUrl:following_redirects", { count: trackingUrls.length });
+    // Limit concurrent redirect checks to avoid overwhelming the network
+    const urlsToCheck = trackingUrls.slice(0, 20); // Max 20 URLs
+    console.log("extractActBlueUrl:following_redirects", { 
+      total: trackingUrls.length, 
+      checking: urlsToCheck.length,
+      sample: urlsToCheck.slice(0, 3).map(u => new URL(u).hostname)
+    });
+    
     const resolved = await Promise.allSettled(
-      trackingUrls.map(async (url) => {
+      urlsToCheck.map(async (url) => {
         const final = await followRedirect(url);
         if (!final) return null;
         try {
@@ -132,7 +157,10 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
         actBlueUrls.push(result.value);
       }
     }
-    console.log("extractActBlueUrl:redirects_resolved", { found: actBlueUrls.length });
+    console.log("extractActBlueUrl:redirects_resolved", { 
+      found: actBlueUrls.length,
+      samples: actBlueUrls.slice(0, 2)
+    });
   }
 
   if (actBlueUrls.length === 0) return null;
