@@ -95,24 +95,28 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
         actBlueUrls.push(cleaned);
       }
-      // Skip common non-tracking domains (unsubscribe, social, etc)
+      // Known tracking/redirect platforms (safe to follow - don't trigger actions)
       else if (
-        host.includes("unsubscribe") ||
-        host.includes("manage.") ||
-        host.includes("preferences.") ||
-        host.includes("facebook.com") ||
-        host.includes("twitter.com") ||
-        host.includes("x.com") ||
-        host.includes("instagram.com") ||
-        host.includes("youtube.com") ||
-        host.includes("linkedin.com")
+        host.includes("links.") || 
+        host.includes("click.") || 
+        host.includes("track.") || 
+        host.includes("redirect.") ||
+        host.includes("ngpvan.com") || 
+        host.includes("everyaction.com") ||
+        host.includes("bsd.net") || // Blue State Digital
+        host.includes("actionnetwork.org") ||
+        // Campaign-specific redirect subdomains (common pattern: domain.com/l/...)
+        (parsed.pathname.startsWith("/l/") && parsed.pathname.length > 10)
       ) {
-        // Skip these - unlikely to be donation links
-        continue;
-      }
-      // Everything else might be a tracking redirect
-      else {
-        trackingUrls.push(cleaned);
+        // Only add if URL doesn't contain unsubscribe/manage keywords
+        const urlLower = cleaned.toLowerCase();
+        if (!urlLower.includes("unsubscribe") && 
+            !urlLower.includes("manage") && 
+            !urlLower.includes("preferences") &&
+            !urlLower.includes("optout") &&
+            !urlLower.includes("opt-out")) {
+          trackingUrls.push(cleaned);
+        }
       }
     } catch {
       continue; // Invalid URL, skip
