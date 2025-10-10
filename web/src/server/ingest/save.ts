@@ -95,15 +95,23 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
         actBlueUrls.push(cleaned);
       }
-      // Potential tracking redirect (common campaign platforms)
+      // Skip common non-tracking domains (unsubscribe, social, etc)
       else if (
-        host.includes("links.") || 
-        host.includes("click.") || 
-        host.includes("track.") || 
-        host.includes("redirect.") ||
-        host.includes("ngpvan.com") || // NGP VAN
-        host.includes("everyaction.com") // EveryAction
+        host.includes("unsubscribe") ||
+        host.includes("manage.") ||
+        host.includes("preferences.") ||
+        host.includes("facebook.com") ||
+        host.includes("twitter.com") ||
+        host.includes("x.com") ||
+        host.includes("instagram.com") ||
+        host.includes("youtube.com") ||
+        host.includes("linkedin.com")
       ) {
+        // Skip these - unlikely to be donation links
+        continue;
+      }
+      // Everything else might be a tracking redirect
+      else {
         trackingUrls.push(cleaned);
       }
     } catch {
@@ -113,10 +121,16 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
 
   // If we found direct ActBlue links, use those (fast path)
   if (actBlueUrls.length === 0 && trackingUrls.length > 0) {
-    // Follow redirects for tracking URLs to find ActBlue destinations
-    console.log("extractActBlueUrl:following_redirects", { count: trackingUrls.length });
+    // Limit concurrent redirect checks to avoid overwhelming the network
+    const urlsToCheck = trackingUrls.slice(0, 20); // Max 20 URLs
+    console.log("extractActBlueUrl:following_redirects", { 
+      total: trackingUrls.length, 
+      checking: urlsToCheck.length,
+      sample: urlsToCheck.slice(0, 3).map(u => new URL(u).hostname)
+    });
+    
     const resolved = await Promise.allSettled(
-      trackingUrls.map(async (url) => {
+      urlsToCheck.map(async (url) => {
         const final = await followRedirect(url);
         if (!final) return null;
         try {
@@ -139,7 +153,10 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
         actBlueUrls.push(result.value);
       }
     }
-    console.log("extractActBlueUrl:redirects_resolved", { found: actBlueUrls.length });
+    console.log("extractActBlueUrl:redirects_resolved", { 
+      found: actBlueUrls.length,
+      samples: actBlueUrls.slice(0, 2)
+    });
   }
 
   if (actBlueUrls.length === 0) return null;
