@@ -174,34 +174,45 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
     }
   }
 
-  // Strip query params and count frequency of each base URL
-  // Landing pages appear multiple times in email body, footer links appear once
-  const baseUrlCounts = new Map<string, { count: number; fullUrl: string }>();
-  
+  // Build stats by BASE URL (origin + pathname) so params don't skew frequency
+  type BaseStats = { count: number; withParams: number; pathLength: number };
+  const baseStats = new Map<string, BaseStats>();
+
   for (const url of actBlueUrls) {
     try {
       const parsed = new URL(url);
       const baseUrl = `${parsed.origin}${parsed.pathname}`;
-      
-      if (baseUrlCounts.has(baseUrl)) {
-        baseUrlCounts.get(baseUrl)!.count++;
-      } else {
-        baseUrlCounts.set(baseUrl, { count: 1, fullUrl: url });
-      }
+      const hadParams = parsed.searchParams && Array.from(parsed.searchParams.keys()).length > 0;
+      const prev = baseStats.get(baseUrl) || { count: 0, withParams: 0, pathLength: parsed.pathname.length };
+      baseStats.set(baseUrl, {
+        count: prev.count + 1,
+        withParams: prev.withParams + (hadParams ? 1 : 0),
+        pathLength: prev.pathLength,
+      });
     } catch {
       continue;
     }
   }
 
-  // Return the most common base URL (with original query params from first occurrence)
-  let mostCommon: { count: number; fullUrl: string } | null = null;
-  for (const entry of baseUrlCounts.values()) {
-    if (!mostCommon || entry.count > mostCommon.count) {
-      mostCommon = entry;
-    }
-  }
+  if (baseStats.size === 0) return null;
 
-  return mostCommon?.fullUrl || null;
+  // Choose the best BASE using tie-breakers:
+  // 1) Highest frequency (count)
+  // 2) Longer pathname (more specific landing pages beat generic footers)
+  // 3) More occurrences that had query params (signals CTA links with tracking)
+  // 4) Lexicographical as last resort for determinism
+  const candidates = Array.from(baseStats.entries());
+  candidates.sort((a, b) => {
+    const [baseA, sa] = a;
+    const [baseB, sb] = b;
+    if (sb.count !== sa.count) return sb.count - sa.count;
+    if (sb.pathLength !== sa.pathLength) return sb.pathLength - sa.pathLength;
+    if (sb.withParams !== sa.withParams) return sb.withParams - sa.withParams;
+    return baseA.localeCompare(baseB);
+  });
+
+  const bestBase = candidates[0]?.[0];
+  return bestBase || null;
 }
 
 export async function ingestTextSubmission(params: IngestTextParams): Promise<IngestResult> {
