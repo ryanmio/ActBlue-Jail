@@ -65,12 +65,22 @@ async function followRedirect(url: string, maxHops = 5): Promise<string | null> 
   
   for (let i = 0; i < maxHops; i++) {
     try {
-      const res = await fetch(current, { 
+      let res = await fetch(current, { 
         method: "HEAD", 
         redirect: "manual",
         headers: { "User-Agent": "Mozilla/5.0 (compatible; ABJail/1.0)" },
         signal: AbortSignal.timeout(3000), // 3s timeout per hop
       });
+      
+      // Some servers do not support HEAD properly; fallback to GET (without following redirects)
+      if (!res.headers.get("location") && (res.status >= 300 && res.status < 400)) {
+        res = await fetch(current, {
+          method: "GET",
+          redirect: "manual",
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; ABJail/1.0)" },
+          signal: AbortSignal.timeout(3000),
+        });
+      }
       
       const location = res.headers.get("location");
       if (!location) {
@@ -116,28 +126,20 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
         actBlueUrls.push(cleaned);
       }
-      // Known tracking/redirect platforms (safe to follow - don't trigger actions)
-      else if (
-        host.includes("links.") || 
-        host.includes("click.") || 
-        host.includes("track.") || 
-        host.includes("redirect.") ||
-        host.includes("ngpvan.com") || 
-        host.includes("everyaction.com") ||
-        host.includes("bsd.net") || // Blue State Digital
-        host.includes("actionnetwork.org") ||
-        // Campaign-specific redirect subdomains (common pattern: domain.com/l/...)
-        (parsed.pathname.startsWith("/l/") && parsed.pathname.length > 10)
-      ) {
-        // Only add if URL doesn't contain unsubscribe/manage keywords
+      // Treat any non-ActBlue link as a candidate tracking redirect, with safe blacklists
+      else {
         const urlLower = cleaned.toLowerCase();
-        if (!urlLower.includes("unsubscribe") && 
-            !urlLower.includes("manage") && 
-            !urlLower.includes("preferences") &&
-            !urlLower.includes("optout") &&
-            !urlLower.includes("opt-out")) {
-          trackingUrls.push(cleaned);
-        }
+        // Skip obvious non-donation/action links
+        if (urlLower.startsWith("mailto:")) continue;
+        // Strong unsubscribe/preferences blacklist (paths, params, or hostnames)
+        const unsubKeywords = [
+          "unsubscribe", "unsub", "optout", "opt-out",
+          "emailpref", "email-prefs", "preferences", "prefs",
+          "manage", "manage-subscriptions", "update-profile"
+        ];
+        if (unsubKeywords.some(k => urlLower.includes(k))) continue;
+        if (host.includes("facebook.com") || host.includes("twitter.com") || host.includes("x.com") || host.includes("instagram.com") || host.includes("youtube.com") || host.includes("linkedin.com")) continue;
+        trackingUrls.push(cleaned);
       }
     } catch {
       continue; // Invalid URL, skip
