@@ -75,6 +75,9 @@ export async function POST(req: NextRequest) {
     // Note: cleanTextForAI also strips forwarded message headers
     const cleanedText = cleanTextForAI(rawText);
     
+    // IMPORTANT: Keep original HTML for URL extraction (before sanitization removes tracking links)
+    const originalHtml = bodyHtml;
+    
     // Sanitize HTML body (remove non-ActBlue links to protect honeytrap email)
     let sanitizedHtml = bodyHtml ? sanitizeEmailHtml(bodyHtml) : null;
     
@@ -102,7 +105,8 @@ export async function POST(req: NextRequest) {
       messageType: "email",
       imageUrlPlaceholder: "email://no-image",
       emailSubject: subject || null,
-      emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links)
+      emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links) for display
+      emailBodyOriginal: originalHtml || null, // Original HTML for URL extraction
       forwarderEmail: envelopeSender || null, // Email of person who forwarded
       submissionToken: submissionToken, // Secure token for email submission
     });

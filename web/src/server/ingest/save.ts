@@ -10,7 +10,8 @@ export type IngestTextParams = {
   messageType: "sms" | "email" | "unknown";
   imageUrlPlaceholder?: string;
   emailSubject?: string | null;
-  emailBody?: string | null;
+  emailBody?: string | null; // Sanitized HTML for display
+  emailBodyOriginal?: string | null; // Original unsanitized HTML for URL extraction
   forwarderEmail?: string | null;
   submissionToken?: string | null;
 };
@@ -261,12 +262,13 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   }
 
   // Extract ActBlue landing URL from text AND email HTML (tracking links often only in HTML)
-  // Combine text + href attributes from HTML
+  // Use ORIGINAL unsanitized HTML for URL extraction (sanitized HTML has tracking links removed)
   let textWithHtmlLinks = textForDedupe || "";
-  if (params.emailBody) {
+  const htmlForExtraction = params.emailBodyOriginal || params.emailBody; // Prefer original, fallback to sanitized
+  if (htmlForExtraction) {
     // Extract href URLs from HTML using regex
     const hrefPattern = /href=["']([^"']+)["']/gi;
-    const hrefMatches = params.emailBody.matchAll(hrefPattern);
+    const hrefMatches = htmlForExtraction.matchAll(hrefPattern);
     const hrefUrls = Array.from(hrefMatches, m => m[1]).join(" ");
     textWithHtmlLinks = textWithHtmlLinks + " " + hrefUrls;
   }
