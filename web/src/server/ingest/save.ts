@@ -112,7 +112,8 @@ async function followRedirect(url: string, maxHops = 5): Promise<string | null> 
 async function extractActBlueUrl(text: string): Promise<string | null> {
   const urlPattern = /https?:\/\/[^\s<>"'\)]+/g;
   const matches = text.match(urlPattern) || [];
-  const actBlueUrls: string[] = [];
+  const directActBlueUrls: string[] = [];
+  const resolvedActBlueUrls: string[] = [];
   const trackingUrls: string[] = [];
 
   for (const rawUrl of matches) {
@@ -124,7 +125,7 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
 
       // Direct ActBlue domain
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
-        actBlueUrls.push(cleaned);
+        directActBlueUrls.push(cleaned);
       }
       // Treat any non-ActBlue link as a candidate tracking redirect, with safe blacklists
       else {
@@ -146,15 +147,16 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
     }
   }
 
-  // Always attempt to resolve tracking redirects (even if footer ActBlue links exist)
-  let resolvedFromTracking: string[] = [];
+  // Always attempt to resolve tracking URLs (CTA links) even if footer ActBlue links are present
   if (trackingUrls.length > 0) {
+    // Limit concurrent redirect checks to avoid overwhelming the network
     const urlsToCheck = trackingUrls.slice(0, 20); // Max 20 URLs
     console.log("extractActBlueUrl:following_redirects", { 
       total: trackingUrls.length, 
       checking: urlsToCheck.length,
       sample: urlsToCheck.slice(0, 3).map(u => new URL(u).hostname)
     });
+    
     const resolved = await Promise.allSettled(
       urlsToCheck.map(async (url) => {
         const final = await followRedirect(url);
@@ -163,6 +165,7 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
           const u = new URL(final);
           const host = u.hostname.toLowerCase();
           if (host === "actblue.com" || host.endsWith(".actblue.com")) {
+            // Filter out unsubscribe/manage links
             if (u.pathname.includes("unsubscribe") || u.pathname.includes("manage") || u.pathname.includes("preferences")) {
               return null;
             }
@@ -172,69 +175,89 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
         return null;
       })
     );
-    for (const r of resolved) {
-      if (r.status === "fulfilled" && r.value) resolvedFromTracking.push(r.value);
+    
+    for (const result of resolved) {
+      if (result.status === "fulfilled" && result.value) {
+        resolvedActBlueUrls.push(result.value);
+      }
     }
-    console.log("extractActBlueUrl:redirects_resolved", { found: resolvedFromTracking.length, samples: resolvedFromTracking.slice(0, 2) });
+    console.log("extractActBlueUrl:redirects_resolved", { 
+      found: resolvedActBlueUrls.length,
+      samples: resolvedActBlueUrls.slice(0, 2)
+    });
   }
 
-  // Prefer ActBlue URLs that came from resolved tracking (CTA buttons) over footer links
-  const combinedActBlue = (resolvedFromTracking.length > 0 ? resolvedFromTracking : []).concat(actBlueUrls);
-
-  if (combinedActBlue.length === 0) return null;
-  if (combinedActBlue.length === 1) {
+  const totalFound = directActBlueUrls.length + resolvedActBlueUrls.length;
+  if (totalFound === 0) return null;
+  if (totalFound === 1) {
     // Always return base URL (no params)
     try {
-      const u = new URL(combinedActBlue[0]);
+      const single = directActBlueUrls[0] || resolvedActBlueUrls[0];
+      const u = new URL(single as string);
       return `${u.origin}${u.pathname}`;
     } catch {
-      return combinedActBlue[0];
+      return (directActBlueUrls[0] || resolvedActBlueUrls[0]) as string;
     }
   }
 
-  // Build stats by BASE URL (origin + pathname) so params don't skew frequency
-  type BaseStats = { count: number; withParams: number; pathLength: number };
+  // Build weighted stats by BASE URL (origin + pathname)
+  // - resolved links (from tracking) are weighted higher (CTA signals)
+  // - cap direct counts to avoid footer repetition dominating
+  // - penalize obvious footer paths
+  type BaseStats = { direct: number; resolved: number; withParams: number; pathLength: number; hasFooter: boolean };
   const baseStats = new Map<string, BaseStats>();
 
-  for (const url of combinedActBlue) {
+  const addUrlToStats = (url: string, kind: "direct" | "resolved") => {
     try {
       const parsed = new URL(url);
       const baseUrl = `${parsed.origin}${parsed.pathname}`;
       const hadParams = parsed.searchParams && Array.from(parsed.searchParams.keys()).length > 0;
-      const prev = baseStats.get(baseUrl) || { count: 0, withParams: 0, pathLength: parsed.pathname.length };
+      const prev = baseStats.get(baseUrl) || { direct: 0, resolved: 0, withParams: 0, pathLength: parsed.pathname.length, hasFooter: /footer/i.test(parsed.pathname) };
       baseStats.set(baseUrl, {
-        count: prev.count + 1,
+        direct: prev.direct + (kind === "direct" ? 1 : 0),
+        resolved: prev.resolved + (kind === "resolved" ? 1 : 0),
         withParams: prev.withParams + (hadParams ? 1 : 0),
         pathLength: prev.pathLength,
+        hasFooter: prev.hasFooter || /footer/i.test(parsed.pathname),
       });
     } catch {
-      continue;
+      // ignore
     }
-  }
+  };
+
+  for (const url of directActBlueUrls) addUrlToStats(url, "direct");
+  for (const url of resolvedActBlueUrls) addUrlToStats(url, "resolved");
 
   if (baseStats.size === 0) return null;
 
-  // Choose the best BASE using tie-breakers:
-  // 1) Highest frequency (count)
-  // 2) Longer pathname (more specific landing pages beat generic footers)
-  // 3) More occurrences that had query params (signals CTA links with tracking)
-  // 4) Lexicographical as last resort for determinism
-  const candidates = Array.from(baseStats.entries());
-  candidates.sort((a, b) => {
-    const [baseA, sa] = a;
-    const [baseB, sb] = b;
-    const isFooterA = /(^|[-_/])footer([-_/]|$)/i.test(new URL(baseA).pathname);
-    const isFooterB = /(^|[-_/])footer([-_/]|$)/i.test(new URL(baseB).pathname);
-    // Prefer non-footer pages when available
-    if (isFooterA !== isFooterB) return isFooterA ? 1 : -1;
-    if (sb.count !== sa.count) return sb.count - sa.count;
-    if (sb.pathLength !== sa.pathLength) return sb.pathLength - sa.pathLength;
-    if (sb.withParams !== sa.withParams) return sb.withParams - sa.withParams;
-    return baseA.localeCompare(baseB);
+  // Compute weighted score per base
+  const candidates = Array.from(baseStats.entries()).map(([base, s]) => {
+    const cappedDirect = Math.min(s.direct, 2);
+    const footerPenalty = s.hasFooter ? 2 : 0;
+    const score = s.resolved * 3 + cappedDirect - footerPenalty;
+    return { base, score, stats: s };
   });
 
-  const bestBase = candidates[0]?.[0];
-  return bestBase || null;
+  candidates.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.stats.resolved !== a.stats.resolved) return b.stats.resolved - a.stats.resolved;
+    if (b.stats.pathLength !== a.stats.pathLength) return b.stats.pathLength - a.stats.pathLength;
+    if (b.stats.withParams !== a.stats.withParams) return b.stats.withParams - a.stats.withParams;
+    return a.base.localeCompare(b.base);
+  });
+
+  const best = candidates[0];
+  if (best) {
+    console.log("extractActBlueUrl:base_selected", {
+      base: best.base,
+      score: best.score,
+      direct: best.stats.direct,
+      resolved: best.stats.resolved,
+      footer: best.stats.hasFooter,
+    });
+    return best.base;
+  }
+  return null;
 }
 
 export async function ingestTextSubmission(params: IngestTextParams): Promise<IngestResult> {
