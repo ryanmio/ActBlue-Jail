@@ -61,6 +61,8 @@ function computeHeuristic(text: string): { isFundraising: boolean; score: number
 // Follow redirects to resolve tracking URLs (async helper)
 async function followRedirect(url: string, maxHops = 5): Promise<string | null> {
   let current = url;
+  const hops: string[] = [];
+  
   for (let i = 0; i < maxHops; i++) {
     try {
       const res = await fetch(current, { 
@@ -69,13 +71,31 @@ async function followRedirect(url: string, maxHops = 5): Promise<string | null> 
         headers: { "User-Agent": "Mozilla/5.0 (compatible; ABJail/1.0)" },
         signal: AbortSignal.timeout(3000), // 3s timeout per hop
       });
+      
       const location = res.headers.get("location");
-      if (!location) return current; // No more redirects
-      current = new URL(location, current).href; // Resolve relative URLs
-    } catch {
+      if (!location) {
+        // No redirect header - this is the final destination
+        hops.push(`${i}: final(${res.status})`);
+        if (i === 0) {
+          // First request returned no redirect - might be expired/broken link
+          console.log("followRedirect:no_redirect", { url, status: res.status, hops });
+        }
+        return current;
+      }
+      
+      const next = new URL(location, current).href;
+      hops.push(`${i}: ${new URL(current).hostname} -> ${new URL(next).hostname}`);
+      current = next;
+    } catch (e) {
+      // Log WHY it failed
+      const error = e instanceof Error ? e.message : String(e);
+      hops.push(`${i}: ERROR(${error})`);
+      console.log("followRedirect:failed", { url, hops, error });
       return null; // Network error or timeout
     }
   }
+  
+  console.log("followRedirect:max_hops", { url, hops });
   return current; // Max hops reached
 }
 
