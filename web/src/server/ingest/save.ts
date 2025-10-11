@@ -146,16 +146,15 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
     }
   }
 
-  // If we found direct ActBlue links, use those (fast path)
-  if (actBlueUrls.length === 0 && trackingUrls.length > 0) {
-    // Limit concurrent redirect checks to avoid overwhelming the network
+  // Always attempt to resolve tracking redirects (even if footer ActBlue links exist)
+  let resolvedFromTracking: string[] = [];
+  if (trackingUrls.length > 0) {
     const urlsToCheck = trackingUrls.slice(0, 20); // Max 20 URLs
     console.log("extractActBlueUrl:following_redirects", { 
       total: trackingUrls.length, 
       checking: urlsToCheck.length,
       sample: urlsToCheck.slice(0, 3).map(u => new URL(u).hostname)
     });
-    
     const resolved = await Promise.allSettled(
       urlsToCheck.map(async (url) => {
         const final = await followRedirect(url);
@@ -164,7 +163,6 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
           const u = new URL(final);
           const host = u.hostname.toLowerCase();
           if (host === "actblue.com" || host.endsWith(".actblue.com")) {
-            // Filter out unsubscribe/manage links
             if (u.pathname.includes("unsubscribe") || u.pathname.includes("manage") || u.pathname.includes("preferences")) {
               return null;
             }
@@ -174,26 +172,23 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
         return null;
       })
     );
-    
-    for (const result of resolved) {
-      if (result.status === "fulfilled" && result.value) {
-        actBlueUrls.push(result.value);
-      }
+    for (const r of resolved) {
+      if (r.status === "fulfilled" && r.value) resolvedFromTracking.push(r.value);
     }
-    console.log("extractActBlueUrl:redirects_resolved", { 
-      found: actBlueUrls.length,
-      samples: actBlueUrls.slice(0, 2)
-    });
+    console.log("extractActBlueUrl:redirects_resolved", { found: resolvedFromTracking.length, samples: resolvedFromTracking.slice(0, 2) });
   }
 
-  if (actBlueUrls.length === 0) return null;
-  if (actBlueUrls.length === 1) {
+  // Prefer ActBlue URLs that came from resolved tracking (CTA buttons) over footer links
+  const combinedActBlue = (resolvedFromTracking.length > 0 ? resolvedFromTracking : []).concat(actBlueUrls);
+
+  if (combinedActBlue.length === 0) return null;
+  if (combinedActBlue.length === 1) {
     // Always return base URL (no params)
     try {
-      const u = new URL(actBlueUrls[0]);
+      const u = new URL(combinedActBlue[0]);
       return `${u.origin}${u.pathname}`;
     } catch {
-      return actBlueUrls[0];
+      return combinedActBlue[0];
     }
   }
 
@@ -201,7 +196,7 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
   type BaseStats = { count: number; withParams: number; pathLength: number };
   const baseStats = new Map<string, BaseStats>();
 
-  for (const url of actBlueUrls) {
+  for (const url of combinedActBlue) {
     try {
       const parsed = new URL(url);
       const baseUrl = `${parsed.origin}${parsed.pathname}`;
@@ -228,6 +223,10 @@ async function extractActBlueUrl(text: string): Promise<string | null> {
   candidates.sort((a, b) => {
     const [baseA, sa] = a;
     const [baseB, sb] = b;
+    const isFooterA = /(^|[-_/])footer([-_/]|$)/i.test(new URL(baseA).pathname);
+    const isFooterB = /(^|[-_/])footer([-_/]|$)/i.test(new URL(baseB).pathname);
+    // Prefer non-footer pages when available
+    if (isFooterA !== isFooterB) return isFooterA ? 1 : -1;
     if (sb.count !== sa.count) return sb.count - sa.count;
     if (sb.pathLength !== sa.pathLength) return sb.pathLength - sa.pathLength;
     if (sb.withParams !== sa.withParams) return sb.withParams - sa.withParams;
