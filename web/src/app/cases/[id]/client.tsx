@@ -453,7 +453,7 @@ function renderReportBody(body: string) {
     // skip underline line right after title if present
     let start = idx + 1;
     if (lines[start] && /^[-_]{3,}$/.test(lines[start].trim())) start++;
-    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Landing page|Reporter note|Screenshot|Meta)\s*$/i.test(l.trim()));
+    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Landing page|Email HTML|Reporter note|Screenshot|Meta)\s*$/i.test(l.trim()));
     const end = nextTitleIdx === -1 ? lines.length : nextTitleIdx;
     return lines.slice(start, end);
   };
