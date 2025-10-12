@@ -60,6 +60,16 @@ export async function POST(req: NextRequest) {
     // Use plain text for classification, HTML for display
     let rawText = bodyPlain || stripHtml(bodyHtml);
     
+    // IMPORTANT: Extract original From line BEFORE stripping forwarded headers
+    // This must happen first while the forwarded message metadata is still intact
+    let originalFromLine = extractOriginalFromLine(rawText);
+    
+    // Fallback: If no From line found in body (not a forward), use Mailgun sender
+    // But only if it's not the honeytrap email (indicates direct send, not forward)
+    if (!originalFromLine && sender && !sender.toLowerCase().includes("democratdonor@gmail.com")) {
+      originalFromLine = sender;
+    }
+    
     // Strip forwarded message header from raw text BEFORE storing
     // Handle cases where the header isn't at the very start; support CRLF; tolerate quotes/indent; remove lone header lines
     rawText = rawText
@@ -118,7 +128,7 @@ export async function POST(req: NextRequest) {
       emailSubject: subject || null,
       emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links) for display
       emailBodyOriginal: originalHtml || null, // Original HTML for URL extraction
-      emailFrom: sender || null, // Raw "From" line from Mailgun (e.g., "NEW ActBlue Update <dccc@ak.dccc.org>")
+      emailFrom: originalFromLine || null, // Full original "From:" line from forwarded email (e.g., "NEW ActBlue Update <dccc@ak.dccc.org>")
       forwarderEmail: envelopeSender || null, // Email of person who forwarded
       submissionToken: submissionToken, // Secure token for email submission
     });
@@ -127,6 +137,7 @@ export async function POST(req: NextRequest) {
       ok: result.ok,
       id: result.id || null,
       from: detectedSender || null,
+      fromLine: originalFromLine || null,
       subject: subject ? subject.slice(0, 50) : null,
       rawLen: rawText ? rawText.length : 0,
       cleanedLen: cleanedText ? cleanedText.length : 0,
@@ -210,8 +221,8 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-// Attempt to extract original sender from forwarded email body
-// Looks for common forwarding patterns like "From: sender@example.com"
+// Attempt to extract original sender email from forwarded email body
+// Returns just the email address for sender_id
 function extractOriginalSender(text: string): string | null {
   const lines = text.split("\n");
   for (const line of lines.slice(0, 50)) { // Check first 50 lines
@@ -223,6 +234,53 @@ function extractOriginalSender(text: string): string | null {
       return match[1];
     }
   }
+  return null;
+}
+
+// Extract the full original "From:" line from forwarded email (for AB009 detection)
+// Returns the complete From line including display name
+// Example: "NEW ActBlue Update (via dccc@dccc.org) <dccc@ak.dccc.org>"
+function extractOriginalFromLine(text: string): string | null {
+  const lines = text.split(/\r?\n/).map(line => line.replace(/^[\s>]+/, "")); // Normalize: strip quotes/whitespace
+  
+  // Find forwarded message boundary (Gmail, Apple Mail, Outlook all use similar patterns)
+  const forwardMarkers = [
+    /^-+\s*Forwarded message\s*-+/i,     // Gmail: "---------- Forwarded message ---------"
+    /^Begin forwarded message:/i,         // Apple Mail
+    /^From:\s+.+@.+/i                     // Outlook (starts with From: line directly)
+  ];
+  
+  for (let i = 0; i < Math.min(lines.length, 100); i++) {
+    const isForwardBoundary = forwardMarkers.some(marker => marker.test(lines[i]));
+    
+    if (isForwardBoundary) {
+      // Search next 20 lines for From: header
+      const searchEnd = Math.min(i + 20, lines.length);
+      for (let j = i; j < searchEnd; j++) {
+        const match = lines[j].match(/^From:\s+(.+)$/i);
+        if (match) {
+          return validateAndCleanFromLine(match[1]);
+        }
+        // Stop at empty line (end of header block)
+        if (lines[j].trim() === "" && j > i) break;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Validate and clean extracted From line
+function validateAndCleanFromLine(fromLine: string): string | null {
+  const cleaned = fromLine.trim();
+  
+  // Must be valid: has email, not honeytrap, reasonable length
+  if (cleaned.includes("@") && 
+      !cleaned.toLowerCase().includes("democratdonor@gmail.com") && 
+      cleaned.length > 5) {
+    return cleaned;
+  }
+  
   return null;
 }
 
