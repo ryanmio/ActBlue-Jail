@@ -63,10 +63,21 @@ export async function POST(req: NextRequest) {
     }
 
     // For fundraising, trigger async pipelines (classify + sender extraction)
+    // IMPORTANT: Don't await pipelines - Twilio has 15s timeout, pipelines can take 20s+
+    // Return 200 immediately to Twilio, let pipelines run in background
     if (result.isFundraising && result.id) {
-      // Always trigger classify and sender immediately
-      await triggerPipelines(result.id);
-      console.log("/api/inbound-sms:triggered_pipelines", { submissionId: result.id });
+      console.log("/api/inbound-sms:triggering_pipelines", { 
+        submissionId: result.id,
+        hasLandingUrl: !!result.landingUrl
+      });
+      
+      // Fire and forget - don't await
+      void triggerPipelines(result.id).catch((e) => {
+        console.error("/api/inbound-sms:pipelines_error", { 
+          submissionId: result.id, 
+          error: String(e) 
+        });
+      });
       
       // If ActBlue landing URL detected, trigger screenshot (which will re-classify with landing context)
       if (result.landingUrl) {
@@ -84,7 +95,10 @@ export async function POST(req: NextRequest) {
             response: text?.slice(0, 200) 
           });
         }).catch((e) => {
-          console.error("/api/inbound-sms:screenshot_error", String(e));
+          console.error("/api/inbound-sms:screenshot_error", { 
+            submissionId: result.id,
+            error: String(e) 
+          });
         });
       }
     } else {
