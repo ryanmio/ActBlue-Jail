@@ -62,7 +62,13 @@ export async function POST(req: NextRequest) {
     
     // IMPORTANT: Extract original From line BEFORE stripping forwarded headers
     // This must happen first while the forwarded message metadata is still intact
-    const originalFromLine = extractOriginalFromLine(rawText);
+    let originalFromLine = extractOriginalFromLine(rawText);
+    
+    // Fallback: If no From line found in body (not a forward), use Mailgun sender
+    // But only if it's not the honeytrap email (indicates direct send, not forward)
+    if (!originalFromLine && sender && !sender.toLowerCase().includes("democratdonor@gmail.com")) {
+      originalFromLine = sender;
+    }
     
     // Strip forwarded message header from raw text BEFORE storing
     // Handle cases where the header isn't at the very start; support CRLF; tolerate quotes/indent; remove lone header lines
