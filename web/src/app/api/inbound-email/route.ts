@@ -118,6 +118,7 @@ export async function POST(req: NextRequest) {
       emailSubject: subject || null,
       emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links) for display
       emailBodyOriginal: originalHtml || null, // Original HTML for URL extraction
+      emailFrom: sender || null, // Raw "From" line from Mailgun (e.g., "NEW ActBlue Update <dccc@ak.dccc.org>")
       forwarderEmail: envelopeSender || null, // Email of person who forwarded
       submissionToken: submissionToken, // Secure token for email submission
     });
