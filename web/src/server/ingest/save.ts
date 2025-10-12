@@ -142,8 +142,15 @@ async function followRedirect(
         signal: AbortSignal.timeout(3000), // 3s timeout per hop
       });
       
-      // Some servers do not support HEAD properly; fallback to GET (without following redirects)
-      if (!res.headers.get("location") && (res.status >= 300 && res.status < 400)) {
+      // Some servers do not support HEAD properly; fallback to GET
+      // - 405 Method Not Allowed (common for click trackers like ngpvan)
+      // - 3xx without Location header (malformed redirect response)
+      const needsGetFallback = 
+        res.status === 405 || 
+        (!res.headers.get("location") && (res.status >= 300 && res.status < 400));
+      
+      if (needsGetFallback) {
+        hops.push(`HEAD:${res.status}→GET`);
         res = await fetch(current, {
           method: "GET",
           redirect: "manual",

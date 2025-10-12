@@ -37,7 +37,9 @@ For each of the top 5 bases by frequency (in order):
 1. Select up to 3 concrete URLs from that base
 2. For each URL, follow redirects:
    - Try HEAD request first (3s timeout)
-   - Fall back to GET if HEAD doesn't return Location header
+   - Fall back to GET if:
+     - HEAD returns 405 Method Not Allowed (common for ngpvan/click trackers)
+     - HEAD returns 3xx without Location header (malformed redirect)
    - Follow up to 5 hops
    - Track redirect chain (domain → domain transitions)
 3. Check if final URL lands on `*.actblue.com`
