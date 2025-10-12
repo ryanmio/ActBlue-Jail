@@ -103,6 +103,9 @@ export async function POST(req: NextRequest) {
     // Attempt to detect original sender from forwarded emails (use raw text)
     // Best-effort: look for "From:" lines in body, otherwise use envelope sender
     const detectedSender = extractOriginalSender(rawText) || sender;
+    
+    // Extract full original "From:" line for AB009 detection (display name + email)
+    const originalFromLine = extractOriginalFromLine(rawText);
 
     // Generate secure token for one-time report submission via email
     const submissionToken = randomBytes(32).toString("base64url");
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest) {
       emailSubject: subject || null,
       emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links) for display
       emailBodyOriginal: originalHtml || null, // Original HTML for URL extraction
-      emailFrom: sender || null, // Raw "From" line from Mailgun (e.g., "NEW ActBlue Update <dccc@ak.dccc.org>")
+      emailFrom: originalFromLine || null, // Full original "From:" line from forwarded email (e.g., "NEW ActBlue Update <dccc@ak.dccc.org>")
       forwarderEmail: envelopeSender || null, // Email of person who forwarded
       submissionToken: submissionToken, // Secure token for email submission
     });
@@ -127,6 +130,7 @@ export async function POST(req: NextRequest) {
       ok: result.ok,
       id: result.id || null,
       from: detectedSender || null,
+      fromLine: originalFromLine || null,
       subject: subject ? subject.slice(0, 50) : null,
       rawLen: rawText ? rawText.length : 0,
       cleanedLen: cleanedText ? cleanedText.length : 0,
@@ -210,8 +214,8 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-// Attempt to extract original sender from forwarded email body
-// Looks for common forwarding patterns like "From: sender@example.com"
+// Attempt to extract original sender email from forwarded email body
+// Returns just the email address for sender_id
 function extractOriginalSender(text: string): string | null {
   const lines = text.split("\n");
   for (const line of lines.slice(0, 50)) { // Check first 50 lines
@@ -221,6 +225,24 @@ function extractOriginalSender(text: string): string | null {
     const match = line.match(/^From:\s*(?:"[^"]*"\s*)?<?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})>?/i);
     if (match && match[1]) {
       return match[1];
+    }
+  }
+  return null;
+}
+
+// Extract the full original "From:" line from forwarded email (for AB009 detection)
+// Returns the complete From line including display name
+// Example: "NEW ActBlue Update (via dccc@dccc.org) <dccc@ak.dccc.org>"
+function extractOriginalFromLine(text: string): string | null {
+  const lines = text.split("\n");
+  for (const line of lines.slice(0, 50)) { // Check first 50 lines
+    // Match "From: anything" but exclude our honeytrap
+    if (line.match(/^From:\s+/i)) {
+      const fromContent = line.replace(/^From:\s+/i, "").trim();
+      // Don't return if it's the honeytrap email
+      if (!fromContent.includes("democratdonor@gmail.com") && fromContent.length > 0) {
+        return fromContent;
+      }
     }
   }
   return null;
