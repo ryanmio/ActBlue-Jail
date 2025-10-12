@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { headers } from "next/headers";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceTabs, ReportingCard, ReportThread } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 import Footer from "@/components/Footer";
@@ -223,24 +223,20 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left column */}
           <div className="lg:col-span-1 space-y-6">
-            {item.message_type === "sms" ? (
-              <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} mediaUrls={item.media_urls} />
-            ) : (
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-                <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
-                <EvidenceTabs
-                  caseId={id}
-                  messageType={item.message_type}
-                  rawText={item.raw_text}
-                  emailBody={item.email_body || null}
-                  screenshotUrl={imgData.url}
-                  screenshotMime={imgData?.mime || null}
-                  landingImageUrl={landData?.url || null}
-                  landingLink={landData?.landingUrl || null}
-                  landingStatus={landData?.status || null}
-                />
-              </div>
-            )}
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
+              <EvidenceTabs
+                caseId={id}
+                messageType={item.message_type}
+                rawText={item.raw_text}
+                emailBody={item.email_body || null}
+                screenshotUrl={imgData.url}
+                screenshotMime={imgData?.mime || null}
+                landingImageUrl={landData?.url || null}
+                landingLink={landData?.landingUrl || null}
+                landingStatus={landData?.status || null}
+              />
+            </div>
           </div>
 
           {/* Right pane */}
