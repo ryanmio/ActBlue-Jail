@@ -78,6 +78,17 @@ export async function POST(req: NextRequest) {
     // IMPORTANT: Keep original HTML for URL extraction (before sanitization removes tracking links)
     const originalHtml = bodyHtml;
     
+    // Log HTML extraction metrics for debugging
+    if (originalHtml) {
+      const hrefPattern = /href=["']([^"']+)["']/gi;
+      const hrefMatches = Array.from(originalHtml.matchAll(hrefPattern));
+      console.log("/api/inbound-email:html_extraction", {
+        originalHtmlLength: originalHtml.length,
+        hrefCount: hrefMatches.length,
+        sampleHrefs: hrefMatches.slice(0, 5).map(m => m[1])
+      });
+    }
+    
     // Sanitize HTML body (remove non-ActBlue links to protect honeytrap email)
     let sanitizedHtml = bodyHtml ? sanitizeEmailHtml(bodyHtml) : null;
     
