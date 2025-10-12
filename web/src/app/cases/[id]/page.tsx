@@ -21,6 +21,7 @@ type CaseItem = {
   created_at?: string | null;
   ai_confidence?: number | string | null;
   message_type?: string | null;
+  media_urls?: Array<{ url: string; contentType?: string }>;
 };
 
 
@@ -223,7 +224,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           {/* Left column */}
           <div className="lg:col-span-1 space-y-6">
             {item.message_type === "sms" ? (
-              <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} />
+              <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} mediaUrls={item.media_urls} />
             ) : (
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
                 <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>

@@ -14,6 +14,7 @@ export type IngestTextParams = {
   emailBodyOriginal?: string | null; // Original unsanitized HTML for URL extraction
   forwarderEmail?: string | null;
   submissionToken?: string | null;
+  mediaUrls?: Array<{ url: string; contentType?: string }>;
 };
 
 export type IngestResult = {
@@ -439,6 +440,9 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   }
   if (params.submissionToken) {
     insertRow.submission_token = params.submissionToken;
+  }
+  if (params.mediaUrls && params.mediaUrls.length > 0) {
+    insertRow.media_urls = params.mediaUrls;
   }
 
   // Extract ActBlue landing URL from text AND email HTML (tracking links often only in HTML)
