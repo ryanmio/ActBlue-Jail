@@ -27,7 +27,7 @@ function formatWhen(iso: string): string {
 }
 
 // Filter to show only these violation codes in the cases page
-const DISPLAYED_VIOLATION_CODES = ["AB001", "AB003", "AB004", "AB007", "AB008"];
+const DISPLAYED_VIOLATION_CODES = ["AB001", "AB003", "AB004", "AB007", "AB008", "AB009"];
 
 const VIOLATION_OPTIONS = VIOLATION_POLICIES.filter((v: { code: string; title: string; policy: string }) =>
   DISPLAYED_VIOLATION_CODES.includes(v.code)

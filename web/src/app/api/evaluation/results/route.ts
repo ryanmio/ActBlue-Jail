@@ -93,7 +93,7 @@ function calculateMetrics(responses: Array<{ manual_violations: any; ai_violatio
   let trueNegatives = 0;
 
   // All possible violation codes
-  const allCodes = ["AB001", "AB002", "AB003", "AB004", "AB005", "AB006", "AB007", "AB008"];
+  const allCodes = ["AB001", "AB002", "AB003", "AB004", "AB005", "AB006", "AB007", "AB008", "AB009"];
 
   responses.forEach((response) => {
     const manualSet = new Set(
