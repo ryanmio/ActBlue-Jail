@@ -2,10 +2,10 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { headers } from "next/headers";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, InboundSMSViewer, EvidenceTabs, ReportingCard, ReportThread } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceTabs, ReportingCard, ReportThread } from "./client";
+import { InboundSMSViewer } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 import Footer from "@/components/Footer";
@@ -21,6 +21,7 @@ type CaseItem = {
   created_at?: string | null;
   ai_confidence?: number | string | null;
   message_type?: string | null;
+  media_urls?: Array<{ url: string; contentType?: string }>;
 };
 
 
@@ -222,24 +223,34 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left column */}
           <div className="lg:col-span-1 space-y-6">
-            {item.message_type === "sms" ? (
-              <InboundSMSViewer rawText={item.raw_text} fromNumber={item.sender_id} createdAt={createdAtIso} />
-            ) : (
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
-                <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
-                <EvidenceTabs
-                  caseId={id}
-                  messageType={item.message_type}
-                  rawText={item.raw_text}
-                  emailBody={item.email_body || null}
-                  screenshotUrl={imgData.url}
-                  screenshotMime={imgData?.mime || null}
-                  landingImageUrl={landData?.url || null}
-                  landingLink={landData?.landingUrl || null}
-                  landingStatus={landData?.status || null}
-                />
-              </div>
-            )}
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
+              
+              {/* SMS metadata banner */}
+              {item.message_type === "sms" && (
+                <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="text-sm font-medium text-slate-900">AB Jail Bot</div>
+                  <div className="text-xs text-slate-600 mt-0.5">
+                    From: {item.sender_id || "(unknown)"}
+                    {createdAtIso && (
+                      <> · Received <LocalTime iso={createdAtIso} /></>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <EvidenceTabs
+                caseId={id}
+                messageType={item.message_type}
+                rawText={item.raw_text}
+                emailBody={item.email_body || null}
+                screenshotUrl={imgData.url}
+                screenshotMime={imgData?.mime || null}
+                landingImageUrl={landData?.url || null}
+                landingLink={landData?.landingUrl || null}
+                landingStatus={landData?.status || null}
+              />
+            </div>
           </div>
 
           {/* Right pane */}

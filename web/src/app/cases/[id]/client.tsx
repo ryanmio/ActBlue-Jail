@@ -244,8 +244,9 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
           } else if (item.sender_id && !senderId) {
             setSenderId(item.sender_id);
           }
-          // If processing is done and we still don't have sender info, stop spinning
-          if (item.processing_status === "done" && !item.sender_name && !item.sender_id) {
+          // Stop polling when processing is done, regardless of sender info
+          // AI has responded - accept the result (even if sender_name is null)
+          if (item.processing_status === "done") {
             setIsDone(true);
             clearInterval(interval);
           }
@@ -1515,9 +1516,10 @@ type InboundSMSViewerProps = {
   rawText: string | null;
   fromNumber: string | null;
   createdAt?: string | null;
+  mediaUrls?: Array<{ url: string; contentType?: string }>;
 };
 
-export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSViewerProps) {
+export function InboundSMSViewer({ rawText, fromNumber, createdAt, mediaUrls }: InboundSMSViewerProps) {
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
       <h2 className="text-xl font-semibold text-slate-900 mb-6">AB Jail Bot</h2>
@@ -1530,7 +1532,36 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt }: InboundSMSV
             )}
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-4 space-y-3">
+          {/* Media attachments */}
+          {mediaUrls && mediaUrls.length > 0 && (
+            <div className="space-y-2">
+              {mediaUrls.map((media, idx) => (
+                <div key={idx} className="rounded-2xl overflow-hidden bg-slate-50 border border-slate-100">
+                  <Gallery>
+                    <Item
+                      original={media.url}
+                      thumbnail={media.url}
+                      width="1024"
+                      height="768"
+                    >
+                      {({ ref, open }) => (
+                        <img
+                          ref={ref as React.Ref<HTMLImageElement>}
+                          onClick={open}
+                          src={media.url}
+                          alt={`Media attachment ${idx + 1}`}
+                          className="w-full cursor-pointer hover:opacity-90 transition-opacity"
+                        />
+                      )}
+                    </Item>
+                  </Gallery>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Text message */}
           <div className="max-h-[400px] overflow-auto">
             <div className="bg-slate-100 text-slate-800 rounded-2xl p-4 inline-block shadow-inner">
               <div className="whitespace-pre-wrap text-sm leading-relaxed">
