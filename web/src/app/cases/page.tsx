@@ -33,6 +33,22 @@ const VIOLATION_OPTIONS = VIOLATION_POLICIES.filter((v: { code: string; title: s
   DISPLAYED_VIOLATION_CODES.includes(v.code)
 );
 
+// Derive a clean one-line preview that skips email metadata headers
+function derivePreview(text?: string | null): string {
+  if (!text) return "";
+  const lines = text.split(/\r?\n/);
+  const headerRegex = /^(From:|Date:|Subject:|To:)\b/i;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (headerRegex.test(line)) continue;
+    // Skip the common Gmail divider too
+    if (/^-+\s*Forwarded message\s*-+$/i.test(line)) continue;
+    return line;
+  }
+  return text.slice(0, 160);
+}
+
 async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
 {
   try {
@@ -210,7 +226,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                         )}
                       </div>
                       <div className="mt-1 text-xs text-slate-600 truncate max-w-[70ch]">
-                        {it.rawText || "(no text)"}
+                        {derivePreview(it.rawText) || "(no text)"}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
