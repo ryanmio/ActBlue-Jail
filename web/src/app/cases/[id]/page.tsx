@@ -225,6 +225,20 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
               <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
+              
+              {/* SMS metadata banner */}
+              {item.message_type === "sms" && (
+                <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="text-sm font-medium text-slate-900">AB Jail Bot</div>
+                  <div className="text-xs text-slate-600 mt-0.5">
+                    From: {item.sender_id || "(unknown)"}
+                    {createdAtIso && (
+                      <> · Received <LocalTime iso={createdAtIso} /></>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               <EvidenceTabs
                 caseId={id}
                 messageType={item.message_type}
