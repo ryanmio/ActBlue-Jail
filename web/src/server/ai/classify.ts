@@ -21,13 +21,13 @@ export async function runClassification(submissionId: string, opts: RunClassific
   // Load submission
   const { data: items, error } = await supabase
     .from("submissions")
-    .select("id, image_url, raw_text, landing_url, landing_screenshot_url")
+    .select("id, image_url, raw_text, landing_url, landing_screenshot_url, sender_id, sender_name")
     .eq("id", submissionId)
     .limit(1);
   if (error || !items?.[0]) {
     return { ok: false, status: 404, error: "not_found" as const };
   }
-  const sub = items[0] as { id: string; image_url?: string | null; raw_text?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null };
+  const sub = items[0] as { id: string; image_url?: string | null; raw_text?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null; sender_id?: string | null; sender_name?: string | null };
 
   // Prepare signed image URL if applicable (and only if extension is supported by OpenAI image_url)
   let signedUrl: string | null = null;
@@ -74,9 +74,17 @@ export async function runClassification(submissionId: string, opts: RunClassific
   const system = `Role: Political Fundraising Compliance Assistant\n\nInstructions:\n- Accept OCR text and an optional screenshot image of the message. Use BOTH sources: read the text carefully and visually inspect the image when present.\n- Evaluate only for the provided 6 violation codes:\n  AB001: Misrepresentation/Impersonation\n  AB003: Missing Full Entity Name\n  AB004: Entity Clarity (Org vs Candidate)\n  AB007: False/Unsubstantiated Claims\n  AB008: Unverified Matching Program\n  AB009: Improper Use of ActBlue Name\n\n- Output STRICT JSON with these top-level keys, in order:\n  1. violations (array)\n  2. summary (string)\n  3. overall_confidence (float, 0–1 inclusive)\n- Each violation is returned as a single object with these keys: code (string), title (string), rationale (string), evidence_span_indices (array of integers), severity (int 1–5), confidence (float 0–1 inclusive).\n- Emit at most one violation object per code; if multiple findings, merge rationales and union indices for that code.\n\nSpecific rules and disambiguation:\n- AB001 (Misrepresentation/Impersonation):\n  - Use the screenshot image and body text as evidence. If the image prominently features candidate(s) who are unaffiliated with the sending entity and the text does not clearly state an affiliation to those candidates, RETURN AB001.\n  - Example pattern: image contains Amy Klobuchar, Jamie Raskin, Adam Schiff; text ends with an org name like \"Let America Vote\" without clarifying affiliation — RETURN AB001.\n  - Do NOT return AB001 when the sending entity is that candidate or an affiliated campaign/committee is clearly stated. Do not flag cases where the candidate IS affiliated or when a celebrity lends their likeness (e.g., Beto sending for Powered By People; Bradley Whitford sending for a PAC). Do not flag cases where a politician's image is used to represent the opposition or to attribute a quote or action to them.\n- AB003 (Missing Full Entity Name): Only flag when NO full entity name appears anywhere in the message. If any full entity name is present (e.g., \"Let America Vote\"), DO NOT return AB003. Do not flag commonly accepted committee abbreviations such as DCCC, DLCC, or DSCC.\n- AB007 (False/Unsubstantiated Claims):\n  - Flag only for bullshit gimmicks that trick donors, like fake voting records or insinuating expiration of non-existent memberships/subscriptions. Do NOT flag political rhetoric or news claims.\n\n- AB008 (Unverified Matching Program):\n  - Use when the message advertises a matching program (e.g., \"500% match\").\n  - Rationale text should clearly state that political committees almost never run genuine donor matching programs, and that such claims are highly improbable and misleading to donors.\n  - Do NOT say \"unsupported\" or \"not documented,\" since we cannot know whether documentation exists.\n  - Use direct phrasing such as:\n    \"This solicitation advertises a '500%-MATCH.' Political committees almost never run genuine donor matching programs, making this claim highly improbable and misleading to donors.\"\n- AB009 (Improper Use of ActBlue Name):\n  - Flag when the message uses ActBlue's name inappropriately or in a disparaging manner.\n  - Examples include: suggesting ActBlue \"may go away at any minute,\" falsely implying security or technical problems with ActBlue's platform, misrepresenting communications as being from ActBlue (e.g., sender name like \"NEW ActBlue Update\" when actually from a different entity), or undermining donor trust in ActBlue.\n  - Do NOT flag legitimate mentions of ActBlue (e.g., \"Donate via ActBlue\") or factual references to the platform.\n- AB007, AB008, AB009: Merge contributing lines into one object per code.\n\n- All confidence values must be floats (0–1).\n- evidence_span_indices must point to text spans; if the evidence is image-only, use an empty array and explain in the rationale (e.g., \"image shows unaffiliated candidates\").\n- If the message is malformed or incomplete, return: {\"violations\": [], \"summary\": \"Input message is malformed or incomplete.\", \"overall_confidence\": 0.1}\n- If no policy violations are found, return: {\"violations\": [], \"summary\": \"No clear violations.\", \"overall_confidence\": 0.3}\n\nOutput Format:\n- Output JSON only—no commentary or markdown.\n- Structure: { \"violations\": [ ... ], \"summary\": \"...\", \"overall_confidence\": ... }\n- Maintain the exact specified ordering of top-level keys and the strict schema.`;
 
   type Message = { role: "system" | "user"; content: any };
+  
+  // Build the initial message text with sender info and body
+  let messageText = "";
+  if (sub.sender_name || sub.sender_id) {
+    messageText += `Sender: ${sub.sender_name || sub.sender_id}\n\n`;
+  }
+  messageText += String(sub.raw_text || "").trim() || "(none)";
+  
   const messages: Message[] = [
     { role: "system", content: system },
-    { role: "user", content: [ { type: "text", text: String(sub.raw_text || "").trim() || "(none)" } ] },
+    { role: "user", content: [ { type: "text", text: messageText } ] },
   ];
   if (signedUrl) {
     const dataUrl = await toDataUrlFromUrl(signedUrl);
