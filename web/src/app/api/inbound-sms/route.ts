@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") || "";
     let bodyText = "";
     let fromNumber = "";
-    let mediaUrls: Array<{ url: string; contentType?: string }> = [];
+    const mediaUrls: Array<{ url: string; contentType?: string }> = [];
 
     if (contentType.includes("application/x-www-form-urlencoded")) {
       // Read raw body as UTF-8 and manually parse to ensure proper encoding
