@@ -60,6 +60,10 @@ export async function POST(req: NextRequest) {
     // Use plain text for classification, HTML for display
     let rawText = bodyPlain || stripHtml(bodyHtml);
     
+    // IMPORTANT: Extract original From line BEFORE stripping forwarded headers
+    // This must happen first while the forwarded message metadata is still intact
+    const originalFromLine = extractOriginalFromLine(rawText);
+    
     // Strip forwarded message header from raw text BEFORE storing
     // Handle cases where the header isn't at the very start; support CRLF; tolerate quotes/indent; remove lone header lines
     rawText = rawText
@@ -103,9 +107,6 @@ export async function POST(req: NextRequest) {
     // Attempt to detect original sender from forwarded emails (use raw text)
     // Best-effort: look for "From:" lines in body, otherwise use envelope sender
     const detectedSender = extractOriginalSender(rawText) || sender;
-    
-    // Extract full original "From:" line for AB009 detection (display name + email)
-    const originalFromLine = extractOriginalFromLine(rawText);
 
     // Generate secure token for one-time report submission via email
     const submissionToken = randomBytes(32).toString("base64url");
@@ -233,18 +234,92 @@ function extractOriginalSender(text: string): string | null {
 // Extract the full original "From:" line from forwarded email (for AB009 detection)
 // Returns the complete From line including display name
 // Example: "NEW ActBlue Update (via dccc@dccc.org) <dccc@ak.dccc.org>"
+// Handles Gmail, Outlook, Apple Mail, and quoted forward formats
 function extractOriginalFromLine(text: string): string | null {
-  const lines = text.split("\n");
-  for (const line of lines.slice(0, 50)) { // Check first 50 lines
-    // Match "From: anything" but exclude our honeytrap
-    if (line.match(/^From:\s+/i)) {
-      const fromContent = line.replace(/^From:\s+/i, "").trim();
-      // Don't return if it's the honeytrap email
-      if (!fromContent.includes("democratdonor@gmail.com") && fromContent.length > 0) {
+  const lines = text.split(/\r?\n/);
+  
+  // Strategy 1: Look for forwarded message headers and extract From: from that block
+  for (let i = 0; i < Math.min(lines.length, 100); i++) {
+    const line = lines[i];
+    const trimmed = line.replace(/^[\s>]+/, "").trim(); // Strip leading whitespace and quote markers
+    
+    // Gmail format: "---------- Forwarded message ---------" or "---------- Forwarded message ----------"
+    if (trimmed.match(/^-+\s*Forwarded message\s*-+/i)) {
+      // Look in next 15 lines for From:
+      for (let j = i + 1; j < Math.min(i + 20, lines.length); j++) {
+        const nextLine = lines[j];
+        const stripped = nextLine.replace(/^[\s>]+/, ""); // Remove quotes and whitespace
+        const fromMatch = stripped.match(/^From:\s+(.+?)$/i);
+        if (fromMatch && fromMatch[1]) {
+          const fromContent = fromMatch[1].trim();
+          // Must contain @ symbol and not be honeytrap
+          if (fromContent.includes("@") && 
+              !fromContent.toLowerCase().includes("democratdonor@gmail.com") && 
+              fromContent.length > 5) {
+            return fromContent;
+          }
+        }
+        // Stop at blank lines or next section header
+        if (stripped.match(/^$/)) break;
+      }
+    }
+    
+    // Apple Mail format: "Begin forwarded message:"
+    if (trimmed.match(/^Begin forwarded message:/i)) {
+      for (let j = i + 1; j < Math.min(i + 20, lines.length); j++) {
+        const nextLine = lines[j];
+        const stripped = nextLine.replace(/^[\s>]+/, "");
+        const fromMatch = stripped.match(/^From:\s+(.+?)$/i);
+        if (fromMatch && fromMatch[1]) {
+          const fromContent = fromMatch[1].trim();
+          if (fromContent.includes("@") && 
+              !fromContent.toLowerCase().includes("democratdonor@gmail.com") && 
+              fromContent.length > 5) {
+            return fromContent;
+          }
+        }
+      }
+    }
+    
+    // Outlook format: Starts directly with From:/Sent:/To: block (no delimiter)
+    // Look for "From: ... <newline> Sent: ... <newline> To:" pattern
+    const stripped = line.replace(/^[\s>]+/, "");
+    if (stripped.match(/^From:\s+.+@.+/i)) {
+      // Check if next line is "Sent:" or "Date:" (indicates forwarded metadata block)
+      if (i + 1 < lines.length) {
+        const nextStripped = lines[i + 1].replace(/^[\s>]+/, "");
+        if (nextStripped.match(/^(Sent|Date|To|Subject):/i)) {
+          const fromMatch = stripped.match(/^From:\s+(.+?)$/i);
+          if (fromMatch && fromMatch[1]) {
+            const fromContent = fromMatch[1].trim();
+            if (fromContent.includes("@") && 
+                !fromContent.toLowerCase().includes("democratdonor@gmail.com") && 
+                fromContent.length > 5) {
+              return fromContent;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Strategy 2: Fallback - look for any From: line with an email in first 50 lines
+  // Only use if we haven't found one via forwarded message detection
+  for (let i = 0; i < Math.min(lines.length, 50); i++) {
+    const line = lines[i];
+    const stripped = line.replace(/^[\s>]+/, "");
+    const fromMatch = stripped.match(/^From:\s+(.+?)$/i);
+    if (fromMatch && fromMatch[1]) {
+      const fromContent = fromMatch[1].trim();
+      // Very strict for fallback: must contain @ and angle brackets (proper email format)
+      if ((fromContent.includes("<") && fromContent.includes(">") && fromContent.includes("@")) &&
+          !fromContent.toLowerCase().includes("democratdonor@gmail.com") && 
+          fromContent.length > 5) {
         return fromContent;
       }
     }
   }
+  
   return null;
 }
 
