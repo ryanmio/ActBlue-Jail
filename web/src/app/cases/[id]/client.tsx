@@ -226,6 +226,7 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
   const [senderName, setSenderName] = useState<string | null>(initialSenderName);
   const [senderId, setSenderId] = useState<string | null>(initialSenderId);
   const [isDone, setIsDone] = useState<boolean>(false);
+  const nullCountRef = useRef<number>(0);
 
   useEffect(() => {
     if (senderName) return; // nothing to poll if we already have it
@@ -248,6 +249,17 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
           if (item.processing_status === "done" && !item.sender_name && !item.sender_id) {
             setIsDone(true);
             clearInterval(interval);
+          }
+          // Defensive: If we get null sender 5 times in a row, give up and show Unknown Sender
+          // This handles cases where AI returned null but processing_status hasn't updated
+          if (!item.sender_name && !item.sender_id) {
+            nullCountRef.current++;
+            if (nullCountRef.current >= 5) {
+              setIsDone(true);
+              clearInterval(interval);
+            }
+          } else {
+            nullCountRef.current = 0; // Reset if we get any data
           }
         }
       } catch {}
