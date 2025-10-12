@@ -70,10 +70,10 @@ export async function POST(req: NextRequest) {
       originalFromLine = sender;
     }
     
-    // Strip forwarded message header from raw text BEFORE storing
-    // Handle cases where the header isn't at the very start; support CRLF; tolerate quotes/indent; remove lone header lines
+    // Strip only the forwarded separator line(s), keep From/Date/Subject/To metadata intact
+    // We remove the visual divider but preserve the subsequent headers for AI and storage
     rawText = rawText
-      .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:\r?\n)+(?:\s*(?:From:.*|Date:.*|Subject:.*|To:.*)\s*(?:\r?\n))+?/im, "")
+      .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:\r?\n)+/im, "")
       .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*$/gim, "");
     
     // Redact honeytrap email address everywhere (democratdonor@gmail.com)
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     // Also strip forwarded header and redact honeytrap from HTML
     if (sanitizedHtml) {
       sanitizedHtml = sanitizedHtml
-        .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:<br\s*\/?\s*>|\r?\n)+(?:\s*(?:From:.*?|Date:.*?|Subject:.*?|To:.*?).*?(?:<br\s*\/?\s*>|\r?\n))+?/im, "")
+        .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:<br\s*\/?\s*>|\r?\n)+/im, "")
         .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:<br\s*\/?\s*>)?$/gim, "");
       sanitizedHtml = redactHoneytrap(sanitizedHtml);
     }
