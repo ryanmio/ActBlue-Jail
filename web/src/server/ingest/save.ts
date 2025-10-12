@@ -58,8 +58,78 @@ function computeHeuristic(text: string): { isFundraising: boolean; score: number
   return { isFundraising, score: score + (hasDollar ? 1 : 0), hits };
 }
 
+// Blacklist keywords for URLs to skip (unsubscribe, preferences, social, etc.)
+const URL_BLACKLIST_KEYWORDS = [
+  "unsubscribe", "unsub", "optout", "opt-out",
+  "emailpref", "email-prefs", "preferences", "prefs",
+  "manage", "manage-subscriptions", "update-profile"
+];
+
+const SOCIAL_HOSTS = [
+  "facebook.com", "twitter.com", "x.com", "instagram.com", 
+  "youtube.com", "linkedin.com"
+];
+
+// Check if URL should be skipped (blacklist)
+function shouldSkipUrl(url: string): { skip: boolean; reason?: string } {
+  const urlLower = url.toLowerCase();
+  
+  if (urlLower.startsWith("mailto:")) {
+    return { skip: true, reason: "mailto" };
+  }
+  
+  for (const keyword of URL_BLACKLIST_KEYWORDS) {
+    if (urlLower.includes(keyword)) {
+      return { skip: true, reason: `blacklist:${keyword}` };
+    }
+  }
+  
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    for (const social of SOCIAL_HOSTS) {
+      if (host.includes(social)) {
+        return { skip: true, reason: `social:${social}` };
+      }
+    }
+  } catch {
+    // Invalid URL
+    return { skip: true, reason: "invalid_url" };
+  }
+  
+  return { skip: false };
+}
+
+// Normalize URL to base (origin + normalized path)
+// Special handling for /go/<id> patterns
+function normalizeToBase(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const origin = parsed.origin;
+    const path = parsed.pathname;
+    
+    // Special case: /go/<id> or similar tracking patterns
+    const goMatch = path.match(/^(\/go\/[^\/]+)/i);
+    if (goMatch) {
+      return origin + goMatch[1];
+    }
+    
+    // Otherwise: origin + full pathname (normalized)
+    const normalized = path
+      .replace(/\/+/g, "/") // collapse multiple slashes
+      .replace(/\/$/, "");   // remove trailing slash
+    
+    return origin + (normalized || "/");
+  } catch {
+    return null;
+  }
+}
+
 // Follow redirects to resolve tracking URLs (async helper)
-async function followRedirect(url: string, maxHops = 5): Promise<string | null> {
+// Returns { finalUrl, hops, status } where hops = array of domain transitions
+async function followRedirect(
+  url: string, 
+  maxHops = 5
+): Promise<{ finalUrl: string | null; hops: string[]; status: string }> {
   let current = url;
   const hops: string[] = [];
   
@@ -85,157 +155,238 @@ async function followRedirect(url: string, maxHops = 5): Promise<string | null> 
       const location = res.headers.get("location");
       if (!location) {
         // No redirect header - this is the final destination
-        hops.push(`${i}: final(${res.status})`);
-        if (i === 0) {
-          // First request returned no redirect - might be expired/broken link
-          console.log("followRedirect:no_redirect", { url, status: res.status, hops });
-        }
-        return current;
+        hops.push(`final(${res.status})`);
+        return { finalUrl: current, hops, status: "success" };
       }
       
       const next = new URL(location, current).href;
-      hops.push(`${i}: ${new URL(current).hostname} -> ${new URL(next).hostname}`);
+      hops.push(`${new URL(current).hostname} → ${new URL(next).hostname}`);
       current = next;
     } catch (e) {
       // Log WHY it failed
       const error = e instanceof Error ? e.message : String(e);
-      hops.push(`${i}: ERROR(${error})`);
-      console.log("followRedirect:failed", { url, hops, error });
-      return null; // Network error or timeout
+      hops.push(`ERROR(${error})`);
+      return { finalUrl: null, hops, status: "error" };
     }
   }
   
-  console.log("followRedirect:max_hops", { url, hops });
-  return current; // Max hops reached
+  hops.push(`MAX_HOPS(${maxHops})`);
+  return { finalUrl: current, hops, status: "max_hops" };
 }
 
-async function extractActBlueUrl(text: string): Promise<string | null> {
+/**
+ * Extract ActBlue landing URL from combined text + HTML links
+ * New algorithm:
+ * 1. Extract all URLs from text (plain + HTML hrefs)
+ * 2. Normalize to base (origin + first path segments, special handling for /go/<id>)
+ * 3. Count frequency of each base (pure frequency, no weighting)
+ * 4. Try top 5 bases by frequency, follow redirects until ActBlue found
+ * 5. Fall back to direct ActBlue links if no CTA bases resolve
+ */
+async function extractActBlueUrl(
+  text: string, 
+  submissionId?: string
+): Promise<string | null> {
+  const logPrefix = submissionId ? `extractActBlueUrl:${submissionId}` : "extractActBlueUrl";
+  
+  // Step 1: Extract all URLs from text
   const urlPattern = /https?:\/\/[^\s<>"'\)]+/g;
-  const matches = text.match(urlPattern) || [];
-  const actBlueUrls: string[] = [];
-  const trackingUrls: string[] = [];
-
-  for (const rawUrl of matches) {
+  const rawMatches = text.match(urlPattern) || [];
+  
+  // Clean trailing punctuation
+  const allUrls = rawMatches
+    .map(url => url.replace(/[.,;:)\]]+$/, ""))
+    .filter(url => url.length > 0);
+  
+  console.log(`${logPrefix}:extractCandidates`, {
+    totalUrls: allUrls.length,
+    sampleUrls: allUrls.slice(0, 5)
+  });
+  
+  if (allUrls.length === 0) {
+    return null;
+  }
+  
+  // Step 2: Categorize URLs and normalize to bases
+  const directActBlueUrls: string[] = [];
+  const nonActBlueUrls: string[] = [];
+  const skippedUrls: Array<{ url: string; reason: string }> = [];
+  
+  for (const url of allUrls) {
+    // Check blacklist
+    const skipCheck = shouldSkipUrl(url);
+    if (skipCheck.skip) {
+      skippedUrls.push({ url, reason: skipCheck.reason || "unknown" });
+      continue;
+    }
+    
     try {
-      // Clean trailing punctuation
-      const cleaned = rawUrl.replace(/[.,;:)\]]+$/, "");
-      const parsed = new URL(cleaned);
+      const parsed = new URL(url);
       const host = parsed.hostname.toLowerCase();
 
       // Direct ActBlue domain
       if (host === "actblue.com" || host.endsWith(".actblue.com")) {
-        actBlueUrls.push(cleaned);
-      }
-      // Treat any non-ActBlue link as a candidate tracking redirect, with safe blacklists
-      else {
-        const urlLower = cleaned.toLowerCase();
-        // Skip obvious non-donation/action links
-        if (urlLower.startsWith("mailto:")) continue;
-        // Strong unsubscribe/preferences blacklist (paths, params, or hostnames)
-        const unsubKeywords = [
-          "unsubscribe", "unsub", "optout", "opt-out",
-          "emailpref", "email-prefs", "preferences", "prefs",
-          "manage", "manage-subscriptions", "update-profile"
-        ];
-        if (unsubKeywords.some(k => urlLower.includes(k))) continue;
-        if (host.includes("facebook.com") || host.includes("twitter.com") || host.includes("x.com") || host.includes("instagram.com") || host.includes("youtube.com") || host.includes("linkedin.com")) continue;
-        trackingUrls.push(cleaned);
+        directActBlueUrls.push(url);
+      } else {
+        nonActBlueUrls.push(url);
       }
     } catch {
-      continue; // Invalid URL, skip
+      skippedUrls.push({ url, reason: "invalid_url" });
     }
   }
-
-  // If we found direct ActBlue links, use those (fast path)
-  if (actBlueUrls.length === 0 && trackingUrls.length > 0) {
-    // Limit concurrent redirect checks to avoid overwhelming the network
-    const urlsToCheck = trackingUrls.slice(0, 20); // Max 20 URLs
-    console.log("extractActBlueUrl:following_redirects", { 
-      total: trackingUrls.length, 
-      checking: urlsToCheck.length,
-      sample: urlsToCheck.slice(0, 3).map(u => new URL(u).hostname)
-    });
-    
-    const resolved = await Promise.allSettled(
-      urlsToCheck.map(async (url) => {
-        const final = await followRedirect(url);
-        if (!final) return null;
-        try {
-          const u = new URL(final);
-          const host = u.hostname.toLowerCase();
-          if (host === "actblue.com" || host.endsWith(".actblue.com")) {
-            // Filter out unsubscribe/manage links
-            if (u.pathname.includes("unsubscribe") || u.pathname.includes("manage") || u.pathname.includes("preferences")) {
-              return null;
-            }
-            return final;
-          }
-        } catch {}
-        return null;
-      })
-    );
-    
-    for (const result of resolved) {
-      if (result.status === "fulfilled" && result.value) {
-        actBlueUrls.push(result.value);
-      }
-    }
-    console.log("extractActBlueUrl:redirects_resolved", { 
-      found: actBlueUrls.length,
-      samples: actBlueUrls.slice(0, 2)
-    });
-  }
-
-  if (actBlueUrls.length === 0) return null;
-  if (actBlueUrls.length === 1) {
-    // Always return base URL (no params)
-    try {
-      const u = new URL(actBlueUrls[0]);
-      return `${u.origin}${u.pathname}`;
-    } catch {
-      return actBlueUrls[0];
-    }
-  }
-
-  // Build stats by BASE URL (origin + pathname) so params don't skew frequency
-  type BaseStats = { count: number; withParams: number; pathLength: number };
-  const baseStats = new Map<string, BaseStats>();
-
-  for (const url of actBlueUrls) {
-    try {
-      const parsed = new URL(url);
-      const baseUrl = `${parsed.origin}${parsed.pathname}`;
-      const hadParams = parsed.searchParams && Array.from(parsed.searchParams.keys()).length > 0;
-      const prev = baseStats.get(baseUrl) || { count: 0, withParams: 0, pathLength: parsed.pathname.length };
-      baseStats.set(baseUrl, {
-        count: prev.count + 1,
-        withParams: prev.withParams + (hadParams ? 1 : 0),
-        pathLength: prev.pathLength,
-      });
-    } catch {
-      continue;
-    }
-  }
-
-  if (baseStats.size === 0) return null;
-
-  // Choose the best BASE using tie-breakers:
-  // 1) Highest frequency (count)
-  // 2) Longer pathname (more specific landing pages beat generic footers)
-  // 3) More occurrences that had query params (signals CTA links with tracking)
-  // 4) Lexicographical as last resort for determinism
-  const candidates = Array.from(baseStats.entries());
-  candidates.sort((a, b) => {
-    const [baseA, sa] = a;
-    const [baseB, sb] = b;
-    if (sb.count !== sa.count) return sb.count - sa.count;
-    if (sb.pathLength !== sa.pathLength) return sb.pathLength - sa.pathLength;
-    if (sb.withParams !== sa.withParams) return sb.withParams - sa.withParams;
-    return baseA.localeCompare(baseB);
+  
+  console.log(`${logPrefix}:categorized`, {
+    directActBlue: directActBlueUrls.length,
+    nonActBlue: nonActBlueUrls.length,
+    skipped: skippedUrls.length,
+    skippedReasons: skippedUrls.slice(0, 3)
   });
-
-  const bestBase = candidates[0]?.[0];
-  return bestBase || null;
+  
+  // Step 3: Build frequency map of bases (non-ActBlue URLs = potential CTA tracking links)
+  const baseFrequency = new Map<string, { count: number; sampleUrls: string[] }>();
+  
+  for (const url of nonActBlueUrls) {
+    const base = normalizeToBase(url);
+    if (!base) continue;
+    
+    const existing = baseFrequency.get(base);
+    if (existing) {
+      existing.count++;
+      if (existing.sampleUrls.length < 3) {
+        existing.sampleUrls.push(url);
+      }
+    } else {
+      baseFrequency.set(base, { count: 1, sampleUrls: [url] });
+    }
+  }
+  
+  // Sort bases by frequency (descending), then by path length (longer = more specific)
+  const sortedBases = Array.from(baseFrequency.entries())
+    .map(([base, stats]) => ({
+      base,
+      count: stats.count,
+      sampleUrl: stats.sampleUrls[0],
+      sampleUrls: stats.sampleUrls,
+      pathLength: base.split("/").length
+    }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return b.pathLength - a.pathLength;
+    });
+  
+  console.log(`${logPrefix}:baseCounts`, {
+    totalBases: sortedBases.length,
+    top10: sortedBases.slice(0, 10).map(b => ({
+      base: b.base,
+      count: b.count,
+      sampleUrl: b.sampleUrl
+    }))
+  });
+  
+  // Step 4: Try top 5 bases by frequency, follow redirects
+  const TOP_N_BASES = 5;
+  const MAX_URLS_PER_BASE = 3; // Try up to 3 concrete URLs per base
+  const topBases = sortedBases.slice(0, TOP_N_BASES);
+  
+  if (topBases.length > 0) {
+    console.log(`${logPrefix}:pickingOrder`, {
+      bases: topBases.map(b => b.base)
+    });
+  }
+  
+  for (const baseInfo of topBases) {
+    const urlsToTry = baseInfo.sampleUrls.slice(0, MAX_URLS_PER_BASE);
+    
+    console.log(`${logPrefix}:redirectAttempt`, {
+      base: baseInfo.base,
+      count: baseInfo.count,
+      urlsToTry: urlsToTry.length
+    });
+    
+    for (const url of urlsToTry) {
+      const redirectResult = await followRedirect(url, 5);
+      
+      console.log(`${logPrefix}:redirectAttempt:result`, {
+        base: baseInfo.base,
+        url: url.slice(0, 100),
+        hops: redirectResult.hops,
+        status: redirectResult.status,
+        finalUrl: redirectResult.finalUrl?.slice(0, 100)
+      });
+      
+      // Check if final URL is ActBlue
+      if (redirectResult.finalUrl) {
+        try {
+          const finalParsed = new URL(redirectResult.finalUrl);
+          const finalHost = finalParsed.hostname.toLowerCase();
+          
+          if (finalHost === "actblue.com" || finalHost.endsWith(".actblue.com")) {
+            // Success! This base resolves to ActBlue
+            const actblueBase = `${finalParsed.origin}${finalParsed.pathname}`;
+            
+            console.log(`${logPrefix}:selectionOutcome`, {
+              outcome: "success",
+              selectedBase: actblueBase,
+              sourceBase: baseInfo.base,
+              sourceBaseCount: baseInfo.count,
+              hops: redirectResult.hops
+            });
+            
+            return actblueBase;
+          }
+        } catch {
+          // Invalid final URL, continue
+        }
+      }
+    }
+    
+    // No URLs from this base resolved to ActBlue, try next base
+    console.log(`${logPrefix}:redirectAttempt:base_failed`, {
+      base: baseInfo.base,
+      reason: "no_actblue_resolution"
+    });
+  }
+  
+  // Step 5: No CTA bases resolved to ActBlue, fall back to direct ActBlue links
+  if (directActBlueUrls.length > 0) {
+    // Count frequency of direct ActBlue bases
+    const directBaseFrequency = new Map<string, number>();
+    
+    for (const url of directActBlueUrls) {
+      try {
+        const parsed = new URL(url);
+        const base = `${parsed.origin}${parsed.pathname}`;
+        directBaseFrequency.set(base, (directBaseFrequency.get(base) || 0) + 1);
+    } catch {
+        // Invalid URL, skip
+      }
+    }
+    
+    // Pick most common direct ActBlue base
+    const sortedDirectBases = Array.from(directBaseFrequency.entries())
+      .sort((a, b) => b[1] - a[1]);
+    
+    if (sortedDirectBases.length > 0) {
+      const [base, count] = sortedDirectBases[0];
+      
+      console.log(`${logPrefix}:selectionOutcome`, {
+        outcome: "fallback_to_direct",
+        selectedBase: base,
+        directActBlueCount: count,
+        reason: "no_cta_bases_resolved"
+      });
+      
+      return base;
+    }
+  }
+  
+  // No ActBlue URLs found at all
+  console.log(`${logPrefix}:selectionOutcome`, {
+    outcome: "none_found",
+    reason: "no_actblue_urls_after_all_attempts"
+  });
+  
+  return null;
 }
 
 export async function ingestTextSubmission(params: IngestTextParams): Promise<IngestResult> {
@@ -287,14 +438,26 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   // Use ORIGINAL unsanitized HTML for URL extraction (sanitized HTML has tracking links removed)
   let textWithHtmlLinks = textForDedupe || "";
   const htmlForExtraction = params.emailBodyOriginal || params.emailBody; // Prefer original, fallback to sanitized
+  
+  let hrefUrlsCount = 0;
   if (htmlForExtraction) {
     // Extract href URLs from HTML using regex
     const hrefPattern = /href=["']([^"']+)["']/gi;
     const hrefMatches = htmlForExtraction.matchAll(hrefPattern);
-    const hrefUrls = Array.from(hrefMatches, m => m[1]).join(" ");
-    textWithHtmlLinks = textWithHtmlLinks + " " + hrefUrls;
+    const hrefUrls = Array.from(hrefMatches, m => m[1]);
+    hrefUrlsCount = hrefUrls.length;
+    textWithHtmlLinks = textWithHtmlLinks + " " + hrefUrls.join(" ");
   }
   
+  console.log("ingestTextSubmission:url_extraction_sources", {
+    textLength: (textForDedupe || "").length,
+    htmlLength: htmlForExtraction ? htmlForExtraction.length : 0,
+    hrefUrlsExtracted: hrefUrlsCount,
+    hasOriginalHtml: !!params.emailBodyOriginal
+  });
+  
+  // Note: We'll get a submission ID after insert, but we can pass null for now
+  // The extraction function will use a generic log prefix
   const landingUrl = await extractActBlueUrl(textWithHtmlLinks);
   if (landingUrl) {
     insertRow.landing_url = landingUrl;
