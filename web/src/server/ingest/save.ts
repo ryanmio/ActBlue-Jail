@@ -12,6 +12,7 @@ export type IngestTextParams = {
   emailSubject?: string | null;
   emailBody?: string | null; // Sanitized HTML for display
   emailBodyOriginal?: string | null; // Original unsanitized HTML for URL extraction
+  emailFrom?: string | null; // Raw "From" line from email header (e.g., "Name <email@example.com>")
   forwarderEmail?: string | null;
   submissionToken?: string | null;
   mediaUrls?: Array<{ url: string; contentType?: string }>;
@@ -434,6 +435,9 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   }
   if (params.emailBody) {
     insertRow.email_body = params.emailBody;
+  }
+  if (params.emailFrom) {
+    insertRow.email_from = params.emailFrom;
   }
   if (params.forwarderEmail) {
     insertRow.forwarder_email = params.forwarderEmail;

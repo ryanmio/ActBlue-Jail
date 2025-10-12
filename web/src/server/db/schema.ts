@@ -30,6 +30,7 @@ export const submissions = pgTable(
     aiSummary: text("ai_summary"),
     emailSubject: text("email_subject"),
     emailBody: text("email_body"),
+    emailFrom: text("email_from"),
     isPublic: boolean("public").default(true),
     landingUrl: text("landing_url"),
     landingScreenshotUrl: text("landing_screenshot_url"),
