@@ -56,6 +56,11 @@ export const VIOLATION_POLICIES: ViolationPolicy[] = [
     title: "Unverified Matching Program",
     policy: "All text and email fundraising solicitations may not [...] promote unverified matching programs. If an entity advertises a matching program for contributions made through ActBlue, the entity must be able to provide documentation to ActBlue of such a program, upon request.",
   },
+  {
+    code: "AB009",
+    title: "Improper Use of ActBlue Name",
+    policy: "Entities must not use the name 'ActBlue' inappropriately or in a disparaging manner. This includes misrepresenting communications from ActBlue, undermining ActBlue by falsely stating or implying security or technical problems with the platform, or suggesting that ActBlue 'may go away at any minute.'",
+  },
 ];
 
 /**

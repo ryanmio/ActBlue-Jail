@@ -11,7 +11,7 @@ This evaluation system allows beta testers to review cases and manually categori
 - **No Login Required**: Uses browser local storage and device fingerprinting
 - **Random Shuffle**: Shows cases in random order with deduplication
 - **Progress Tracking**: Visual progress bar showing X/20 completed
-- **Manual Violation Selection**: All 8 violation codes (AB001-AB008)
+- **Manual Violation Selection**: All 9 violation codes (AB001-AB009)
 - **Notes Field**: Optional evaluator notes (240 character max)
 - **Auto-Save**: Evaluations automatically saved to Supabase with IP/device ID
 - **Comparison Metrics**: Shows accuracy, precision, recall, false positives/negatives
@@ -55,7 +55,7 @@ This evaluation system allows beta testers to review cases and manually categori
 - Main evaluation interface
 - Shows one case at a time with image and text
 - Displays AI-detected violations
-- Allows manual violation selection
+- Allows manual violation selection (all 9 codes: AB001-AB009)
 - Progress bar and auto-save
 
 **/evaluation/results**
@@ -76,6 +76,7 @@ This evaluation system allows beta testers to review cases and manually categori
 | AB006 | PAC Disclosure Clarity |
 | AB007 | False/Unsubstantiated Claims |
 | AB008 | Unverified Matching Program |
+| AB009 | Improper Use of ActBlue Name |
 
 ## Metrics Explained
 
