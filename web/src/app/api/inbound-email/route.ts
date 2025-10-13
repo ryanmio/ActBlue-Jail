@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links) for display
       emailBodyOriginal: originalHtml || null, // Original HTML for URL extraction
       emailFrom: originalFromLine || null, // Full original "From:" line (prefer original content; not the forwarder)
-      forwarderEmail: parseEmailAddress(envelopeSender) || envelopeSender || null, // Bare email of forwarder
+      forwarderEmail: isForwarded ? (parseEmailAddress(envelopeSender) || envelopeSender || null) : null, // Only set if forwarded
       submissionToken: submissionToken, // Secure token for email submission
     });
     
