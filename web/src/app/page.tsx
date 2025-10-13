@@ -30,9 +30,10 @@ export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [stepIndex, setStepIndex] = useState<number>(0);
-  const [mode, setMode] = useState<"image" | "text">("image");
+  const [mode, setMode] = useState<"image" | "text" | "forward">("image");
   const [textValue, setTextValue] = useState<string>("");
   const [textError, setTextError] = useState<string>("");
+  const [forwardedCases, setForwardedCases] = useState<Array<{ id: string; status: 'processing' | 'complete' }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onBrowseClick = useCallback(() => inputRef.current?.click(), []);
@@ -176,6 +177,48 @@ export default function Home() {
     }
   }, [textValue]);
 
+  // Poll for forwarded email cases when in forward mode
+  useEffect(() => {
+    if (mode !== "forward") {
+      setForwardedCases([]);
+      return;
+    }
+
+    let cancelled = false;
+    const pollInterval = setInterval(async () => {
+      try {
+        // Poll for submissions created in the last 5 minutes via email
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const supabase = assertSupabaseBrowser();
+        const { data, error } = await supabase
+          .from('submissions')
+          .select('id, created_at, ai_version, sender_name')
+          .gte('created_at', fiveMinutesAgo)
+          .eq('message_type', 'email')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (error || cancelled) return;
+
+        const cases = (data || []).map((c: { id: string; ai_version?: string | null }) => ({
+          id: c.id,
+          status: (c.ai_version ? 'complete' : 'processing') as 'processing' | 'complete'
+        }));
+
+        if (!cancelled) {
+          setForwardedCases(cases);
+        }
+      } catch (err) {
+        console.error('Failed to poll for forwarded cases:', err);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+    };
+  }, [mode]);
+
   return (
     <main
       className="min-h-[calc(100vh+160px)] bg-white"
@@ -269,12 +312,12 @@ export default function Home() {
           <div
             role="button"
             aria-label="Upload screenshot"
-            onClick={onBrowseClick}
-            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={onDrop}
-            onPaste={onCardPaste}
-            className={`relative cursor-pointer rounded-3xl border-2 border-dashed p-8 md:p-10 text-center transition-colors ${
+            onClick={mode !== "forward" ? onBrowseClick : undefined}
+            onDragOver={mode !== "forward" ? (e) => { e.preventDefault(); setIsDragOver(true); } : undefined}
+            onDragLeave={mode !== "forward" ? () => setIsDragOver(false) : undefined}
+            onDrop={mode !== "forward" ? onDrop : undefined}
+            onPaste={mode !== "forward" ? onCardPaste : undefined}
+            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 border-dashed p-8 md:p-10 text-center transition-colors ${
               isDragOver
                 ? "border-slate-400 bg-white"
                 : "border-slate-300 bg-white/60 hover:border-slate-400 hover:bg-white"
@@ -299,29 +342,33 @@ export default function Home() {
                   >
                     Paste text
                   </button>
-                </div>
-
-                {mode === "image" && (
-                <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
-                  <svg
-                    className="w-7 h-7 md:w-8 md:h-8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMode("forward"); }}
+                    className={`px-3 py-1.5 border-l border-slate-300 ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
                   >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
+                    Forward
+                  </button>
                 </div>
-                )}
 
                 {mode === "image" && (
-                  <>
+                  <div className="min-h-[280px] flex flex-col items-center justify-center">
+                    <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
+                      <svg
+                        className="w-7 h-7 md:w-8 md:h-8"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    </div>
                     <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
                     <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
                     <div className="mt-4 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
@@ -335,11 +382,11 @@ export default function Home() {
                         Terms
                       </Link>.
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {mode === "text" && (
-                  <div className="max-w-lg mx-auto text-left">
+                  <div className="max-w-lg mx-auto text-left min-h-[280px]">
                     <label className="block text-sm font-medium text-slate-900 mb-2">Paste the message text</label>
                     <textarea
                       value={textValue}
@@ -376,6 +423,80 @@ export default function Home() {
                         Paste from clipboard
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {mode === "forward" && (
+                  <div className="max-w-lg mx-auto text-center min-h-[280px]">
+                    <div className="mb-4">
+                      <div className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">Forward emails to</div>
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg border border-slate-300">
+                        <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <code className="text-base font-mono text-slate-900">submit@abjail.org</code>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await navigator.clipboard.writeText('submit@abjail.org');
+                            } catch {
+                              // ignore
+                            }
+                          }}
+                          className="text-slate-600 hover:text-slate-900"
+                          title="Copy to clipboard"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
+                      Please redact any personally identifying information you wish before forwarding.
+                    </div>
+
+                    {forwardedCases.length > 0 && (
+                      <div className="mt-6 space-y-2">
+                        {forwardedCases.map((case_) => (
+                          <div key={case_.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="flex items-center gap-3">
+                              {case_.status === 'processing' ? (
+                                <>
+                                  <span className="inline-block h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
+                                  <span className="text-sm text-slate-700">Processing case...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  <span className="text-sm text-slate-700">Case complete</span>
+                                </>
+                              )}
+                            </div>
+                            {case_.status === 'complete' && (
+                              <Link
+                                href={`/cases/${case_.id}`}
+                                className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Open case
+                              </Link>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {forwardedCases.length === 0 && (
+                      <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
+                        Forwarded emails will appear here for processing
+                      </div>
+                    )}
                   </div>
                 )}
               </>
