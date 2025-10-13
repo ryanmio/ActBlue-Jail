@@ -613,6 +613,8 @@ type RecentCase = {
   sender_id: string | null;
   sender_name: string | null;
   raw_text: string | null;
+  message_type: string | null;
+  forwarder_email: string | null;
   violations: Array<{ code: string; title: string }>;
 };
 
@@ -680,32 +682,53 @@ function RecentCases() {
             ))}
           </div>
         )}
-        {!loading && cases.map((r) => (
-          <div key={r.id} className="py-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="font-medium truncate max-w-[60vw] text-slate-900">{r.sender_name || r.sender_id || "Unknown sender"}</div>
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
-                {r.violations && r.violations.length > 0 ? (
-                  r.violations.slice(0, 3).map((v, idx) => (
-                    <span
-                      key={`${v.code}-${idx}`}
-                      className="inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw]"
-                      title={v.title}
-                    >
-                      {v.title}
+        {!loading && cases.map((r) => {
+          // Bot submitted: SMS or email without forwarder (automated ingestion)
+          // User submitted: unknown (manual upload) or email with forwarder (user forwarded)
+          const messageType = r.message_type?.toLowerCase();
+          const isBotSubmitted = messageType === 'sms' || (messageType === 'email' && !r.forwarder_email);
+          const showTypeBadge = messageType && messageType !== 'unknown';
+          
+          return (
+            <div key={r.id} className="py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium truncate max-w-[60vw] text-slate-900">{r.sender_name || r.sender_id || "Unknown sender"}</div>
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
+                  {/* Violation badges */}
+                  {r.violations && r.violations.length > 0 ? (
+                    r.violations.slice(0, 3).map((v, idx) => (
+                      <span
+                        key={`${v.code}-${idx}`}
+                        className="inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw]"
+                        title={v.title}
+                      >
+                        {v.title}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-500">No issues</span>
+                  )}
+                  {/* Type badge - desktop only, neutral styling, without parentheses */}
+                  {showTypeBadge && (
+                    <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300">
+                      {messageType === 'email' && 'Email'}
+                      {messageType === 'sms' && 'SMS'}
+                      {messageType === 'mms' && 'MMS'}
                     </span>
-                  ))
-                ) : (
-                  <span className="text-slate-500">No issues</span>
-                )}
+                  )}
+                  {/* Source badge - desktop only, neutral styling, without parentheses */}
+                  <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300">
+                    {isBotSubmitted ? 'Bot Submitted' : 'User Submitted'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-16 md:w-20 text-right text-xs text-slate-700 tabular-nums">{formatWhen(r.created_at)}</div>
+                <Link className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" href={`/cases/${r.id}`}>View</Link>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="w-16 md:w-20 text-right text-xs text-slate-700 tabular-nums">{formatWhen(r.created_at)}</div>
-              <Link className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" href={`/cases/${r.id}`}>View</Link>
-            </div>
-          </div>
-        ))}
+          );
+        })}
         {!loading && cases.length === 0 && (
           <div className="py-8 text-center text-sm text-slate-700">No cases yet.</div>
         )}

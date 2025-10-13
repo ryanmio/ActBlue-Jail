@@ -23,11 +23,13 @@ export async function GET(req: NextRequest) {
       sender_id: string | null;
       sender_name: string | null;
       raw_text: string | null;
+      message_type: string | null;
+      forwarder_email: string | null;
     };
 
     let builder = supabase
       .from("submissions")
-      .select("id, created_at, sender_id, sender_name, raw_text", { count: "exact" })
+      .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email", { count: "exact" })
       .order("created_at", { ascending: false });
 
     // Only show public cases
@@ -66,6 +68,8 @@ export async function GET(req: NextRequest) {
       senderId: r.sender_id,
       senderName: r.sender_name,
       rawText: r.raw_text,
+      messageType: r.message_type,
+      forwarderEmail: r.forwarder_email,
     }));
 
     // Optionally include top violations (deduped by code, max 3 per case)

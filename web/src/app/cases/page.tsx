@@ -11,6 +11,8 @@ type SubmissionRow = {
   senderName: string | null;
   rawText: string | null;
   issues: Array<{ code: string; title: string }>;
+  messageType?: string | null;
+  forwarderEmail?: string | null;
 };
 
 function formatWhen(iso: string): string {
@@ -76,6 +78,10 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Pr
       raw_text?: string | null;
       rawText?: string | null;
       issues?: Array<{ code: string; title: string }>;
+      message_type?: string | null;
+      messageType?: string | null;
+      forwarder_email?: string | null;
+      forwarderEmail?: string | null;
     }>;
     const withIssues = rows.map((r) => ({
       id: r.id,
@@ -86,6 +92,8 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Pr
       issues: Array.isArray(r.issues)
         ? r.issues.filter((v) => typeof v.code === "string" && v.code.trim()).slice(0, 3)
         : [],
+      messageType: r.message_type || r.messageType || null,
+      forwarderEmail: r.forwarder_email || r.forwarderEmail || null,
     }));
     return {
       items: withIssues,
@@ -223,6 +231,28 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                             {it.issues.length > 1 && (
                               <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300 md:hidden">+{it.issues.length - 1} more</span>
                             )}
+                            {/* Desktop-only badges for type and submission source, matching pill style */}
+                            {(() => {
+                              const type = (it.messageType || '').toLowerCase();
+                              const showType = type && type !== 'unknown';
+                              // Bot submitted: SMS or email without forwarder (automated ingestion)
+                              // User submitted: unknown (manual upload) or email with forwarder (user forwarded)
+                              const isBotSubmitted = type === 'sms' || (type === 'email' && !it.forwarderEmail);
+                              return (
+                                <>
+                                  {showType && (
+                                    <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                                      {type === 'email' && 'Email'}
+                                      {type === 'sms' && 'SMS'}
+                                      {type === 'mms' && 'MMS'}
+                                    </span>
+                                  )}
+                                  <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                                    {isBotSubmitted ? 'Bot Submitted' : 'User Submitted'}
+                                  </span>
+                                </>
+                              );
+                            })()}
                           </>
                         )}
                       </div>
