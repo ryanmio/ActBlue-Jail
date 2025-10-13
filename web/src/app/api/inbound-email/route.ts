@@ -59,14 +59,21 @@ export async function POST(req: NextRequest) {
 
     // Use plain text for classification, HTML for display
     let rawText = bodyPlain || stripHtml(bodyHtml);
-    
+
+    // Determine if this appears to be a forwarded email
+    const isForwarded = detectForwardedEmail(subject || "", rawText, bodyHtml || "");
+
     // IMPORTANT: Extract original From line BEFORE stripping forwarded headers
-    // This must happen first while the forwarded message metadata is still intact
+    // Try from body-plain first; if missing, try from stripped HTML
     let originalFromLine = extractOriginalFromLine(rawText);
-    
-    // Fallback: If no From line found in body (not a forward), use Mailgun sender
-    // But only if it's not the honeytrap email (indicates direct send, not forward)
-    if (!originalFromLine && sender && !sender.toLowerCase().includes("democratdonor@gmail.com")) {
+    if (!originalFromLine && bodyHtml) {
+      const htmlAsText = stripHtml(bodyHtml);
+      originalFromLine = extractOriginalFromLine(htmlAsText);
+    }
+
+    // Fallback: Only if NOT a forwarded email, use the envelope sender
+    // For forwarded emails, we must not set email_from to the forwarder's address
+    if (!originalFromLine && sender && !isForwarded) {
       originalFromLine = sender;
     }
     
@@ -110,9 +117,12 @@ export async function POST(req: NextRequest) {
       sanitizedHtml = redactHoneytrap(sanitizedHtml);
     }
     
-    // Attempt to detect original sender from forwarded emails (use raw text)
-    // Best-effort: look for "From:" lines in body, otherwise use envelope sender
-    const detectedSender = extractOriginalSender(rawText) || sender;
+    // Attempt to detect original sender email (for sender_id): prefer parsed from originalFromLine, then from body, else envelope
+    const detectedSender =
+      parseEmailAddress(originalFromLine || undefined) ||
+      extractOriginalSender(rawText) ||
+      parseEmailAddress(sender) ||
+      sender;
 
     // Generate secure token for one-time report submission via email
     const submissionToken = randomBytes(32).toString("base64url");
@@ -128,8 +138,8 @@ export async function POST(req: NextRequest) {
       emailSubject: subject || null,
       emailBody: sanitizedHtml || null, // Sanitized HTML (no tracking/unsubscribe links) for display
       emailBodyOriginal: originalHtml || null, // Original HTML for URL extraction
-      emailFrom: originalFromLine || null, // Full original "From:" line from forwarded email (e.g., "NEW ActBlue Update <dccc@ak.dccc.org>")
-      forwarderEmail: envelopeSender || null, // Email of person who forwarded
+      emailFrom: originalFromLine || null, // Full original "From:" line (prefer original content; not the forwarder)
+      forwarderEmail: parseEmailAddress(envelopeSender) || envelopeSender || null, // Bare email of forwarder
       submissionToken: submissionToken, // Secure token for email submission
     });
     
@@ -221,6 +231,15 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Detect if an email appears to be a forward based on subject/body/html markers
+function detectForwardedEmail(subject: string, bodyText: string, bodyHtml: string): boolean {
+  const subj = subject.toLowerCase();
+  if (subj.startsWith("fwd:") || subj.includes("fw:")) return true;
+  const textHasForward = /forwarded message|begin forwarded message/i.test(bodyText);
+  const htmlHasForward = /forwarded message|begin forwarded message/i.test(bodyHtml);
+  return textHasForward || htmlHasForward;
+}
+
 // Attempt to extract original sender email from forwarded email body
 // Returns just the email address for sender_id
 function extractOriginalSender(text: string): string | null {
@@ -282,5 +301,15 @@ function validateAndCleanFromLine(fromLine: string): string | null {
   }
   
   return null;
+}
+
+// Parse a bare email address from formats like:
+// - Name <email@example.com>
+// - "Name" <email@example.com>
+// - email@example.com
+function parseEmailAddress(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const m = input.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  return m ? m[1] : null;
 }
 
