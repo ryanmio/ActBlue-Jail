@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
     // Get random submissions that are completed and public
     let query = supabase
       .from("submissions")
-      .select("id, image_url, sender_id, sender_name, raw_text, message_type, ai_confidence, created_at, landing_url, landing_screenshot_url")
+      .select("id, image_url, sender_id, sender_name, raw_text, message_type, ai_confidence, created_at, landing_url, landing_screenshot_url, email_body")
       .eq("processing_status", "done")
       .eq("public", true)
       .not("raw_text", "is", null)
@@ -136,6 +136,7 @@ export async function GET(req: NextRequest) {
         createdAt: sub.created_at,
         landingUrl: sub.landing_url,
         landingScreenshotUrl: await convertToSignedUrl(supabase, sub.landing_screenshot_url),
+        emailBody: sub.email_body || null,
         aiViolations: violationsBySubmission[sub.id] || [],
       }))
     );

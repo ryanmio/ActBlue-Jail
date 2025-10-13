@@ -23,6 +23,7 @@ type Sample = {
   createdAt: string;
   landingUrl: string | null;
   landingScreenshotUrl: string | null;
+  emailBody: string | null;
   aiViolations: Array<{ code: string; title: string; description: string; confidence: number }>;
 };
 
@@ -38,7 +39,7 @@ export default function EvaluationPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"image" | "text" | "landing">("image");
+  const [activeTab, setActiveTab] = useState<"image" | "html" | "text" | "landing">("image");
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   // Initialize device ID and load progress from localStorage
@@ -100,10 +101,13 @@ export default function EvaluationPage() {
   useEffect(() => {
     if (currentSample) {
       const hasImage = currentSample.imageUrl !== null && currentSample.imageUrl !== undefined;
+      const hasHtml = currentSample.emailBody !== null && currentSample.emailBody !== undefined && currentSample.emailBody.trim().length > 0;
       const hasLanding = currentSample.landingScreenshotUrl !== null && currentSample.landingScreenshotUrl !== undefined;
       
-      // Default to text tab, switch to image if available
-      if (hasImage) {
+      // Priority: HTML (for emails) > Image > Text > Landing
+      if (hasHtml) {
+        setActiveTab("html");
+      } else if (hasImage) {
         setActiveTab("image");
       } else if (currentSample.rawText) {
         setActiveTab("text");
@@ -288,6 +292,7 @@ export default function EvaluationPage() {
   }
 
   const hasImage = currentSample?.imageUrl !== null && currentSample?.imageUrl !== undefined;
+  const hasHtml = currentSample?.emailBody !== null && currentSample?.emailBody !== undefined && currentSample.emailBody.trim().length > 0;
   const hasLanding = currentSample?.landingScreenshotUrl !== null && currentSample?.landingScreenshotUrl !== undefined;
 
   return (
@@ -501,24 +506,41 @@ export default function EvaluationPage() {
 
               {/* Tab Bar */}
               <div className="flex border-b bg-gray-50">
-                <button
-                  onClick={() => hasImage && setActiveTab("image")}
-                  disabled={!hasImage}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
-                    activeTab === "image"
-                      ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                      : hasImage
-                      ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                      : "text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  📸 Image
-                  {hasImage && (
+                {/* Show HTML tab for emails, Image tab for others */}
+                {hasHtml ? (
+                  <button
+                    onClick={() => setActiveTab("html")}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
+                      activeTab === "html"
+                        ? "bg-white border-b-2 border-blue-600 text-blue-600"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    📧 HTML
                     <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
                       currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
                     }`}></span>
-                  )}
-                </button>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => hasImage && setActiveTab("image")}
+                    disabled={!hasImage}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
+                      activeTab === "image"
+                        ? "bg-white border-b-2 border-blue-600 text-blue-600"
+                        : hasImage
+                        ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                        : "text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    📸 Image
+                    {hasImage && (
+                      <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                        currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
+                      }`}></span>
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveTab("text")}
                   className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
@@ -554,6 +576,42 @@ export default function EvaluationPage() {
 
               {/* Tab Content */}
               <div className="p-4 max-h-[600px] overflow-y-auto">
+                {activeTab === "html" && (
+                  <div>
+                    {hasHtml && currentSample.emailBody ? (
+                      <div className="w-full bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <div className="max-h-128 overflow-auto flex justify-center">
+                          <div className="scale-[0.6] origin-top" style={{ width: "calc(100% / 0.6)" }}>
+                            <div 
+                              className="prose prose-sm max-w-none text-gray-900 text-xs prose-headings:text-sm"
+                              dangerouslySetInnerHTML={{ __html: currentSample.emailBody }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center bg-gray-100 rounded-lg p-12">
+                        <div className="text-center text-gray-400">
+                          <svg
+                            className="w-16 h-16 mx-auto mb-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <p className="font-medium">No HTML available</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {activeTab === "image" && (
                   <div>
                     {hasImage ? (
