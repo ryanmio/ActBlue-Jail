@@ -1406,8 +1406,8 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
           ) : (
             <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
               {emailBody ? (
-                <div className="max-h-96 overflow-auto">
-                  <div className="origin-top-left scale-[0.5]" style={{ width: "200%" }}>
+                <div className="max-h-96 overflow-auto flex justify-center">
+                  <div className="scale-[0.5] origin-top" style={{ width: "calc(100% / 0.5)" }}>
                     <div 
                       className="prose prose-sm max-w-none text-slate-900 text-xs prose-headings:text-sm"
                       dangerouslySetInnerHTML={{ __html: redactEmailsInHtml(emailBody) }}
