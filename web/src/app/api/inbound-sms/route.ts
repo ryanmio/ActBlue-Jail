@@ -106,26 +106,50 @@ export async function POST(req: NextRequest) {
     }
 
     // For fundraising, trigger async pipelines (classify + sender extraction)
-    // IMPORTANT: Don't await pipelines - Twilio has 15s timeout, pipelines can take 20s+
-    // Return 200 immediately to Twilio, let pipelines run in background
+    // IMPORTANT: In serverless, we must initiate fetches BEFORE returning response
+    // Otherwise the function terminates and kills pending operations
     if (result.isFundraising && result.id) {
+      // Initiate pipeline fetch requests synchronously (don't use async wrapper)
+      // This ensures requests start before function exits
+      const base = process.env.NEXT_PUBLIC_SITE_URL 
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+        || "http://localhost:3000";
+      
       console.log("/api/inbound-sms:triggering_pipelines", { 
         submissionId: result.id,
-        hasLandingUrl: !!result.landingUrl
+        hasLandingUrl: !!result.landingUrl,
+        baseUrl: base,
+        envSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
+        envVercelUrl: !!process.env.VERCEL_URL
       });
       
-      // Fire and forget - don't await
-      void triggerPipelines(result.id).catch((e) => {
-        console.error("/api/inbound-sms:pipelines_error", { 
-          submissionId: result.id, 
-          error: String(e) 
-        });
+      // Start classify request
+      fetch(`${base}/api/classify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId: result.id }),
+      }).then(async (r) => {
+        const text = await r.text().catch(() => "");
+        console.log("/api/inbound-sms:classify_triggered", { status: r.status, submissionId: result.id });
+      }).catch((e) => {
+        console.error("/api/inbound-sms:classify_error", { submissionId: result.id, error: String(e) });
+      });
+      
+      // Start sender extraction request
+      fetch(`${base}/api/sender`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId: result.id }),
+      }).then(async (r) => {
+        const text = await r.text().catch(() => "");
+        console.log("/api/inbound-sms:sender_triggered", { status: r.status, submissionId: result.id });
+      }).catch((e) => {
+        console.error("/api/inbound-sms:sender_error", { submissionId: result.id, error: String(e) });
       });
       
       // If ActBlue landing URL detected, trigger screenshot (which will re-classify with landing context)
       if (result.landingUrl) {
-        const base = process.env.NEXT_PUBLIC_SITE_URL || "";
-        void fetch(`${base}/api/screenshot-actblue`, {
+        fetch(`${base}/api/screenshot-actblue`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ caseId: result.id, url: result.landingUrl }),
@@ -134,8 +158,7 @@ export async function POST(req: NextRequest) {
           console.log("/api/inbound-sms:screenshot_triggered", { 
             status: r.status, 
             caseId: result.id,
-            url: result.landingUrl,
-            response: text?.slice(0, 200) 
+            url: result.landingUrl
           });
         }).catch((e) => {
           console.error("/api/inbound-sms:screenshot_error", { 
