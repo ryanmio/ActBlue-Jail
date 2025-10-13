@@ -22,6 +22,7 @@ type CaseItem = {
   ai_confidence?: number | string | null;
   message_type?: string | null;
   media_urls?: Array<{ url: string; contentType?: string }>;
+  forwarder_email?: string | null;
 };
 
 
@@ -203,15 +204,24 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
                 <LiveSender id={id} initialSenderName={item.sender_name} initialSenderId={item.sender_id} />
               </h1>
-              <p className="text-slate-600">
-                {createdAtIso ? (
-                  <>
-                    Submitted <LocalTime iso={createdAtIso} />
-                  </>
-                ) : (
-                  ""
+              <div className="flex items-center gap-2 flex-wrap text-xs text-slate-700">
+                {createdAtIso && (
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                    <span className="mr-1">Submitted</span>
+                    <LocalTime iso={createdAtIso} />
+                  </span>
                 )}
-              </p>
+                {item?.message_type && item.message_type !== 'unknown' && (
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                    {item.message_type?.toLowerCase() === 'email' && 'Email'}
+                    {item.message_type?.toLowerCase() === 'sms' && 'SMS'}
+                    {item.message_type?.toLowerCase() === 'mms' && 'MMS'}
+                  </span>
+                )}
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                  {item?.forwarder_email ? 'Bot Submitted' : 'User Submitted'}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <RequestDeletionButton id={id} disabled={!isPublic} />
