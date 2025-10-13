@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
+import { env } from "@/lib/env";
 import { cleanTextForAI } from "@/server/ingest/text-cleaner";
 import { sanitizeEmailHtml } from "@/server/ingest/html-sanitizer";
 
@@ -178,7 +179,13 @@ export async function POST(req: NextRequest) {
       
       // If ActBlue landing URL detected, trigger screenshot (which will re-classify with landing context)
       if (result.landingUrl) {
-        const base = process.env.NEXT_PUBLIC_SITE_URL || "";
+        // Build absolute base URL robustly (avoid relative fetch which fails in Node)
+        const isLocal = process.env.NODE_ENV === "development" || !env.NEXT_PUBLIC_SITE_URL || env.NEXT_PUBLIC_SITE_URL.includes("localhost");
+        let base = isLocal ? "http://localhost:3000" : env.NEXT_PUBLIC_SITE_URL;
+        // Fallback to request origin if available
+        try {
+          if (!base) base = new URL(req.url).origin;
+        } catch {}
         console.log("/api/inbound-email:triggering_screenshot", {
           submissionId: result.id,
           url: result.landingUrl
