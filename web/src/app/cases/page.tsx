@@ -37,9 +37,10 @@ const VIOLATION_OPTIONS = VIOLATION_POLICIES.filter((v: { code: string; title: s
 function derivePreview(text?: string | null): string {
   if (!text) return "";
   const lines = text.split(/\r?\n/);
-  const headerRegex = /^(From:|Date:|Subject:|To:)\b/i;
+  const headerRegex = /^(From|Date|Subject|To|Cc|Bcc|Reply-To):/i;
   for (const raw of lines) {
-    const line = raw.trim();
+    // normalize: drop quote markers and leading whitespace
+    const line = raw.replace(/^[>\s]+/, "").trim();
     if (!line) continue;
     if (headerRegex.test(line)) continue;
     // Skip the common Gmail divider too
