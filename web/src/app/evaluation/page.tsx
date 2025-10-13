@@ -24,6 +24,8 @@ type Sample = {
   landingUrl: string | null;
   landingScreenshotUrl: string | null;
   emailBody: string | null;
+  emailSubject?: string | null;
+  emailFrom?: string | null;
   aiViolations: Array<{ code: string; title: string; description: string; confidence: number }>;
 };
 
@@ -579,7 +581,24 @@ export default function EvaluationPage() {
                 {activeTab === "html" && (
                   <div>
                     {hasHtml && currentSample.emailBody ? (
-                      <div className="w-full bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <div>
+                        {(currentSample.emailFrom || currentSample.emailSubject) && (
+                          <div className="mb-3">
+                            {currentSample.emailFrom && (
+                              <div className="text-sm text-gray-900">
+                                <span className="font-semibold">From:</span>{" "}
+                                <span className="break-all">{currentSample.emailFrom}</span>
+                              </div>
+                            )}
+                            {currentSample.emailSubject && (
+                              <div className="text-sm text-gray-900 mt-1">
+                                <span className="font-semibold">Subject:</span>{" "}
+                                <span className="break-words">{currentSample.emailSubject}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className="w-full bg-white rounded-lg border border-gray-200 overflow-hidden">
                         <div className="max-h-128 overflow-auto flex justify-center">
                           <div className="scale-[0.6] origin-top" style={{ width: "calc(100% / 0.6)" }}>
                             <div 
@@ -587,6 +606,7 @@ export default function EvaluationPage() {
                               dangerouslySetInnerHTML={{ __html: currentSample.emailBody }}
                             />
                           </div>
+                        </div>
                         </div>
                       </div>
                     ) : (
