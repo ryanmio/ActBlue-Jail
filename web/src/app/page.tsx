@@ -683,8 +683,10 @@ function RecentCases() {
           </div>
         )}
         {!loading && cases.map((r) => {
-          const isBot = !!r.forwarder_email;
+          // Bot submitted: SMS or email without forwarder (automated ingestion)
+          // User submitted: unknown (manual upload) or email with forwarder (user forwarded)
           const messageType = r.message_type?.toLowerCase();
+          const isBotSubmitted = messageType === 'sms' || (messageType === 'email' && !r.forwarder_email);
           const showTypeBadge = messageType && messageType !== 'unknown';
           
           return (
@@ -716,7 +718,7 @@ function RecentCases() {
                   )}
                   {/* Source badge - desktop only, neutral styling, without parentheses */}
                   <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300">
-                    {isBot ? 'Bot Submitted' : 'User Submitted'}
+                    {isBotSubmitted ? 'Bot Submitted' : 'User Submitted'}
                   </span>
                 </div>
               </div>

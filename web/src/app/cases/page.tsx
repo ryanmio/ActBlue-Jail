@@ -235,7 +235,9 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                             {(() => {
                               const type = (it.messageType || '').toLowerCase();
                               const showType = type && type !== 'unknown';
-                              const isBot = Boolean(it.forwarderEmail);
+                              // Bot submitted: SMS or email without forwarder (automated ingestion)
+                              // User submitted: unknown (manual upload) or email with forwarder (user forwarded)
+                              const isBotSubmitted = type === 'sms' || (type === 'email' && !it.forwarderEmail);
                               return (
                                 <>
                                   {showType && (
@@ -246,7 +248,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                     </span>
                                   )}
                                   <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                                    {isBot ? 'Bot Submitted' : 'User Submitted'}
+                                    {isBotSubmitted ? 'Bot Submitted' : 'User Submitted'}
                                   </span>
                                 </>
                               );

@@ -219,7 +219,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                   </span>
                 )}
                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                  {item?.forwarder_email ? 'Bot Submitted' : 'User Submitted'}
+                  {/* Bot submitted: SMS or email without forwarder (automated ingestion) */}
+                  {/* User submitted: unknown (manual upload) or email with forwarder (user forwarded) */}
+                  {(item?.message_type?.toLowerCase() === 'sms' || (item?.message_type?.toLowerCase() === 'email' && !item?.forwarder_email)) ? 'Bot Submitted' : 'User Submitted'}
                 </span>
               </div>
             </div>
