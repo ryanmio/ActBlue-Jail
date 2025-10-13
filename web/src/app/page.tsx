@@ -35,6 +35,8 @@ export default function Home() {
   const [textError, setTextError] = useState<string>("");
   const [forwardedCases, setForwardedCases] = useState<Array<{ id: string; status: 'processing' | 'complete'; senderName?: string | null }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+  const copiedTimeoutRef = useRef<number | null>(null);
 
   const onBrowseClick = useCallback(() => inputRef.current?.click(), []);
 
@@ -219,6 +221,15 @@ export default function Home() {
       clearInterval(pollInterval);
     };
   }, [mode]);
+
+  // Cleanup copy tooltip timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <main
@@ -436,23 +447,33 @@ export default function Home() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                         <code className="text-base font-mono text-slate-900">submit@abjail.org</code>
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              await navigator.clipboard.writeText('submit@abjail.org');
-                            } catch {
-                              // ignore
-                            }
-                          }}
-                          className="text-slate-600 hover:text-slate-900"
-                          title="Copy to clipboard"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await navigator.clipboard.writeText('submit@abjail.org');
+                                setCopied(true);
+                                if (copiedTimeoutRef.current) window.clearTimeout(copiedTimeoutRef.current);
+                                copiedTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500);
+                              } catch {
+                                // ignore
+                              }
+                            }}
+                            className="text-slate-600 hover:text-slate-900"
+                            title="Copy to clipboard"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          {copied && (
+                            <div role="status" aria-live="polite" className="absolute -top-8 right-0 bg-slate-900 text-white text-xs rounded px-2 py-1 shadow">
+                              Copied
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
