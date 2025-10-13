@@ -33,7 +33,7 @@ export default function Home() {
   const [mode, setMode] = useState<"image" | "text" | "forward">("image");
   const [textValue, setTextValue] = useState<string>("");
   const [textError, setTextError] = useState<string>("");
-  const [forwardedCases, setForwardedCases] = useState<Array<{ id: string; status: 'processing' | 'complete' }>>([]);
+  const [forwardedCases, setForwardedCases] = useState<Array<{ id: string; status: 'processing' | 'complete'; senderName?: string | null }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onBrowseClick = useCallback(() => inputRef.current?.click(), []);
@@ -200,9 +200,10 @@ export default function Home() {
 
         if (error || cancelled) return;
 
-        const cases = (data || []).map((c: { id: string; ai_version?: string | null }) => ({
+        const cases = (data || []).map((c: { id: string; ai_version?: string | null; sender_name?: string | null }) => ({
           id: c.id,
-          status: (c.ai_version ? 'complete' : 'processing') as 'processing' | 'complete'
+          status: (c.ai_version ? 'complete' : 'processing') as 'processing' | 'complete',
+          senderName: c.sender_name ?? null,
         }));
 
         if (!cancelled) {
@@ -463,30 +464,37 @@ export default function Home() {
                       <div className="mt-6 space-y-2">
                         {forwardedCases.map((case_) => (
                           <div key={case_.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="flex items-center gap-3">
-                              {case_.status === 'processing' ? (
-                                <>
-                                  <span className="inline-block h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
-                                  <span className="text-sm text-slate-700">Processing case...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  <span className="text-sm text-slate-700">Case complete</span>
-                                </>
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-slate-900 truncate max-w-[55vw]">
+                                {case_.senderName || "Unknown sender"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <div className="flex items-center gap-2 text-sm text-slate-700">
+                                {case_.status === 'processing' ? (
+                                  <>
+                                    <span className="inline-block h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
+                                    <span>Processing</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>Complete</span>
+                                  </>
+                                )}
+                              </div>
+                              {case_.status === 'complete' && (
+                                <Link
+                                  href={`/cases/${case_.id}`}
+                                  className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  Open case
+                                </Link>
                               )}
                             </div>
-                            {case_.status === 'complete' && (
-                              <Link
-                                href={`/cases/${case_.id}`}
-                                className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Open case
-                              </Link>
-                            )}
                           </div>
                         ))}
                       </div>
@@ -494,7 +502,7 @@ export default function Home() {
 
                     {forwardedCases.length === 0 && (
                       <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
-                        Forwarded emails will appear here for processing
+                        Recently forwarded emails will appear here
                       </div>
                     )}
                   </div>
