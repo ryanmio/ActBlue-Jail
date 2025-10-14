@@ -77,9 +77,11 @@ export async function POST(req: NextRequest) {
         console.warn("/api/ocr:ocrspace_response_err", { status: resp.status, ms: Date.now() - attemptStart, detail: json });
         return { ok: false as const, json };
       }
-      const parsedText: string = json?.ParsedResults?.[0]?.ParsedText ?? "";
+      // Extract text from up to 3 pages and concatenate
+      const pages = json?.ParsedResults?.slice(0, 3) ?? [];
+      const parsedText = pages.map((p: any) => p?.ParsedText ?? "").join("\n\n");
       const confidence = Number(json?.OCRExitCode === 1 ? 0.8 : 0.5);
-      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, ms: Date.now() - attemptStart });
+      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, ms: Date.now() - attemptStart });
       return { ok: true as const, text: parsedText, confidence };
     } catch (err) {
       console.warn("/api/ocr:ocrspace_fetch_err", String(err));
@@ -113,9 +115,11 @@ export async function POST(req: NextRequest) {
         console.warn("/api/ocr:ocrspace_response_err", { status: resp.status, ms: Date.now() - attemptStart, detail: json });
         return { ok: false as const, json };
       }
-      const parsedText: string = json?.ParsedResults?.[0]?.ParsedText ?? "";
+      // Extract text from up to 3 pages and concatenate
+      const pages = json?.ParsedResults?.slice(0, 3) ?? [];
+      const parsedText = pages.map((p: any) => p?.ParsedText ?? "").join("\n\n");
       const confidence = Number(json?.OCRExitCode === 1 ? 0.8 : 0.5);
-      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, ms: Date.now() - attemptStart });
+      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, ms: Date.now() - attemptStart });
       return { ok: true as const, text: parsedText, confidence };
     } catch (err) {
       console.warn("/api/ocr:ocrspace_fetch_err", String(err));
