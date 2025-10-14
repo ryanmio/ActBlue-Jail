@@ -1,14 +1,6 @@
 # AB Jail
 
-AB Jail is an open-source project that brings transparency to political fundraising. The tool allows dragging and dropping screenshots of deceptive texts or emails, where AI extracts the sender, checks against ActBlue's rules, drafts a report, and logs it publicly. Messages from seeded phone numbers are automatically collected to build a real-time feed of these solicitations.
-
-## Structure
-
-- **Frontend**: Pages for viewing cases, uploading screenshots, and an evaluation system to rate AI accuracy.
-- **API Routes**: Handle uploads, OCR for text extraction, AI classification of violations, report generation, and more—like screenshotting landing pages or processing inbound SMS.
-- **Database**: Schemas for reports, comments, and evaluations, with SQL migrations.
-- **AI Integration**: Server-side logic for classifying messages and identifying senders.
-- **Components**: UI elements for breadcrumbs, headers, animations, and a landing page scanner.
+AB Jail is an open-source project that brings transparency to political fundraising. The tool allows forwarding or dragging and dropping screenshots of deceptive texts or emails, where AI extracts the sender, checks against ActBlue's rules, drafts a report, and logs it publicly. Messages from seeded phone numbers are automatically collected to build a real-time feed of these solicitations.
 
 ## Contributing
 
