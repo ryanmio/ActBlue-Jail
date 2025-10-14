@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
       }
       // Extract text from up to 3 pages and concatenate
       const pages = json?.ParsedResults?.slice(0, 3) ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedText = pages.map((p: any) => p?.ParsedText ?? "").join("\n\n");
       const confidence = Number(json?.OCRExitCode === 1 ? 0.8 : 0.5);
       console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, ms: Date.now() - attemptStart });
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
       }
       // Extract text from up to 3 pages and concatenate
       const pages = json?.ParsedResults?.slice(0, 3) ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedText = pages.map((p: any) => p?.ParsedText ?? "").join("\n\n");
       const confidence = Number(json?.OCRExitCode === 1 ? 0.8 : 0.5);
       console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, ms: Date.now() - attemptStart });
