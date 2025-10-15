@@ -105,35 +105,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // For fundraising, trigger async pipelines (classify + sender extraction)
-    // Fire-and-forget: initiate request but don't await response
+    // For fundraising, trigger pipelines (classify + sender extraction)
+    // Use same pattern as email: await triggerPipelines directly
     if (result.isFundraising && result.id) {
-      const base = process.env.NEXT_PUBLIC_SITE_URL 
-        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-        || "http://localhost:3000";
-      
       console.log("/api/inbound-sms:triggering_pipelines", { 
         submissionId: result.id,
-        hasLandingUrl: !!result.landingUrl,
-        baseUrl: base,
-        envSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
-        envVercelUrl: !!process.env.VERCEL_URL
+        hasLandingUrl: !!result.landingUrl
       });
       
-      // Fire-and-forget: trigger process-job asynchronously
-      // This spawns a separate serverless function that won't be killed
-      fetch(`${base}/api/process-job`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          submissionId: result.id,
-          landingUrl: result.landingUrl || null
-        }),
-      }).then((r) => {
-        console.log("/api/inbound-sms:job_triggered", { status: r.status, submissionId: result.id });
-      }).catch((e) => {
-        console.error("/api/inbound-sms:job_error", { submissionId: result.id, error: String(e) });
+      // Run pipelines synchronously like email does
+      const pipelinesStart = Date.now();
+      await triggerPipelines(result.id);
+      const pipelinesElapsed = Date.now() - pipelinesStart;
+      
+      console.log("/api/inbound-sms:pipelines_completed", { 
+        submissionId: result.id,
+        elapsedMs: pipelinesElapsed
       });
+      
+      // If landing URL detected, trigger screenshot
+      if (result.landingUrl) {
+        const base = process.env.NEXT_PUBLIC_SITE_URL 
+          || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+          || "http://localhost:3000";
+        
+        // Fire-and-forget for screenshot (can take 15+ seconds)
+        fetch(`${base}/api/screenshot-actblue`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId: result.id, url: result.landingUrl }),
+        }).catch((e) => {
+          console.error("/api/inbound-sms:screenshot_error", { submissionId: result.id, error: String(e) });
+        });
+      }
     } else {
       console.log("/api/inbound-sms:skipped_triggers_non_fundraising", { submissionId: result.id });
     }
