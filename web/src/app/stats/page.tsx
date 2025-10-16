@@ -19,6 +19,15 @@ import {
 } from "@/components/ui/chart";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Check } from "lucide-react";
 
 type StatsData = {
@@ -39,6 +48,10 @@ type StatsData = {
     count: number;
   }> | null;
   violations_by_bucket: Array<{
+    bucket: string;
+    count: number;
+  }> | null;
+  reports_by_bucket: Array<{
     bucket: string;
     count: number;
   }> | null;
@@ -66,6 +79,7 @@ const CHART_COLORS = {
   // Unified shades of blue for the entire dashboard
   captures: "hsl(217, 91%, 60%)", // blue-500
   violations: "hsl(224, 76%, 48%)", // blue-600
+  reports: "hsl(213, 94%, 68%)", // blue-400
   userUpload: "hsl(213, 94%, 68%)", // blue-400
   honeytrap: "hsl(226, 71%, 40%)", // blue-700
 };
@@ -88,7 +102,7 @@ export default function StatsPage() {
   const [allSenders, setAllSenders] = useState<string[]>([]); // options list (unfiltered)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAllSenders, setShowAllSenders] = useState(false);
+  const [sendersPage, setSendersPage] = useState(1);
   const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -344,19 +358,19 @@ export default function StatsPage() {
               {/* KPI Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard
-                  label="Captures"
-                  value={data.kpis.total_captures}
-                  description="Total messages analyzed"
-                />
-                <KpiCard
-                  label="With Violations"
+                  label="Violations Detected"
                   value={data.kpis.captures_with_violations}
-                  description="Flagged potential issues"
+                  description="Cases flagged with violations"
                 />
                 <KpiCard
-                  label="Reports Generated"
+                  label="Reports Sent"
                   value={data.kpis.total_reports}
-                  description="Outbound reports sent"
+                  description="Reports submitted to ActBlue"
+                />
+                <KpiCard
+                  label="Unique Senders"
+                  value={data.top_senders?.length || 0}
+                  description="Distinct sender accounts"
                 />
                 <KpiCard
                   label="Source Split"
@@ -367,8 +381,8 @@ export default function StatsPage() {
 
               {/* Combined Line Chart */}
               <CombinedTimelineChart
-                capturesBuckets={data.captures_by_bucket || []}
                 violationsBuckets={data.violations_by_bucket || []}
+                reportsBuckets={data.reports_by_bucket || []}
                 days={data.period.days}
                 periodStart={data.period.start}
                 periodEnd={data.period.end}
@@ -383,8 +397,8 @@ export default function StatsPage() {
               {/* Top Senders Table */}
               <TopSendersTable
                 senders={data.top_senders || []}
-                showAll={showAllSenders}
-                onToggleShowAll={() => setShowAllSenders(!showAllSenders)}
+                currentPage={sendersPage}
+                onPageChange={setSendersPage}
               />
             </>
           )}
@@ -415,14 +429,14 @@ function KpiCard({
 }
 
 function CombinedTimelineChart({
-  capturesBuckets,
   violationsBuckets,
+  reportsBuckets,
   days,
   periodStart,
   periodEnd,
 }: {
-  capturesBuckets: Array<{ bucket: string; count: number }>;
   violationsBuckets: Array<{ bucket: string; count: number }>;
+  reportsBuckets: Array<{ bucket: string; count: number }>;
   days: number;
   periodStart?: string;
   periodEnd?: string;
@@ -459,7 +473,7 @@ function CombinedTimelineChart({
   // Build a complete sequence of keys to ensure chart reaches end of period
   function buildKeys(): string[] {
     try {
-      if (!periodStart || !periodEnd) return capturesBuckets.map((b) => nyDateKey(new Date(b.bucket)));
+      if (!periodStart || !periodEnd) return violationsBuckets.map((b) => nyDateKey(new Date(b.bucket)));
       const keys: string[] = [];
       const start = new Date(periodStart);
       const end = new Date(periodEnd);
@@ -474,7 +488,7 @@ function CombinedTimelineChart({
       }
       return keys;
     } catch {
-      return capturesBuckets.map((b) => nyDateKey(new Date(b.bucket)));
+      return violationsBuckets.map((b) => nyDateKey(new Date(b.bucket)));
     }
   }
   // Server now returns buckets as 'YYYY-MM-DD' strings; fall back to converting if needed
@@ -483,19 +497,19 @@ function CombinedTimelineChart({
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
     return nyDateKey(new Date(v));
   }
-  const cap = new Map(capturesBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
   const vio = new Map(violationsBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
+  const rep = new Map(reportsBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
   const mergedData = buildKeys().map((k) => ({
     date: k.replace(/^\d{4}-/, () => ""), // short display (MM-DD)
-    captures: cap.get(k) || 0,
     violations: vio.get(k) || 0,
+    reports: rep.get(k) || 0,
   }));
 
   if (mergedData.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">
-          Captures & Violations Over Time
+          Violations & Reports Over Time
         </h3>
         <div className="py-12 text-center text-sm text-slate-500">
           No data available
@@ -505,20 +519,20 @@ function CombinedTimelineChart({
   }
 
   const chartConfig = {
-    captures: {
-      label: "Captures",
-      color: CHART_COLORS.captures,
-    },
     violations: {
       label: "Violations",
       color: CHART_COLORS.violations,
+    },
+    reports: {
+      label: "Reports",
+      color: CHART_COLORS.reports,
     },
   };
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6">
       <h3 className="text-lg font-semibold text-slate-900 mb-4">
-        Captures & Violations Over Time
+        Violations & Reports Over Time
       </h3>
       <ChartContainer config={chartConfig} className="h-[300px] w-full aspect-auto">
         <LineChart data={mergedData}>
@@ -546,18 +560,18 @@ function CombinedTimelineChart({
           <Legend content={<ChartLegendContent payload={undefined} />} />
           <Line
             type="monotone"
-            dataKey="captures"
-            stroke="var(--color-captures)"
-            strokeWidth={2}
-            dot={{ fill: "var(--color-captures)", r: 4 }}
-            activeDot={{ r: 6 }}
-          />
-          <Line
-            type="monotone"
             dataKey="violations"
             stroke="var(--color-violations)"
             strokeWidth={2}
             dot={{ fill: "var(--color-violations)", r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="reports"
+            stroke="var(--color-reports)"
+            strokeWidth={2}
+            dot={{ fill: "var(--color-reports)", r: 4 }}
             activeDot={{ r: 6 }}
           />
         </LineChart>
@@ -768,8 +782,8 @@ function SourceSplitPieChart({
 
 function TopSendersTable({
   senders,
-  showAll,
-  onToggleShowAll,
+  currentPage,
+  onPageChange,
 }: {
   senders: Array<{
     sender: string;
@@ -777,12 +791,46 @@ function TopSendersTable({
     captures_with_violations: number;
     is_repeat_offender: boolean;
   }>;
-  showAll: boolean;
-  onToggleShowAll: () => void;
+  currentPage: number;
+  onPageChange: (page: number) => void;
 }) {
   const router = useRouter();
-  const displayedSenders = showAll ? senders : senders.slice(0, 10);
-  const hasMore = senders.length > 10;
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(senders.length / itemsPerPage);
+  
+  // Calculate displayed senders for current page
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const displayedSenders = senders.slice(startIndex, endIndex);
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    const showEllipsis = totalPages > 7;
+
+    if (!showEllipsis) {
+      // Show all pages if 7 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+
+      if (currentPage <= 3) {
+        // Near start
+        pages.push(2, 3, 4, 'ellipsis', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        // Near end
+        pages.push('ellipsis', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        // Middle
+        pages.push('ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages);
+      }
+    }
+
+    return pages;
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6">
@@ -811,16 +859,22 @@ function TopSendersTable({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {displayedSenders.map((s, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
+                  <tr
+                    key={idx}
+                    className="hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View cases for ${s.sender}`}
+                    onClick={() => router.push(`/cases?q=${encodeURIComponent(s.sender)}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/cases?q=${encodeURIComponent(s.sender)}`);
+                      }
+                    }}
+                  >
                     <td className="py-2 pr-4 text-slate-900 truncate max-w-[250px]">
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/cases?q=${encodeURIComponent(s.sender)}`)}
-                        className="text-slate-900 hover:bg-slate-50 rounded px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
-                        aria-label={`View cases for ${s.sender}`}
-                      >
-                        {s.sender}
-                      </button>
+                      <span className="text-slate-900">{s.sender}</span>
                     </td>
                     <td className="py-2 pr-4 text-slate-900 tabular-nums text-right">
                       {s.total_captures}
@@ -841,14 +895,60 @@ function TopSendersTable({
               </tbody>
             </table>
           </div>
-          {hasMore && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={onToggleShowAll}
-                className="text-sm px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
-              >
-                {showAll ? "Show less" : `Show all ${senders.length} senders`}
-              </button>
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between">
+              <p className="text-sm text-slate-700 whitespace-nowrap">
+                Showing {startIndex + 1}-{Math.min(endIndex, senders.length)} of {senders.length} senders
+              </p>
+              <Pagination>
+                <PaginationContent className="[&_a]:text-slate-800 [&_a]:hover:text-slate-900">
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      size="default"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) onPageChange(currentPage - 1);
+                      }}
+                      className={(currentPage === 1 ? "pointer-events-none opacity-50 " : "") + "cursor-pointer text-slate-800 hover:text-slate-900"}
+                    />
+                  </PaginationItem>
+                  
+                  {getPageNumbers().map((page, idx) => (
+                    <PaginationItem key={idx}>
+                      {page === 'ellipsis' ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          href="#"
+                          size="icon"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onPageChange(page);
+                          }}
+                          isActive={currentPage === page}
+                          className="cursor-pointer text-slate-800 hover:text-slate-900"
+                        >
+                          {page}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      size="default"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) onPageChange(currentPage + 1);
+                      }}
+                      className={(currentPage === totalPages ? "pointer-events-none opacity-50 " : "") + "cursor-pointer text-slate-800 hover:text-slate-900"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </>
