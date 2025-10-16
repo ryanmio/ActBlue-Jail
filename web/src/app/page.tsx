@@ -699,7 +699,7 @@ function RecentCases() {
                     r.violations.slice(0, 3).map((v, idx) => (
                       <span
                         key={`${v.code}-${idx}`}
-                        className="inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw]"
+                        className="inline-flex items-center rounded-full bg-orange-50 pl-3 pr-3.5 py-1 text-[11px] font-medium text-orange-800 border border-orange-200 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw]"
                         title={v.title}
                       >
                         {v.title}

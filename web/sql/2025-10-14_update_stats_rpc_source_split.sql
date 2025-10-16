@@ -99,6 +99,23 @@ begin
         order by bucket_key
       ) buckets
     ),
+    'reports_by_bucket', (
+      select json_agg(json_build_object('bucket', bucket_key, 'count', count) order by bucket_key)
+      from (
+        select to_char(
+                 case when day_count <= 45 then date_trunc('day', r.created_at at time zone 'America/New_York')
+                      else date_trunc('week', r.created_at at time zone 'America/New_York') end,
+                 'YYYY-MM-DD'
+               ) as bucket_key,
+               count(*) as count
+        from reports r
+        join submissions s on s.id = r.case_id
+        where r.created_at >= start_date and r.created_at <= end_date
+          and (not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names))
+        group by bucket_key
+        order by bucket_key
+      ) buckets
+    ),
     'top_senders', (
       select json_agg(json_build_object('sender', sender_name_val, 'total_captures', capture_count, 'captures_with_violations', violation_count, 'is_repeat_offender', violation_count >= 3) order by capture_count desc)
       from (
@@ -113,7 +130,6 @@ begin
         group by sender_name_val
         having count(*) >= 1
         order by capture_count desc
-        limit 20
       ) senders
     ),
     'violation_mix', (
