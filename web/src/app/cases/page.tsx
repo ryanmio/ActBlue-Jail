@@ -223,13 +223,13 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                               <span
                                 key={`${v.code}-${idx}`}
                                 title={v.code}
-                                className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300 max-w-[80%] md:max-w-none min-w-0`}
+                                className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 max-w-[80%] md:max-w-none min-w-0`}
                               >
                                 <span className="truncate">{v.title}</span>
                               </span>
                             ))}
                             {it.issues.length > 1 && (
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300 md:hidden">+{it.issues.length - 1} more</span>
+                              <span className="inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 md:hidden">+{it.issues.length - 1} more</span>
                             )}
                             {/* Desktop-only badges for type and submission source, matching pill style */}
                             {(() => {
