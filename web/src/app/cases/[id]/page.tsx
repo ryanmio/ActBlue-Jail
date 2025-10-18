@@ -10,6 +10,7 @@ import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 import Footer from "@/components/Footer";
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { isBotSubmitted } from "@/lib/badge-helpers";
 type CaseItem = {
   id: string;
   image_url: string;
@@ -219,9 +220,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                   </span>
                 )}
                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                  {/* Bot submitted: SMS or email without forwarder (automated ingestion) */}
-                  {/* User submitted: unknown (manual upload) or email with forwarder (user forwarded) */}
-                  {(item?.message_type?.toLowerCase() === 'sms' || (item?.message_type?.toLowerCase() === 'email' && !item?.forwarder_email)) ? 'Bot Submitted' : 'User Submitted'}
+                  {isBotSubmitted({
+                    messageType: item?.message_type,
+                    imageUrl: item?.image_url,
+                    senderId: item?.sender_id,
+                    forwarderEmail: item?.forwarder_email,
+                  }) ? 'Bot Submitted' : 'User Submitted'}
                 </span>
               </div>
             </div>
@@ -238,12 +242,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
               <h2 className="text-xl font-semibold text-slate-900 mb-2">Evidence</h2>
               
-              {/* SMS metadata banner */}
-              {item.message_type === "sms" && (
+              {/* SMS metadata banner - only for bot-ingested SMS (has sender_id) */}
+              {item.message_type === "sms" && item.sender_id && (
                 <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="text-sm font-medium text-slate-900">AB Jail Bot</div>
                   <div className="text-xs text-slate-600 mt-0.5">
-                    From: {item.sender_id || "(unknown)"}
+                    From: {item.sender_id}
                     {createdAtIso && (
                       <> · Received <LocalTime iso={createdAtIso} /></>
                     )}
