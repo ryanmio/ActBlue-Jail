@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
   <div style="max-width:600px;margin:0 auto;padding:20px">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#3b82f6,#1e40af);color:white;padding:24px;border-radius:12px 12px 0 0;text-align:center">
-      <h1 style="margin:0;font-size:24px;font-weight:700">ActBlue Violation Report</h1>
+      <h1 style="margin:0;font-size:24px;font-weight:700">Potential AUP Violation</h1>
       <p style="margin:8px 0 0 0;opacity:0.9;font-size:14px">Case #${esc(shortId)}</p>
     </div>
     

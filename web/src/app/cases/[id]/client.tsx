@@ -1016,8 +1016,8 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
     <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 mb-1">Report to ActBlue</h2>
-          <p className="text-sm text-slate-600">Submit a violation report for this case.</p>
+          <h2 className="text-xl font-semibold text-slate-900 mb-1">Submit report</h2>
+          <p className="text-sm text-slate-600">Destination: ActBlue</p>
         </div>
         <a
           href={policyHref}
