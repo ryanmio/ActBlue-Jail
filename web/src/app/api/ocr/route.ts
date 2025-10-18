@@ -4,6 +4,7 @@ import { getSupabaseServer } from "@/lib/supabase-server";
 import { env } from "@/lib/env";
 import { buildDedupeFields, findDuplicateCase } from "@/server/ingest/dedupe";
 import sharp from "sharp";
+import { detectScreenshotType } from "@/server/ai/detect-type";
 
 export async function POST(req: NextRequest) {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -200,6 +201,67 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "db_update_failed", detail: updateError.message }, { status: 500 });
   }
   console.log("/api/ocr:db_update_ok", { submissionId, ocrMs });
+
+  // Screenshot type detection (only for manual uploads with message_type = "unknown")
+  try {
+    const { data: currentSubmission } = await supabase
+      .from("submissions")
+      .select("message_type")
+      .eq("id", submissionId)
+      .single();
+    
+    const currentMessageType = currentSubmission?.message_type;
+    
+    // Only run detection if message_type is "unknown" (i.e., manual upload)
+    if (currentMessageType === "unknown" && !isPdf) {
+      const detectionStart = Date.now();
+      
+      // Prepare a downscaled image data URL for the AI vision model
+      let imageDataUrl: string | null = null;
+      try {
+        // Create a small thumbnail for vision model (to reduce tokens)
+        const thumbnail = await sharp(processed)
+          .resize({ width: 800, withoutEnlargement: true })
+          .toFormat("jpeg", { quality: 70 })
+          .toBuffer();
+        const thumbBase64 = thumbnail.toString("base64");
+        imageDataUrl = `data:image/jpeg;base64,${thumbBase64}`;
+      } catch (thumbError) {
+        console.warn("/api/ocr:type_detection:thumbnail_failed", String(thumbError));
+        // Skip type detection if we can't create thumbnail
+      }
+      
+      if (imageDataUrl) {
+        const result = await detectScreenshotType(imageDataUrl); // No timeout - GPT-5 can be slow
+        const detectionMs = Date.now() - detectionStart;
+        
+        console.log("/api/ocr:type_detected", {
+          submissionId,
+          type: result.type,
+          confidence: result.confidence,
+          usedModel: result.usedModel,
+          ms: detectionMs,
+        });
+        
+        // Update message_type if confident and type is SMS or Email
+        if (result.confidence >= 0.7 && (result.type === "sms" || result.type === "email")) {
+          const { error: typeUpdateError } = await supabase
+            .from("submissions")
+            .update({ message_type: result.type })
+            .eq("id", submissionId);
+          
+          if (typeUpdateError) {
+            console.warn("/api/ocr:type_update_failed", { submissionId, error: typeUpdateError });
+          } else {
+            console.log("/api/ocr:type_updated", { submissionId, newType: result.type });
+          }
+        }
+      }
+    }
+  } catch (typeDetectionError) {
+    // Log but don't fail the OCR pipeline
+    console.warn("/api/ocr:type_detection_error", { submissionId, error: String(typeDetectionError) });
+  }
 
   // Fire-and-forget classify (absolute URL). Log failures.
   try {

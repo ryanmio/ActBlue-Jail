@@ -21,6 +21,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
+import { isBotSubmitted } from "@/lib/badge-helpers";
 
 type SubmissionRow = {
   id: string;
@@ -621,6 +622,7 @@ type RecentCase = {
   raw_text: string | null;
   message_type: string | null;
   forwarder_email: string | null;
+  image_url: string | null;
   violations: Array<{ code: string; title: string }>;
 };
 
@@ -689,10 +691,13 @@ function RecentCases() {
           </div>
         )}
         {!loading && cases.map((r) => {
-          // Bot submitted: SMS or email without forwarder (automated ingestion)
-          // User submitted: unknown (manual upload) or email with forwarder (user forwarded)
           const messageType = r.message_type?.toLowerCase();
-          const isBotSubmitted = messageType === 'sms' || (messageType === 'email' && !r.forwarder_email);
+          const isBot = isBotSubmitted({
+            messageType: r.message_type,
+            imageUrl: r.image_url,
+            senderId: r.sender_id,
+            forwarderEmail: r.forwarder_email,
+          });
           const showTypeBadge = messageType && messageType !== 'unknown';
           
           return (
@@ -754,7 +759,7 @@ function RecentCases() {
                   )}
                   {/* Source badge - desktop only, neutral styling, without parentheses */}
                   <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300">
-                    {isBotSubmitted ? 'Bot Submitted' : 'User Submitted'}
+                    {isBot ? 'Bot Submitted' : 'User Submitted'}
                   </span>
                 </div>
               </div>

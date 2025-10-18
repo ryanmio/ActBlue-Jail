@@ -25,11 +25,12 @@ export async function GET(req: NextRequest) {
       raw_text: string | null;
       message_type: string | null;
       forwarder_email: string | null;
+      image_url: string | null;
     };
 
     let builder = supabase
       .from("submissions")
-      .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email", { count: "exact" })
+      .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email, image_url", { count: "exact" })
       .order("created_at", { ascending: false });
 
     // Only show public cases
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest) {
       rawText: r.raw_text,
       messageType: r.message_type,
       forwarderEmail: r.forwarder_email,
+      imageUrl: r.image_url,
     }));
 
     // Optionally include top violations (deduped by code, max 3 per case)

@@ -3,6 +3,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import Footer from "@/components/Footer";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
 import { PageHeader } from "@/components/PageHeader";
+import { isBotSubmitted } from "@/lib/badge-helpers";
 import {
   HoverCard,
   HoverCardContent,
@@ -18,6 +19,7 @@ type SubmissionRow = {
   issues: Array<{ code: string; title: string }>;
   messageType?: string | null;
   forwarderEmail?: string | null;
+  imageUrl?: string | null;
 };
 
 function formatWhen(iso: string): string {
@@ -87,6 +89,8 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Pr
       messageType?: string | null;
       forwarder_email?: string | null;
       forwarderEmail?: string | null;
+      image_url?: string | null;
+      imageUrl?: string | null;
     }>;
     const withIssues = rows.map((r) => ({
       id: r.id,
@@ -99,6 +103,7 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Pr
         : [],
       messageType: r.message_type || r.messageType || null,
       forwarderEmail: r.forwarder_email || r.forwarderEmail || null,
+      imageUrl: r.image_url || r.imageUrl || null,
     }));
     return {
       items: withIssues,
@@ -221,7 +226,9 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 md:flex-wrap">
                         {it.issues.length === 0 ? (
-                          <span className="text-slate-500">No issues</span>
+                          <span className="inline-flex items-center rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-800 border border-cyan-800">
+                            No Violations Detected
+                          </span>
                         ) : (
                           <>
                             {it.issues.map((v, idx) => {
@@ -266,30 +273,33 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                             {it.issues.length > 1 && (
                               <span className="inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 md:hidden">+{it.issues.length - 1} more</span>
                             )}
-                            {/* Desktop-only badges for type and submission source, matching pill style */}
-                            {(() => {
-                              const type = (it.messageType || '').toLowerCase();
-                              const showType = type && type !== 'unknown';
-                              // Bot submitted: SMS or email without forwarder (automated ingestion)
-                              // User submitted: unknown (manual upload) or email with forwarder (user forwarded)
-                              const isBotSubmitted = type === 'sms' || (type === 'email' && !it.forwarderEmail);
-                              return (
-                                <>
-                                  {showType && (
-                                    <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                                      {type === 'email' && 'Email'}
-                                      {type === 'sms' && 'SMS'}
-                                      {type === 'mms' && 'MMS'}
-                                    </span>
-                                  )}
-                                  <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                                    {isBotSubmitted ? 'Bot Submitted' : 'User Submitted'}
-                                  </span>
-                                </>
-                              );
-                            })()}
                           </>
                         )}
+                        {/* Desktop-only badges for type and submission source - always show regardless of issues */}
+                        {(() => {
+                          const type = (it.messageType || '').toLowerCase();
+                          const showType = type && type !== 'unknown';
+                          const isBot = isBotSubmitted({
+                            messageType: it.messageType,
+                            imageUrl: it.imageUrl,
+                            senderId: it.senderId,
+                            forwarderEmail: it.forwarderEmail,
+                          });
+                          return (
+                            <>
+                              {showType && (
+                                <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                                  {type === 'email' && 'Email'}
+                                  {type === 'sms' && 'SMS'}
+                                  {type === 'mms' && 'MMS'}
+                                </span>
+                              )}
+                              <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
+                                {isBot ? 'Bot Submitted' : 'User Submitted'}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
                       <div className="mt-1 text-xs text-slate-600 truncate max-w-[70ch]">
                         {derivePreview(it.rawText) || "(no text)"}

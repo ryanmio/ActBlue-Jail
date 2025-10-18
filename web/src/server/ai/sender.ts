@@ -36,7 +36,7 @@ export async function runSenderExtraction(submissionId: string) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false as const, status: 400, error: "openai_key_missing" as const };
-  const model = process.env.OPENAI_MODEL_VISION || "gpt-4o-mini";
+  const model = process.env.OPENAI_MODEL_VISION || "gpt-5-mini-2025-08-07";
 
   type ImageUrlPart = { type: "image_url"; image_url: { url: string } };
   type TextPart = { type: "text"; text: string };
