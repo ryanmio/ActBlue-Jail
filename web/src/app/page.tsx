@@ -322,8 +322,8 @@ export default function Home() {
         
         {/* Header */}
         <header className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">ActBlue Jail</h1>
-          <p className="text-sm text-slate-700">Upload a screenshot or paste to begin. Not affiliated with ActBlue.</p>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">AB Jail</h1>
+          <p className="text-sm text-slate-700">Not affiliated with ActBlue.</p>
         </header>
 
         {/* Upload card */}
