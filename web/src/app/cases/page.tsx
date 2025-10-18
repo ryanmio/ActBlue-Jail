@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import Footer from "@/components/Footer";
-import { VIOLATION_POLICIES } from "@/lib/violation-policies";
+import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 type SubmissionRow = {
   id: string;
@@ -219,15 +224,45 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                           <span className="text-slate-500">No issues</span>
                         ) : (
                           <>
-                            {it.issues.map((v, idx) => (
-                              <span
-                                key={`${v.code}-${idx}`}
-                                title={v.code}
-                                className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 max-w-[80%] md:max-w-none min-w-0`}
-                              >
-                                <span className="truncate">{v.title}</span>
-                              </span>
-                            ))}
+                            {it.issues.map((v, idx) => {
+                              const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
+                              return (
+                                <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
+                                  <HoverCardTrigger asChild>
+                                    <span
+                                      title={v.code}
+                                      className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 max-w-[80%] md:max-w-none min-w-0 cursor-help`}
+                                    >
+                                      <span className="truncate">{v.title}</span>
+                                    </span>
+                                  </HoverCardTrigger>
+                                  {policy && (
+                                    <HoverCardContent className="w-96 bg-white border-slate-200" side="top">
+                                      <div className="space-y-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div>
+                                            <div className="font-mono text-xs text-slate-500">{policy.code}</div>
+                                            <div className="font-semibold text-sm text-slate-900">{policy.title}</div>
+                                          </div>
+                                        </div>
+                                        <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
+                                        <a
+                                          href={AUP_HELP_URL}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                                        >
+                                          View full policy
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                          </svg>
+                                        </a>
+                                      </div>
+                                    </HoverCardContent>
+                                  )}
+                                </HoverCard>
+                              );
+                            })}
                             {it.issues.length > 1 && (
                               <span className="inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 md:hidden">+{it.issues.length - 1} more</span>
                             )}

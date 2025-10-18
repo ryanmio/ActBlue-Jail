@@ -15,6 +15,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BugReportDialog } from "@/components/bug-report-dialog";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
 
 type SubmissionRow = {
   id: string;
@@ -696,15 +702,45 @@ function RecentCases() {
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
                   {/* Violation badges */}
                   {r.violations && r.violations.length > 0 ? (
-                    r.violations.slice(0, 3).map((v, idx) => (
-                      <span
-                        key={`${v.code}-${idx}`}
-                        className="inline-flex items-center rounded-full bg-orange-50 pl-3 pr-3.5 py-1 text-[11px] font-medium text-orange-800 border border-orange-200 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw]"
-                        title={v.title}
-                      >
-                        {v.title}
-                      </span>
-                    ))
+                    r.violations.slice(0, 3).map((v, idx) => {
+                      const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
+                      return (
+                        <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
+                          <HoverCardTrigger asChild>
+                            <span
+                              className="inline-flex items-center rounded-full bg-orange-50 pl-3 pr-3.5 py-1 text-[11px] font-medium text-orange-800 border border-orange-200 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw] cursor-help"
+                              title={v.title}
+                            >
+                              {v.title}
+                            </span>
+                          </HoverCardTrigger>
+                          {policy && (
+                            <HoverCardContent className="w-96 bg-white border-slate-200" side="top">
+                              <div className="space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <div className="font-mono text-xs text-slate-500">{policy.code}</div>
+                                    <div className="font-semibold text-sm text-slate-900">{policy.title}</div>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
+                                <a
+                                  href={AUP_HELP_URL}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                                >
+                                  View full policy
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
+                              </div>
+                            </HoverCardContent>
+                          )}
+                        </HoverCard>
+                      );
+                    })
                   ) : (
                     <span className="text-slate-500">No issues</span>
                   )}
