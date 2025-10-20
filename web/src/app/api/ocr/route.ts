@@ -133,8 +133,9 @@ export async function POST(req: NextRequest) {
   }
 
   const b64Processed = processed.toString("base64");
-  const t1 = isPdf ? 90000 : 30000;
-  const t2 = isPdf ? 150000 : 45000;
+  // Increase timeouts to reduce AbortError rate from OCR.space under load
+  const t1 = isPdf ? 120000 : 60000;
+  const t2 = isPdf ? 180000 : 120000;
   let result: { ok: true; text: string; confidence: number } | { ok: false; json: unknown };
   if (isPdf) {
     console.log("/api/ocr:attempt_1", { processed: false, mime: "application/pdf", timeoutMs: t1 });
@@ -145,15 +146,15 @@ export async function POST(req: NextRequest) {
     result = await callOcrSpace(dataUriProcessed, t1);
   }
   if (!result.ok) {
-    // Retry once with original (non-processed) image and a longer timeout
+    // Retry once with original (non-processed) image and a longer timeout.
+    // For images, switch to multipart file upload on retry (more reliable than base64 under load).
     console.warn("/api/ocr:attempt_1_failed", result.json);
     console.log("/api/ocr:attempt_2", { processed: false, mime, timeoutMs: t2 });
     if (isPdf) {
       result = await callOcrSpaceFile(imgBuf, "application/pdf", `${submissionId}.pdf`, t2);
     } else {
-      const b64Original = imgBuf.toString("base64");
-      const dataUriOriginal = `data:${mime};base64,${b64Original}`;
-      result = await callOcrSpace(dataUriOriginal, t2);
+      const filename = `${submissionId}.${mime === "image/png" ? "png" : "jpg"}`;
+      result = await callOcrSpaceFile(imgBuf, mime, filename, t2);
     }
   }
   if (!result.ok) {
