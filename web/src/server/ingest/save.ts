@@ -509,7 +509,7 @@ export async function triggerPipelines(submissionId: string) {
     const base = isLocal ? "http://localhost:3000" : env.NEXT_PUBLIC_SITE_URL;
     console.log("triggerPipelines:start", { submissionId, base, isLocal });
     
-    // Fire both requests in parallel and await them (serverless needs this)
+    // Fire all requests in parallel and await them (serverless needs this)
     const classifyPromise = fetch(`${base}/api/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -532,8 +532,19 @@ export async function triggerPipelines(submissionId: string) {
       console.error("triggerPipelines:sender_error", String(e));
     });
     
-    // Await both to ensure they complete (Vercel serverless requirement)
-    await Promise.all([classifyPromise, senderPromise]);
+    const redactPiiPromise = fetch(`${base}/api/redact-pii`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ submissionId }),
+    }).then(async (r) => {
+      const text = await r.text().catch(() => "");
+      console.log("triggerPipelines:redact-pii", { status: r.status, body: text?.slice(0, 200) });
+    }).catch((e) => {
+      console.error("triggerPipelines:redact-pii_error", String(e));
+    });
+    
+    // Await all to ensure they complete (Vercel serverless requirement)
+    await Promise.all([classifyPromise, senderPromise, redactPiiPromise]);
   } catch (e) {
     console.error("triggerPipelines:exception", String(e));
   }
