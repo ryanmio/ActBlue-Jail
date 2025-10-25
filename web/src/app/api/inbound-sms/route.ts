@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
+import { repairMojibake, cleanTextForAI, normalizePunctuation } from "@/server/ingest/text-cleaner";
 
 // Twilio will POST with application/x-www-form-urlencoded by default
 export async function POST(req: NextRequest) {
@@ -76,9 +77,17 @@ export async function POST(req: NextRequest) {
       return xmlResponse(`<Response></Response>`, 400);
     }
 
+    // Preserve raw text (as received) for dedupe/url extraction context
+    const rawText = bodyText || "";
+
+    // Repair common mojibake and normalize punctuation for consistent heuristics
+    const repaired = normalizePunctuation(repairMojibake(rawText));
+    const cleanedForAI = cleanTextForAI(repaired);
+
     // Insert into Supabase (with duplicate detection inside ingestTextSubmission)
     const result = await ingestTextSubmission({
-      text: bodyText || "",
+      text: cleanedForAI || "",
+      rawText,
       senderId: fromNumber || null,
       messageType: "sms",
       imageUrlPlaceholder: "sms://no-image",
@@ -88,7 +97,7 @@ export async function POST(req: NextRequest) {
       ok: result.ok,
       id: result.id || null,
       from: fromNumber || null,
-      bodyLen: bodyText ? bodyText.length : 0,
+      bodyLen: rawText ? rawText.length : 0,
       numMedia: mediaUrls.length,
       mediaContentTypes: mediaUrls.map(m => m.contentType).filter(Boolean),
       isFundraising: result.isFundraising ?? null,
