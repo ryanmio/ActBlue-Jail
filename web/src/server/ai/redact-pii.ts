@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export interface PIIDetectionResult {
-  name: string | null;
-  email: string | null;
+  strings_to_redact: string[];
   confidence: number;
-  notes?: string;
 }
 
 /**
@@ -20,50 +18,47 @@ export async function detectPII(
   if (!apiKey) {
     console.warn("detectPII:no_api_key");
     return {
-      name: null,
-      email: null,
+      strings_to_redact: [],
       confidence: 0,
-      notes: "No API key available",
     };
   }
 
   const model = "gpt-5-mini-2025-08-07";
   
-  const system = `You are identifying PERSONAL INFORMATION (name and email) that should be redacted from a political fundraising message.
+  const system = `You are identifying PERSONAL INFORMATION that should be redacted from a political fundraising message.
 
-Your task: Find any personalized recipient information (name and/or email address) that appears in the message content.
+Your task: Find ALL variations of the recipient's personal information (name variants, email addresses) that appear in the message.
 
-Look for:
-- Personalized greetings: "Hi Ryan", "Dear Ryan Mioduski"
-- Personalized content: "NAME: Ryan Mioduski", "FOR: Ryan Mioduski", "Match offer for Ryan Mioduski"
-- Direct address in subject/body: "Your 600% match, Ryan"
-- Personal email addresses mentioned in the content (not org emails)
-- "From:" header lines with personal emails (gmail.com, outlook.com, yahoo.com, etc.) in forwarded messages
+Return EVERY string that should be replaced with asterisks. Include:
+- Full name: "Ryan Mioduski"
+- First name standalone: "Ryan" (if used in personalization like "Hi Ryan," or "Ryan, this is...")
+- Name with punctuation: "Ryan," or "Ryan."
+- Name variations: "R. Mioduski", "R Mioduski"
+- Email addresses: "ryan@mioduski.us"
+- Any other personal identifiers
 
-Return the EXACT strings that should be redacted (the full name as it appears, the email as it appears).
-
-DO NOT extract:
+DO NOT include:
 - Organization names
 - Political candidate names being discussed
 - PAC/committee names
-- Organization email addresses (like @dccc.org, @actblue.com, @democraticvictoryfund.org)
-- Generic greetings without names ("Hi there", "Dear Friend", "Dear Democrat")
+- Organization email addresses (like @dccc.org, @actblue.com)
+- Common words that happen to match a first name in non-personalized context
 
 Return STRICT JSON only (no markdown):
 {
-  "name": string | null,
-  "email": string | null,
-  "confidence": <number between 0 and 1>,
-  "notes": "<brief explanation of what you found>"
+  "strings_to_redact": ["string1", "string2", ...],
+  "confidence": <number between 0 and 1>
 }
 
 Examples:
-- Input: "NAME: Ryan Mioduski\n4X-MATCH YOUR $6" → {"name": "Ryan Mioduski", "email": null, "confidence": 0.95}
-- Input: "Hi Ryan,\nYour match is unlocked!" → {"name": "Ryan", "email": null, "confidence": 0.85}
-- Input: "From: John Smith <john@gmail.com>" → {"name": "John Smith", "email": "john@gmail.com", "confidence": 0.9}
-- Input: "Paid for by Democratic Victory Fund" → {"name": null, "email": null, "confidence": 0.9, "notes": "No personal info"}
+- Input: "Hi Ryan, this is for Ryan Mioduski" → {"strings_to_redact": ["Ryan Mioduski", "Ryan"], "confidence": 0.9}
+- Input: "NAME: Ryan Mioduski\nContact: ryan@mioduski.us" → {"strings_to_redact": ["Ryan Mioduski", "ryan@mioduski.us"], "confidence": 0.95}
+- Input: "From: R. Mioduski <ryan@gmail.com>" → {"strings_to_redact": ["R. Mioduski", "ryan@gmail.com"], "confidence": 0.9}
+- Input: "Dear Friend, donate now!" → {"strings_to_redact": [], "confidence": 0.95}
 
-Be conservative with confidence. Only return high confidence (≥0.7) when you find clear personalized content or personal email addresses.`;
+IMPORTANT: Return the exact strings as they appear in the text. If "Ryan," appears with a comma, include it. Be thorough - find ALL variations.
+
+Be conservative with confidence. Only return high confidence (≥0.7) when you find clear personalized content.`;
 
   type Message = { role: "system" | "user"; content: string };
   
@@ -112,10 +107,8 @@ Be conservative with confidence. Only return high confidence (≥0.7) when you f
       });
       
       return {
-        name: null,
-        email: null,
+        strings_to_redact: [],
         confidence: 0,
-        notes: `OpenAI API failed with status ${resp.status}`,
       };
     }
     
@@ -125,27 +118,26 @@ Be conservative with confidence. Only return high confidence (≥0.7) when you f
     try {
       const parsed = JSON.parse(content);
       
+      const stringsToRedact = Array.isArray(parsed.strings_to_redact) 
+        ? parsed.strings_to_redact.filter((s: any) => typeof s === "string" && s.trim().length > 0)
+        : [];
+      
       console.log("detectPII:success", {
         elapsed,
-        hasName: !!parsed.name,
-        hasEmail: !!parsed.email,
+        stringsFound: stringsToRedact.length,
         confidence: parsed.confidence,
       });
       
       return {
-        name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : null,
-        email: typeof parsed.email === "string" && parsed.email.trim() ? parsed.email.trim() : null,
+        strings_to_redact: stringsToRedact,
         confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
-        notes: typeof parsed.notes === "string" ? parsed.notes : undefined,
       };
     } catch (parseError) {
       console.warn("detectPII:parse_failed", { content, error: String(parseError) });
       
       return {
-        name: null,
-        email: null,
+        strings_to_redact: [],
         confidence: 0,
-        notes: "Failed to parse AI response",
       };
     }
   } catch (error) {
@@ -153,10 +145,8 @@ Be conservative with confidence. Only return high confidence (≥0.7) when you f
     console.warn("detectPII:error", { error: errorMsg });
     
     return {
-      name: null,
-      email: null,
+      strings_to_redact: [],
       confidence: 0,
-      notes: errorMsg.includes("abort") ? "Request timeout" : "Network error",
     };
   }
 }

@@ -54,13 +54,12 @@ export async function POST(req: NextRequest) {
 
     console.log("redact-pii:detected", {
       submissionId,
-      hasName: !!piiResult.name,
-      hasEmail: !!piiResult.email,
+      stringsFound: piiResult.strings_to_redact.length,
       confidence: piiResult.confidence,
     });
 
     // If no PII detected or low confidence, skip redaction
-    if ((!piiResult.name && !piiResult.email) || piiResult.confidence < 0.5) {
+    if (piiResult.strings_to_redact.length === 0 || piiResult.confidence < 0.5) {
       console.log("redact-pii:skipped", {
         submissionId,
         reason: "no_pii_or_low_confidence",
@@ -74,55 +73,46 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Perform redaction on text fields
+    // Perform redaction on text fields - iterate over all strings to redact
     const updates: Record<string, string | null> = {};
 
+    // Helper function to redact all PII strings from text
+    // Also redacts punctuation-stripped versions (e.g., "Ryan," → also redact "Ryan")
+    const redactText = (text: string): string => {
+      let redacted = text;
+      const stringsToRedact = new Set<string>();
+      
+      // Collect all strings to redact, including punctuation-stripped versions
+      for (const piiString of piiResult.strings_to_redact) {
+        stringsToRedact.add(piiString);
+        
+        // Also add version without trailing punctuation
+        const withoutPunctuation = piiString.replace(/[.,;:!?]+$/, "");
+        if (withoutPunctuation !== piiString && withoutPunctuation.length > 0) {
+          stringsToRedact.add(withoutPunctuation);
+        }
+      }
+      
+      // Sort by length descending to redact longer strings first (avoid partial matches)
+      const sortedStrings = Array.from(stringsToRedact).sort((a, b) => b.length - a.length);
+      
+      for (const piiString of sortedStrings) {
+        const asterisks = "*".repeat(piiString.length);
+        redacted = redacted.split(piiString).join(asterisks);
+      }
+      return redacted;
+    };
+
     if (submission.raw_text) {
-      let redactedText = submission.raw_text;
-      
-      if (piiResult.name) {
-        const nameAsterisks = "*".repeat(piiResult.name.length);
-        redactedText = redactedText.split(piiResult.name).join(nameAsterisks);
-      }
-      
-      if (piiResult.email) {
-        const emailAsterisks = "*".repeat(piiResult.email.length);
-        redactedText = redactedText.split(piiResult.email).join(emailAsterisks);
-      }
-      
-      updates.raw_text = redactedText;
+      updates.raw_text = redactText(submission.raw_text);
     }
 
     if (submission.email_body) {
-      let redactedBody = submission.email_body;
-      
-      if (piiResult.name) {
-        const nameAsterisks = "*".repeat(piiResult.name.length);
-        redactedBody = redactedBody.split(piiResult.name).join(nameAsterisks);
-      }
-      
-      if (piiResult.email) {
-        const emailAsterisks = "*".repeat(piiResult.email.length);
-        redactedBody = redactedBody.split(piiResult.email).join(emailAsterisks);
-      }
-      
-      updates.email_body = redactedBody;
+      updates.email_body = redactText(submission.email_body);
     }
 
     if (submission.email_subject) {
-      let redactedSubject = submission.email_subject;
-      
-      if (piiResult.name) {
-        const nameAsterisks = "*".repeat(piiResult.name.length);
-        redactedSubject = redactedSubject.split(piiResult.name).join(nameAsterisks);
-      }
-      
-      if (piiResult.email) {
-        const emailAsterisks = "*".repeat(piiResult.email.length);
-        redactedSubject = redactedSubject.split(piiResult.email).join(emailAsterisks);
-      }
-      
-      updates.email_subject = redactedSubject;
+      updates.email_subject = redactText(submission.email_subject);
     }
 
     // Update database with redacted text
@@ -146,8 +136,7 @@ export async function POST(req: NextRequest) {
       console.log("redact-pii:success", {
         submissionId,
         fieldsUpdated: Object.keys(updates),
-        name: piiResult.name,
-        email: piiResult.email,
+        stringsRedacted: piiResult.strings_to_redact,
       });
 
       return NextResponse.json({
