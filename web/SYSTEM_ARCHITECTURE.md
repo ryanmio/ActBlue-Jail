@@ -123,7 +123,9 @@ created_at timestamptz
    - Fires parallel requests to:
      * POST /api/classify (AI classification)
      * POST /api/sender (sender extraction)
-   - Both are fire-and-forget but awaited for serverless
+     * POST /api/redact-pii (personalization/PII redaction) — NEW
+   - All are fire-and-forget but awaited for serverless
+   - Redaction is isolated; failures never impact other pipelines
 
 4. /api/classify/route.ts
    - Updates processing_status = 'classified'
@@ -242,8 +244,9 @@ created_at timestamptz
    - Returns {ok: true}
 
 4. (Same as email flow from step 3 onwards)
-   - triggerPipelines() → classify + sender
+   - triggerPipelines() → classify + sender (NO redact-pii here)
    - Classification completes
+   - PII redaction is NOT triggered for screenshot/PDF uploads (UI displays raw file)
    - /api/send-case-preview is called but SKIPS because forwarder_email is NULL
    - No email sent to user
 ```
@@ -274,7 +277,7 @@ created_at timestamptz
 
 3. (Same as email flow from step 2 onwards)
    - ingestTextSubmission() runs heuristic
-   - If fundraising, calls triggerPipelines()
+   - If fundraising, calls triggerPipelines() (includes redact-pii)
    - Classification completes
    - /api/send-case-preview is called but SKIPS because forwarder_email is NULL
    - No email sent to user
@@ -310,6 +313,21 @@ created_at timestamptz
 **Output:** {ok: true, sender_name: string, model: string}
 **Side Effects:**
 - Updates sender_name in submissions table
+
+### POST /api/redact-pii
+**Purpose:** Post-processing step that redacts submitter PII (personalized strings) from stored text fields
+**Input:** {submissionId: string}
+**Output:** {ok: true, redacted: boolean, fieldsUpdated?: string[], confidence?: number}
+**How it works:**
+- Loads `raw_text`, `email_subject`, and `email_body`
+- Calls `detectPII()` (server/ai/redact-pii.ts) which returns:
+  - `strings_to_redact: string[]` (e.g., "Ryan,", "Ryan Mioduski", "ryan@mioduski.us")
+  - `confidence: number (0..1)`
+- Skips if no strings or confidence < 0.5
+- Redacts all occurrences, plus punctuation-stripped variants ("Ryan," → also "Ryan")
+- Sorts by length descending to avoid partial matches
+- Updates DB for: `raw_text`, `email_subject`, `email_body`
+**Notes:** Runs in parallel with other pipelines; failures don't affect them
 
 ### POST /api/screenshot-actblue
 **Purpose:** Capture screenshot of ActBlue landing page
@@ -439,6 +457,14 @@ created_at timestamptz
 
 ### /server/ingest/save.ts: extractActBlueUrl()
 **Purpose:** Find ActBlue landing page URL in text
+### /server/ai/redact-pii.ts: detectPII()
+**Purpose:** Ask AI to return every personalized string that should be redacted
+**Input:** raw_text (plus optional email_from)
+**Output:** `{ strings_to_redact: string[], confidence: number }`
+**Details:**
+- Finds full names, first-name variants, initials (e.g., "R. Mioduski"), and personal emails
+- Excludes org/candidate/PAC names and org emails
+- Conservative confidence; threshold 0.5 applied by the API route
 **Input:** Text string
 **Output:** string | null
 **Logic:**
@@ -510,6 +536,14 @@ queued → ocr → classified → done
 - democratdonor@gmail.com is redacted throughout system
 - Non-ActBlue links removed from email HTML
 - Prevents exposing honeytrap to third parties
+
+### PII Redaction (Personalization Removal)
+- Runs after ingest as an isolated step for email/SMS/text
+- AI returns `strings_to_redact` to replace with asterisks
+- Also redacts punctuation-stripped variants (e.g., "Ryan," → "Ryan")
+- Applies to `raw_text`, `email_subject`, `email_body`
+- Confidence threshold ≥ 0.5 to reduce false positives
+- Not applied to screenshot/PDF uploads (raw files shown in UI)
 
 ### Signed URLs
 - Supabase Storage URLs are signed with expiry (1-24 hours)
@@ -690,7 +724,7 @@ These are NOT displayed in the UI but are included when re-classifying with `inc
 EMAIL FORWARD:
 Mailgun → /api/inbound-email → ingestTextSubmission() → DB insert with forwarder_email + token
   ↓
-triggerPipelines() → /api/classify + /api/sender (parallel)
+triggerPipelines() → /api/classify + /api/sender + /api/redact-pii (parallel)
   ↓
 /api/classify completes → /api/send-case-preview (fire-and-forget)
   ↓
@@ -716,7 +750,7 @@ SCREENSHOT UPLOAD:
 TEXT PASTE:
 Text submission → ingestTextSubmission() with forwarder_email = NULL
   ↓
-triggerPipelines() → /api/classify
+triggerPipelines() → /api/classify + /api/redact-pii
   ↓
 /api/classify completes → /api/send-case-preview
   ↓
@@ -777,6 +811,7 @@ triggerPipelines() → /api/classify
 - /web/src/server/ingest/dedupe.ts
 - /web/src/server/ai/classify.ts
 - /web/src/server/ai/sender.ts
+- /web/src/server/ai/redact-pii.ts (NEW)
 - /web/src/server/email/draft.ts
 
 ### Database
