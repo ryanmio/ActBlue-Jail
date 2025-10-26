@@ -76,7 +76,9 @@ export function repairMojibake(input: string): string {
   try {
     if (!input) return input;
     // Quick heuristic to detect mojibake patterns
-    const looksMojibake = /(?:Ã.|Â.|â(?:||||||)?|â¢|â|â¦|â|â)/.test(input);
+    // Covers common UTF-8-as-Latin1 cases (Ã, Â, â…) and 4-byte sequences shown as "ð…",
+    // e.g. emoji (ðŸ…) or Mathematical Alphanumerics (ð…). These indicate bytes starting with 0xF0.
+    const looksMojibake = /(?:Ã.|Â.|â(?:||)?|â¢|â|â¦|â|â|ð[\x90-\xBF])/.test(input);
     if (!looksMojibake) return input;
     // Interpret current code points as Latin-1 bytes and decode as UTF-8
     const bytes = new Uint8Array(input.length);
@@ -84,7 +86,9 @@ export function repairMojibake(input: string): string {
       bytes[i] = input.charCodeAt(i) & 0xff;
     }
     const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-    return decoded;
+    // Apply compatibility normalization to collapse styled letters (𝘢→a, 𝘣→b, etc.) to ASCII
+    // This prevents downstream issues with AI classification and deduplication
+    return decoded.normalize("NFKD");
   } catch {
     return input;
   }
