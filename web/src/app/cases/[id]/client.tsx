@@ -8,6 +8,7 @@ import LocalTime from "@/components/LocalTime";
 import ReviewAnimation from "@/components/review-animation";
 import { LandingPageScanner } from "@/components/landing-page-scanner";
 import { EmailSuccessAnimation } from "@/components/email-success-animation";
+import { repairMojibake, normalizePunctuation } from "@/server/ingest/text-cleaner";
 
 function Tooltip({ label, children }: { label?: string; children: React.ReactNode }) {
   if (!label) return <>{children}</>;
@@ -40,9 +41,12 @@ export function LiveCaseText({ id, initialText, initialStatus }: Props) {
         const data = await res.json();
         const item = data.item as { raw_text: string | null; processing_status?: string | null };
         if (!cancelled) {
-          setText(item?.raw_text ?? null);
+          const raw = item?.raw_text ?? null;
+          // Best-effort: repair mojibake for display, mirroring server-side cleaning
+          const cleaned = raw ? normalizePunctuation(repairMojibake(raw)) : null;
+          setText(cleaned);
           setStatus(item?.processing_status ?? null);
-          if (item?.raw_text && item?.processing_status === "done") {
+          if (raw && item?.processing_status === "done") {
             clearInterval(interval);
           }
         }
@@ -1415,7 +1419,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
                   </div>
                 </div>
               ) : rawText ? (
-                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{redactEmailsInText(rawText)}</pre>
+                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{redactEmailsInText(normalizePunctuation(repairMojibake(rawText)))}</pre>
               ) : (
                 <div className="text-slate-600 text-sm">No primary evidence available.</div>
               )}
@@ -1565,7 +1569,7 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt, mediaUrls }: 
           <div className="max-h-[400px] overflow-auto">
             <div className="bg-slate-100 text-slate-800 rounded-2xl p-4 inline-block shadow-inner">
               <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {rawText || "(no message body)"}
+                {rawText ? normalizePunctuation(repairMojibake(rawText)) : "(no message body)"}
               </div>
             </div>
           </div>
