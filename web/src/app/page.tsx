@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { assertSupabaseBrowser } from "@/lib/supabase";
 import { cachedJsonFetch } from "@/lib/client-cache";
 import Footer from "@/components/Footer";
@@ -22,16 +23,21 @@ import {
 } from "@/components/ui/hover-card";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
 import { isBotSubmitted } from "@/lib/badge-helpers";
+import { useOnboardingState } from "@/components/onboarding/useOnboardingState";
+import { OnboardingToast } from "@/components/onboarding/OnboardingToast";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 
-type SubmissionRow = {
-  id: string;
-  createdAt: string;
-  senderId: string | null;
-  senderName: string | null;
-  rawText: string | null;
-};
+function OnboardingHandler({ onOpen }: { onOpen: () => void }) {
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    if (searchParams?.get("onboarding") === "open") {
+      onOpen();
+    }
+  }, [searchParams, onOpen]);
 
-type CaseDetail = { violations?: Array<{ code: string; title: string }> };
+  return null;
+}
 
 export default function Home() {
   const [status, setStatus] = useState<string>("");
@@ -44,6 +50,14 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const copiedTimeoutRef = useRef<number | null>(null);
+
+  // Onboarding state
+  const { shouldShowToast, markDismissed, markClicked } = useOnboardingState();
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  const handleOnboardingOpen = useCallback(() => {
+    setIsOnboardingOpen(true);
+  }, []);
 
   const onBrowseClick = useCallback(() => inputRef.current?.click(), []);
 
@@ -239,15 +253,38 @@ export default function Home() {
   }, []);
 
   return (
-    <main
-      className="min-h-[calc(100vh+160px)] bg-white"
-      style={{
-        background:
-          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-      }}
-    >
+    <>
+      {/* Handle ?onboarding=open query param */}
+      <Suspense fallback={null}>
+        <OnboardingHandler onOpen={handleOnboardingOpen} />
+      </Suspense>
+
+      {/* Onboarding toast */}
+      {shouldShowToast && (
+        <OnboardingToast
+          onClick={() => {
+            markClicked();
+            setIsOnboardingOpen(true);
+          }}
+          onDismiss={markDismissed}
+        />
+      )}
+
+      {/* Onboarding modal */}
+      <OnboardingModal
+        open={isOnboardingOpen}
+        onOpenChange={setIsOnboardingOpen}
+      />
+
+      <main
+        className="min-h-[calc(100vh+160px)] bg-white"
+        style={{
+          background:
+            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+        }}
+      >
       <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-10 relative">
         {/* Menu Button - Top Right */}
         <div className="absolute top-6 right-6 md:top-10 md:right-10">
@@ -265,6 +302,15 @@ export default function Home() {
               <DropdownMenuContent className="w-56 bg-white border border-slate-200 shadow-lg text-slate-900" align="end">
                 <DropdownMenuLabel className="text-slate-600 font-semibold">AB Jail</DropdownMenuLabel>
                 <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setIsOnboardingOpen(true);
+                    }}
+                    className="cursor-pointer text-slate-900 hover:bg-slate-100"
+                  >
+                    How it works
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/about" className="cursor-pointer text-slate-900 hover:bg-slate-100">About</Link>
                   </DropdownMenuItem>
@@ -589,6 +635,7 @@ export default function Home() {
         <Footer />
       </div>
     </main>
+    </>
   );
 }
 
