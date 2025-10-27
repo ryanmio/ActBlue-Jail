@@ -19,14 +19,24 @@ type OnboardingModalProps = {
 const STEPS = [
   {
     title: "What is AB Jail?",
-    description:
-      "AB Jail is a public log of political fundraising messages. We're an open-source, community-driven project that brings transparency to political fundraising by flagging potential ActBlue policy violations.",
-    note: "Not affiliated with ActBlue.",
+    description: (
+      <>
+        <strong>AB Jail is a public transparency tool that documents deceptive political fundraising</strong>. We continuously collect campaign emails and texts to flag potential violations of fundraising platform policies and make those patterns visible and accountable.
+      </>
+    ),
+    icon: (
+      <svg className="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
   },
   {
-    title: "How to use it",
-    description:
-      "Forward an email to submit@abjail.org, drag and drop a screenshot, or paste text from a political fundraising message. Our system will automatically extract and analyze the content.",
+    title: "How it works",
+    description: (
+      <>
+        Anyone can contribute: <strong>forward a deceptive fundraising email to submit@abjail.org or upload a screenshot</strong> to create a public case. We automatically identify potential violations of ActBlue's account use policy and make the evidence public for accountability.
+      </>
+    ),
     icon: (
       <svg className="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -34,9 +44,25 @@ const STEPS = [
     ),
   },
   {
-    title: "What happens next",
-    description:
-      "We use OCR to extract text from screenshots, then classify potential ActBlue policy violations using AI. Each submission becomes a public case that anyone can view and reference.",
+    title: "Reporting violations",
+    description: (
+      <>
+        <strong>File a report with one click</strong>, from the case page or by forwarding to submit@abjail.org. We extract the details ActBlue needs to investigate and generate a report for you, so you can submit fast and track responses on the case.
+      </>
+    ),
+    icon: (
+      <svg className="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    title: "Why this exists",
+    description: (
+      <>
+        Our goal is accountability. By <strong>centralizing evidence and patterns of deceptive fundraising</strong> – fake matches, contrived deadlines, misleading language – we make it easier to spot abuses, report them to platforms, and track outcomes over time.
+      </>
+    ),
     icon: (
       <svg className="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -44,9 +70,9 @@ const STEPS = [
     ),
   },
   {
-    title: "Privacy notice",
+    title: "Privacy & public record",
     description:
-      "All submissions are made public. We attempt to automatically redact personally identifying information (PII), but accuracy isn't guaranteed. Please review your content and redact any private information before submitting.",
+      "Submissions are public. We attempt to redact personally identifying information, but accuracy isn't guaranteed – please remove private details before submitting. By contributing, you help document deceptive tactics and make accountability easier for platforms and the public.",
     icon: (
       <svg className="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -90,7 +116,7 @@ export function OnboardingModal({ open, onOpenChange, videoUrl }: OnboardingModa
           <DialogTitle className="text-2xl">{step.title}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6" style={{ minHeight: '240px' }}>
           {/* Optional video slot */}
           {videoUrl && currentStep === 0 && (
             <div className="aspect-video rounded-lg overflow-hidden bg-slate-100">
@@ -115,7 +141,7 @@ export function OnboardingModal({ open, onOpenChange, videoUrl }: OnboardingModa
           )}
 
           {/* Description */}
-          <DialogDescription className="text-base leading-relaxed text-slate-700">
+          <DialogDescription className="text-base leading-relaxed text-slate-700 min-h-[100px]">
             {step.description}
           </DialogDescription>
 
