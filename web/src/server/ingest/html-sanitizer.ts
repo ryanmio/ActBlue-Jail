@@ -16,7 +16,7 @@ export function sanitizeEmailHtml(html: string): string {
   const emailRegex = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
   const maskEmail = (email: string) => {
     try {
-      const [local, domainFull] = email.split("@");
+      const [, domainFull] = email.split("@");
       const lastDot = domainFull.lastIndexOf(".");
       if (lastDot <= 0) return "****@****.***";
       const tld = domainFull.slice(lastDot + 1);

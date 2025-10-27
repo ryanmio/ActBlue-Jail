@@ -99,6 +99,8 @@ export default function EvaluationPage() {
     fetchSamples();
   }, [deviceId, evaluatedIds]);
 
+  const currentSample = samples[currentIndex];
+
   // Set default tab based on what's available
   useEffect(() => {
     if (currentSample) {
@@ -120,8 +122,6 @@ export default function EvaluationPage() {
       }
     }
   }, [currentIndex, samples, currentSample]);
-
-  const currentSample = samples[currentIndex];
   const progress = evaluatedIds.length;
   const progressPercent = Math.min((progress / REQUIRED_EVALUATIONS) * 100, 100);
   const canSubmit = progress >= REQUIRED_EVALUATIONS;
