@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import Footer from "@/components/Footer";
+import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -10,48 +13,48 @@ export const metadata: Metadata = {
 
 export default function WelcomePage() {
   return (
-    <main className="min-h-screen bg-white">
-      <div className="mx-auto max-w-4xl px-6 py-10 md:px-10 md:py-16">
-        {/* Header */}
-        <div className="mb-10">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 mb-6"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to home
-          </Link>
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">
-            How AB Jail works
-          </h1>
-          <p className="text-lg text-slate-700 leading-relaxed">
-            A complete guide to using AB Jail to document and report potential ActBlue policy violations.
-          </p>
-        </div>
+    <main
+      className="min-h-screen bg-white"
+      style={{
+        background:
+          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
+          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
+          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
+      }}
+    >
+      <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-8 md:space-y-10 relative">
+        <PageHeader />
+        
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "How it works" },
+          ]}
+          className="mb-2"
+        />
 
-        {/* Main content */}
-        <div className="prose prose-slate max-w-none">
-          <section className="mb-12">
-            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
-              What is AB Jail?
-            </h2>
-            <p className="text-slate-700 leading-relaxed mb-4">
-              AB Jail is an open-source, community-driven project that brings transparency to political fundraising. 
-              We provide a public log of political SMS messages and emails, automatically extract their content, 
-              and check them against ActBlue&apos;s Acceptable Use Policy (AUP).
-            </p>
-            <p className="text-slate-700 leading-relaxed mb-4">
-              Our goal is to help hold political campaigns and organizations accountable by making deceptive 
-              fundraising practices visible to the public.
-            </p>
-            <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 text-sm text-slate-700">
-              <strong>Note:</strong> AB Jail is not affiliated with ActBlue. This is an independent transparency project.
-            </div>
-          </section>
+        <header className="text-center space-y-2">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">How it works</h1>
+          <p className="text-sm text-slate-700">Not affiliated with ActBlue.</p>
+        </header>
 
-          <section className="mb-12">
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">Quick start</h2>
+          <ol className="list-decimal list-inside text-slate-700 space-y-1">
+            <li>Forward a fundraising email to <code className="bg-slate-100 px-1.5 py-0.5 rounded">submit@abjail.org</code> <em>or</em> upload a screenshot.</li>
+            <li>We process it, create a public case, and flag potential policy issues.</li>
+            <li>
+              Submit the report to ActBlue:
+              <span className="block pl-5">
+                • If you <strong>forwarded</strong>, use the &ldquo;Submit to ActBlue&rdquo; link in the email we send you.<br />
+                • If you <strong>uploaded</strong>, click <em>Submit to ActBlue</em> on the case page.
+              </span>
+              We&apos;ll track any replies on the case.
+            </li>
+          </ol>
+        </section>
+
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
             <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               How to submit a message
             </h2>
@@ -60,181 +63,186 @@ export default function WelcomePage() {
             </p>
 
             <div className="space-y-6">
-              <div className="border border-slate-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Screenshot upload
-                </h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  Take a screenshot of the message on your phone or computer, then drag and drop it onto the upload area. 
-                  We support PNG, JPG, HEIC, and single-page PDF files up to 10MB.
-                </p>
-                <p className="text-sm text-slate-600">
-                  This is the most common method and provides the most complete record, including formatting and images.
-                </p>
-              </div>
-
-              <div className="border border-slate-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Paste text
-                </h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  Switch to the &ldquo;Paste text&rdquo; tab and paste the message content directly. This works well for plain text emails.
-                </p>
-                <p className="text-sm text-slate-600">
-                  Faster than screenshots, but you&apos;ll lose formatting and context.
-                </p>
-              </div>
-
+              {/* Forward email (BEST) */}
               <div className="border border-slate-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
                   <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  Forward email
+                  Forward email <span className="ml-2 text-xs font-medium text-white bg-slate-900 rounded px-2 py-0.5">Best fidelity</span>
                 </h3>
                 <p className="text-slate-700 leading-relaxed mb-3">
-                  Forward suspicious fundraising emails directly to{" "}
-                  <code className="bg-slate-100 px-2 py-1 rounded text-sm font-mono">
-                    submit@abjail.org
-                  </code>
-                  . We&apos;ll automatically process them.
+                  Forward suspicious fundraising emails to{" "}
+                  <code className="bg-slate-100 px-2 py-1 rounded text-sm font-mono">submit@abjail.org</code>. 
+                  This preserves headers, formatting, links, and images so we can prepare a ready-to-send report.
                 </p>
                 <p className="text-sm text-slate-600">
-                  The easiest method for email submissions, preserving all metadata and formatting.
+                  Recommended for email: most complete record and fastest reporting flow.
+                </p>
+              </div>
+
+              {/* Screenshot upload (BEST FOR SMS) */}
+              <div className="border border-slate-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                  <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Screenshot upload <span className="ml-2 text-xs font-medium text-white bg-slate-900 rounded px-2 py-0.5">Best for SMS</span>
+                </h3>
+                <p className="text-slate-700 leading-relaxed mb-3">
+                  Capture the text thread or email view and drag it into the uploader. We support PNG, JPG, HEIC, and single-page PDF up to 10MB.
+                </p>
+                <p className="text-sm text-slate-600">
+                  Recommended for SMS/MMS and social screenshots. Preserves layout and images, but not email headers.
+                </p>
+              </div>
+
+              {/* Paste text (FALLBACK) */}
+              <div className="border border-slate-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                  <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Paste text <span className="ml-2 text-xs font-medium text-white bg-slate-500 rounded px-2 py-0.5">Fallback</span>
+                </h3>
+                <p className="text-slate-700 leading-relaxed mb-3">
+                  Switch to the &ldquo;Paste text&rdquo; tab and paste the message content. Quickest option when forwarding or screenshots aren&apos;t possible.
+                </p>
+                <p className="text-sm text-slate-600">
+                  Fast, but loses formatting, images, and email metadata.
                 </p>
               </div>
             </div>
-          </section>
+        </section>
 
-          <section className="mb-12">
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
             <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               What happens after you submit
             </h2>
             <div className="space-y-4">
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">
-                  1
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">1</div>
                 <div>
-                  <h3 className="font-semibold text-slate-900 mb-1">Text extraction</h3>
-                  <p className="text-slate-700 leading-relaxed">
-                    We use OCR (Optical Character Recognition) via Tesseract to extract text from screenshots. 
-                    For forwarded emails or pasted text, this step is skipped.
-                  </p>
+                  <h3 className="font-semibold text-slate-900 mb-1">We capture the content</h3>
+                  <p className="text-slate-700">Screenshots go through Optical Character Recognition (OCR); forwarded emails keep their original formatting. The raw text and media are stored on the case.</p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">
-                  2
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">2</div>
                 <div>
-                  <h3 className="font-semibold text-slate-900 mb-1">AI classification</h3>
-                  <p className="text-slate-700 leading-relaxed">
-                    Our AI analyzes the message against ActBlue&apos;s Acceptable Use Policy. It identifies potential 
-                    violations like unverified matching programs, deceptive sender names, or false urgency claims.
-                  </p>
+                  <h3 className="font-semibold text-slate-900 mb-1">We extract additional context</h3>
+                  <p className="text-slate-700">If an ActBlue landing page URL is detected, we automatically capture a screenshot for context. For forwarded emails, we also reduce personalized content (like your name) to protect your privacy.</p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">
-                  3
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">3</div>
                 <div>
-                  <h3 className="font-semibold text-slate-900 mb-1">Public case</h3>
-                  <p className="text-slate-700 leading-relaxed">
-                    A public case is created with the extracted text, identified violations, and (for screenshots) 
-                    the original image. Anyone can view and reference this case.
-                  </p>
+                  <h3 className="font-semibold text-slate-900 mb-1">AI flags potential issues</h3>
+                  <p className="text-slate-700">A lightweight check confirms it&apos;s fundraising; a deeper check highlights potential violations (e.g., fake matches, deceptive urgency).</p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">
-                  4
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">4</div>
                 <div>
-                  <h3 className="font-semibold text-slate-900 mb-1">Statistics tracking</h3>
-                  <p className="text-slate-700 leading-relaxed">
-                    Each case contributes to our public statistics, helping identify repeat offenders and 
-                    trending violation types.
-                  </p>
+                  <h3 className="font-semibold text-slate-900 mb-1">A public case is created</h3>
+                  <p className="text-slate-700">The case shows evidence (text/screenshot), flagged issues, and the landing-page snapshot for context.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold">5</div>
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-1">Report to ActBlue</h3>
+                  <p className="text-slate-700">From the case page, click <em>Submit to ActBlue</em>. We prefill campaign name, message text or screenshot, landing page, and a case link. Replies from ActBlue are attached back to the case.</p>
                 </div>
               </div>
             </div>
-          </section>
+        </section>
 
-          <section className="mb-12">
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
             <h2 className="text-2xl font-semibold text-slate-900 mb-4">
-              Privacy and data handling
+              Submitting violations to ActBlue
             </h2>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-4">
-              <h3 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Important: All submissions are public
-              </h3>
-              <p className="text-amber-900 leading-relaxed">
-                Everything you submit will be visible to the public. Do not submit content containing 
-                private information you don&apos;t want shared.
+            <p className="text-slate-700 leading-relaxed mb-4">
+              We make reporting fast and consistent by pre-filling the details ActBlue needs to investigate—so you can submit in seconds and track responses in one place.
+            </p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+              <h3 className="font-semibold text-blue-900 mb-3">Email-Only Workflow (Easiest)</h3>
+              <ol className="space-y-2 text-blue-900">
+                <li className="flex gap-2"><span className="font-semibold">1.</span><span>Forward a suspicious email to <code className="bg-blue-100 px-2 py-0.5 rounded">submit@abjail.org</code>.</span></li>
+                <li className="flex gap-2"><span className="font-semibold">2.</span><span>We process it and email you the case.</span></li>
+                <li className="flex gap-2"><span className="font-semibold">3.</span><span>Click the <em>Submit to ActBlue</em> link to file your report.</span></li>
+              </ol>
+              <p className="text-sm text-blue-800 mt-3">
+                No website visit required. The entire process happens via email.
               </p>
             </div>
 
-            <p className="text-slate-700 leading-relaxed mb-4">
-              We automatically attempt to redact personally identifying information (PII) such as:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-slate-700 mb-4">
-              <li>Phone numbers</li>
-              <li>Email addresses (except sender addresses)</li>
-              <li>Street addresses</li>
-              <li>Social Security numbers</li>
-              <li>Credit card numbers</li>
-            </ul>
-            <p className="text-slate-700 leading-relaxed">
-              However, automated redaction is not perfect. Please review your submission and manually 
-              redact any sensitive information before uploading.
-            </p>
-          </section>
-
-          <section className="mb-12">
-            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
-              Understanding violation codes
-            </h2>
-            <p className="text-slate-700 leading-relaxed mb-4">
-              Our AI classifies messages using a taxonomy based on ActBlue&apos;s Acceptable Use Policy. 
-              Common violation types include:
-            </p>
-            <div className="space-y-3 mb-4">
-              <div className="border-l-4 border-orange-400 pl-4 py-2">
-                <div className="font-mono text-xs text-slate-500 mb-1">AB003</div>
-                <div className="font-semibold text-slate-900">Unverified Matching Program</div>
-                <div className="text-sm text-slate-700">Claims of donation matching without proper verification</div>
-              </div>
-              <div className="border-l-4 border-orange-400 pl-4 py-2">
-                <div className="font-mono text-xs text-slate-500 mb-1">AB006</div>
-                <div className="font-semibold text-slate-900">Impersonation/Deceptive Identity</div>
-                <div className="text-sm text-slate-700">Messages that mislead about the true sender&apos;s identity</div>
-              </div>
-              <div className="border-l-4 border-orange-400 pl-4 py-2">
-                <div className="font-mono text-xs text-slate-500 mb-1">AB008</div>
-                <div className="font-semibold text-slate-900">False Urgency or Scarcity</div>
-                <div className="text-sm text-slate-700">Artificial deadlines or pressure tactics without legitimate basis</div>
-              </div>
+            <div className="border border-slate-200 rounded-lg p-6">
+              <h3 className="font-semibold text-slate-900 mb-3">Website Workflow</h3>
+              <ol className="space-y-2 text-slate-700">
+                <li className="flex gap-2">
+                  <span className="font-semibold">1.</span>
+                  <span>Upload via website or forward an email</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold">2.</span>
+                  <span>View the case on AB Jail</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold">3.</span>
+                  <span>Click &ldquo;Submit to ActBlue&rdquo; button on the case page</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold">4.</span>
+                  <span>Review the pre-filled report and submit</span>
+                </li>
+              </ol>
             </div>
-            <p className="text-slate-700 leading-relaxed">
-              View any case detail page to see the full list of violation codes and policies.
-            </p>
-          </section>
+        </section>
 
-          <section className="mb-12">
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
+              How we flag potential violations
+            </h2>
+            <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-4 text-slate-800">
+              <h3 className="font-semibold text-slate-900 mb-1">How detection works</h3>
+              <p className="text-sm">
+                We use AI to review each fundraising solicitation in context. First we extract the text and capture a snapshot of the donation page. The AI compares that evidence to ActBlue’s Account Use Policy (AUP) and our focused policy patterns, then returns potential flags with a short rationale.
+              </p>
+            </div>
+
+            <div className="divide-y divide-slate-200 rounded-md border border-slate-200">
+              {VIOLATION_POLICIES.map((v) => (
+                <details key={v.code} className="group">
+                  <summary className="flex w-full items-center justify-between cursor-pointer list-none px-4 py-3 hover:bg-slate-50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-4 w-1.5 bg-orange-400 rounded" />
+                      <span className="font-semibold text-slate-900">{v.title}</span>
+                    </div>
+                    <svg className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <p className="text-sm text-slate-700 mb-2">{v.policy}</p>
+                    <a href={AUP_HELP_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-700 hover:underline">
+                      View full ActBlue AUP
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7m0 0v7m0-7L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                </details>
+              ))}
+            </div>
+        </section>
+
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
             <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Get involved
             </h2>
@@ -249,16 +257,16 @@ export default function WelcomePage() {
             </ul>
             <div className="flex gap-3 flex-wrap">
               <Link
-                href="/"
+                href="/evaluation"
                 className="px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-colors"
               >
-                Submit a case
+                AI Training
               </Link>
               <Link
-                href="/evaluation"
-                className="px-4 py-2 border border-slate-300 text-slate-900 rounded-md hover:bg-slate-50 transition-colors"
+                href="/"
+                className="px-4 py-2 border border-slate-300 text-slate-900 rounded-md hover:bg-slate-50 transition-colors inline-flex items-center gap-2"
               >
-                AI Training
+                Submit a case
               </Link>
               <a
                 href="https://github.com/ryanmio/ActBlue-Jail"
@@ -266,15 +274,15 @@ export default function WelcomePage() {
                 rel="noopener noreferrer"
                 className="px-4 py-2 border border-slate-300 text-slate-900 rounded-md hover:bg-slate-50 transition-colors inline-flex items-center gap-2"
               >
-                View on GitHub
+                Code on GitHub
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
             </div>
-          </section>
+        </section>
 
-          <section>
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
             <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Questions?
             </h2>
@@ -294,12 +302,9 @@ export default function WelcomePage() {
               </a>
               .
             </p>
-          </section>
-        </div>
+        </section>
 
-        <div className="mt-16">
-          <Footer />
-        </div>
+        <Footer />
       </div>
     </main>
   );

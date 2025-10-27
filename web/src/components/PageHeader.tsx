@@ -30,6 +30,9 @@ export function PageHeader() {
           <DropdownMenuLabel className="text-slate-600 font-semibold">AB Jail</DropdownMenuLabel>
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
+              <Link href="/welcome" className="cursor-pointer text-slate-900 hover:bg-slate-100">How it works</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link href="/about" className="cursor-pointer text-slate-900 hover:bg-slate-100">About</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

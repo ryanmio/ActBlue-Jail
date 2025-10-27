@@ -302,14 +302,8 @@ export default function Home() {
               <DropdownMenuContent className="w-56 bg-white border border-slate-200 shadow-lg text-slate-900" align="end">
                 <DropdownMenuLabel className="text-slate-600 font-semibold">AB Jail</DropdownMenuLabel>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setIsOnboardingOpen(true);
-                    }}
-                    className="cursor-pointer text-slate-900 hover:bg-slate-100"
-                  >
-                    How it works
+                  <DropdownMenuItem asChild>
+                    <Link href="/welcome" className="cursor-pointer text-slate-900 hover:bg-slate-100">How it works</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/about" className="cursor-pointer text-slate-900 hover:bg-slate-100">About</Link>
