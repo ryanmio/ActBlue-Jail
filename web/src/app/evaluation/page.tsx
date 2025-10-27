@@ -119,7 +119,7 @@ export default function EvaluationPage() {
         setActiveTab("text");
       }
     }
-  }, [currentIndex, samples]);
+  }, [currentIndex, samples, currentSample]);
 
   const currentSample = samples[currentIndex];
   const progress = evaluatedIds.length;
