@@ -1249,16 +1249,11 @@ type EvidenceTabsProps = {
 };
 
 export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
-  // Support multiple honeytrap emails (comma-separated)
-  const HONEYTRAP_EMAILS = (process.env.NEXT_PUBLIC_HONEYTRAP_EMAILS || "").split(',').map(e => e.trim()).filter(e => e.length > 0);
+  const HONEYTRAP_EMAIL = "democratdonor@gmail.com";
   
   const redactEmailsInText = (text: string): string => {
-    // First, always redact all honeytrap emails
-    let result = text;
-    for (const email of HONEYTRAP_EMAILS) {
-      const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      result = result.replace(new RegExp(escapedEmail, 'gi'), '*******@*******.com');
-    }
+    // First, always redact honeytrap email
+    const result = text.replace(new RegExp(HONEYTRAP_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '*******@*******.com');
     
     // Extract From: email to preserve it
     const fromMatch = result.match(/From:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
@@ -1282,12 +1277,8 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
   };
 
   const redactEmailsInHtml = (html: string): string => {
-    // First, always redact all honeytrap emails
-    let result = html;
-    for (const email of HONEYTRAP_EMAILS) {
-      const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      result = result.replace(new RegExp(escapedEmail, 'gi'), '*******@*******.com');
-    }
+    // First, always redact honeytrap email
+    const result = html.replace(new RegExp(HONEYTRAP_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '*******@*******.com');
     
     // Extract From: email to preserve it
     const fromMatch = result.match(/From:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);

@@ -3,7 +3,6 @@ import { randomBytes } from "crypto";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 import { cleanTextForAI } from "@/server/ingest/text-cleaner";
 import { sanitizeEmailHtml } from "@/server/ingest/html-sanitizer";
-import { env } from "@/lib/env";
 
 // Mailgun sends POST with application/x-www-form-urlencoded by default
 export async function POST(req: NextRequest) {
@@ -84,17 +83,10 @@ export async function POST(req: NextRequest) {
       .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:\r?\n)+/im, "")
       .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*$/gim, "");
     
-    // Redact honeytrap email addresses (supports multiple comma-separated emails)
-    const HONEYTRAP_EMAILS = (env.HONEYTRAP_EMAILS || "").split(',').map(e => e.trim()).filter(e => e.length > 0);
-    const redactHoneytraps = (text: string): string => {
-      let result = text;
-      for (const email of HONEYTRAP_EMAILS) {
-        const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        result = result.replace(new RegExp(escapedEmail, 'gi'), '*******@*******.com');
-      }
-      return result;
-    };
-    rawText = redactHoneytraps(rawText);
+    // Redact honeytrap email address everywhere (democratdonor@gmail.com)
+    const HONEYTRAP_EMAIL = "democratdonor@gmail.com";
+    const redactHoneytrap = (text: string) => text.replace(new RegExp(HONEYTRAP_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '*******@*******.com');
+    rawText = redactHoneytrap(rawText);
     
     // Clean text for AI (removes tracking links, invisible chars, excessive whitespace)
     // Note: cleanTextForAI also strips forwarded message headers
@@ -302,10 +294,9 @@ function validateAndCleanFromLine(fromLine: string): string | null {
   const cleaned = fromLine.trim();
   
   // Must be valid: has email, not honeytrap, reasonable length
-  const honeytrapEmails = (process.env.HONEYTRAP_EMAILS || "").split(',').map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
-  const isHoneytrap = honeytrapEmails.some(email => cleaned.toLowerCase().includes(email));
-  
-  if (cleaned.includes("@") && !isHoneytrap && cleaned.length > 5) {
+  if (cleaned.includes("@") && 
+      !cleaned.toLowerCase().includes("democratdonor@gmail.com") && 
+      cleaned.length > 5) {
     return cleaned;
   }
   
