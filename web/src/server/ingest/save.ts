@@ -436,6 +436,9 @@ export async function ingestTextSubmission(params: IngestTextParams): Promise<In
   if (params.emailBody) {
     insertRow.email_body = params.emailBody;
   }
+  if (params.emailBodyOriginal) {
+    insertRow.email_body_original = params.emailBodyOriginal;
+  }
   if (params.emailFrom) {
     insertRow.email_from = params.emailFrom;
   }

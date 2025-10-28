@@ -119,7 +119,7 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Pr
 }
 
 export default async function CasesPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
-  const sp: Record<string, string | string[] | undefined> = await (searchParams || Promise.resolve({}));
+  const sp: Record<string, string | string[] | undefined> = searchParams ? await searchParams : {};
   const pageParam = Array.isArray(sp["page"]) ? sp["page"][0] : sp["page"];
   const limitParam = Array.isArray(sp["limit"]) ? sp["limit"][0] : sp["limit"];
   const qParam = Array.isArray(sp["q"]) ? sp["q"][0] : sp["q"];

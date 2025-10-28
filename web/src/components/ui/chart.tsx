@@ -126,6 +126,8 @@ const ChartTooltipContent = React.forwardRef<
       className,
       indicator = "dot",
       hideLabel = false,
+      // hideIndicator kept for API compatibility
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       hideIndicator = false,
       label,
       labelFormatter,
@@ -196,6 +198,8 @@ const ChartTooltipContent = React.forwardRef<
             const rec = item as Record<string, unknown>
             const key = `${nameKey || (rec.name as string | undefined) || (rec.dataKey as string | undefined) || "value"}`
             const itemConfig = config[key as keyof typeof config]
+            // Preserve local reference for potential formatter use; avoid unused-var lint
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const indicatorColor =
               color || ((rec.payload as { fill?: string } | undefined)?.fill) || (rec.color as string | undefined)
 

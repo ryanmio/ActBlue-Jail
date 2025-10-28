@@ -375,7 +375,7 @@ export default function StatsPage() {
                 <KpiCard
                   label="Source Split"
                   value={`${data.kpis.user_uploads} / ${data.kpis.honeytraps}`}
-                  description="Uploads / Honeytrap"
+                  description="User Submitted / Bot Submitted"
                 />
               </div>
 
@@ -720,7 +720,7 @@ function SourceSplitPieChart({
   }>;
 }) {
   const chartData = sources.map((s) => ({
-    name: s.source === "user_upload" ? "User Uploads" : "Honeytrap",
+    name: s.source === "user_upload" ? "User Submitted" : "Bot Submitted",
     value: s.count,
     percentage: s.percentage,
     fill: s.source === "user_upload" ? CHART_COLORS.userUpload : CHART_COLORS.honeytrap,
