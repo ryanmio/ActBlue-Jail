@@ -33,12 +33,15 @@ export async function GET(
     });
   }
 
-  // Return the raw HTML
+  // Return the raw HTML with strict CSP to prevent XSS
   return new NextResponse(sub.email_body, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; img-src https: data: blob:; style-src 'unsafe-inline' https:; font-src https: data:; frame-ancestors 'none';",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
     },
   });
 }
