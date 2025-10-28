@@ -1249,57 +1249,8 @@ type EvidenceTabsProps = {
 };
 
 export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screenshotUrl, screenshotMime = null, landingImageUrl, landingLink, landingStatus }: EvidenceTabsProps) {
-  const HONEYTRAP_EMAIL = "democratdonor@gmail.com";
-  
-  const redactEmailsInText = (text: string): string => {
-    // First, always redact honeytrap email
-    const result = text.replace(new RegExp(HONEYTRAP_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '*******@*******.com');
-    
-    // Extract From: email to preserve it
-    const fromMatch = result.match(/From:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
-    const fromEmail = fromMatch ? fromMatch[1].toLowerCase() : null;
-    
-    return result.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
-      if (fromEmail && email.toLowerCase() === fromEmail) {
-        return email; // Preserve From: email
-      }
-      // Skip if already redacted
-      if (email.includes('*******')) return email;
-      try {
-        const parts = email.split("@");
-        const domain = parts[1] || "";
-        const tld = domain.includes(".") ? domain.split(".").pop() || "com" : "com";
-        return `${"*".repeat(7)}@${"*".repeat(7)}.${tld}`;
-      } catch {
-        return "****@****.***";
-      }
-    });
-  };
-
-  const redactEmailsInHtml = (html: string): string => {
-    // First, always redact honeytrap email
-    const result = html.replace(new RegExp(HONEYTRAP_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '*******@*******.com');
-    
-    // Extract From: email to preserve it
-    const fromMatch = result.match(/From:\s*[^<\n]*?<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?/i);
-    const fromEmail = fromMatch ? fromMatch[1].toLowerCase() : null;
-    
-    return result.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (email) => {
-      if (fromEmail && email.toLowerCase() === fromEmail) {
-        return email; // Preserve From: email
-      }
-      // Skip if already redacted
-      if (email.includes('*******')) return email;
-      try {
-        const parts = email.split("@");
-        const domain = parts[1] || "";
-        const tld = domain.includes(".") ? domain.split(".").pop() || "com" : "com";
-        return `${"*".repeat(7)}@${"*".repeat(7)}.${tld}`;
-      } catch {
-        return "****@****.***";
-      }
-    });
-  };
+  // Note: Email redaction is now handled server-side during ingestion.
+  // The data we receive here is already redacted, so no client-side redaction is needed.
 
   const [tab, setTab] = useState<"primary" | "landing">("primary");
   const [scanUrl, setScanUrl] = useState("");
@@ -1414,12 +1365,12 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
                   <div className="scale-[0.5] origin-top" style={{ width: "calc(100% / 0.5)" }}>
                     <div 
                       className="prose prose-sm max-w-none text-slate-900 text-xs prose-headings:text-sm"
-                      dangerouslySetInnerHTML={{ __html: redactEmailsInHtml(emailBody) }}
+                      dangerouslySetInnerHTML={{ __html: emailBody }}
                     />
                   </div>
                 </div>
               ) : rawText ? (
-                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{redactEmailsInText(normalizePunctuation(repairMojibake(rawText)))}</pre>
+                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{normalizePunctuation(repairMojibake(rawText))}</pre>
               ) : (
                 <div className="text-slate-600 text-sm">No primary evidence available.</div>
               )}

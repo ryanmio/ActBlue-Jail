@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 import { cleanTextForAI } from "@/server/ingest/text-cleaner";
 import { sanitizeEmailHtml } from "@/server/ingest/html-sanitizer";
+import { env } from "@/lib/env";
 
 // Mailgun sends POST with application/x-www-form-urlencoded by default
 export async function POST(req: NextRequest) {
@@ -83,9 +84,24 @@ export async function POST(req: NextRequest) {
       .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*(?:\r?\n)+/im, "")
       .replace(/^[\s>]*-+\s*Forwarded message\s*-+\s*$/gim, "");
     
-    // Redact honeytrap email address everywhere (democratdonor@gmail.com)
-    const HONEYTRAP_EMAIL = "democratdonor@gmail.com";
-    const redactHoneytrap = (text: string) => text.replace(new RegExp(HONEYTRAP_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '*******@*******.com');
+    // Redact honeytrap email addresses from environment variable
+    const honeytrapEmails = env.HONEYTRAP_EMAILS 
+      ? env.HONEYTRAP_EMAILS.split(',').map(e => e.trim()).filter(e => e.length > 0)
+      : [];
+    
+    if (honeytrapEmails.length === 0) {
+      console.warn("/api/inbound-email:warning HONEYTRAP_EMAILS not configured - skipping redaction");
+    }
+    
+    const redactHoneytrap = (text: string) => {
+      let result = text;
+      for (const email of honeytrapEmails) {
+        const escaped = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        result = result.replace(new RegExp(escaped, 'gi'), '*******@*******.com');
+      }
+      return result;
+    };
+    
     rawText = redactHoneytrap(rawText);
     
     // Clean text for AI (removes tracking links, invisible chars, excessive whitespace)
@@ -293,14 +309,23 @@ function extractOriginalFromLine(text: string): string | null {
 function validateAndCleanFromLine(fromLine: string): string | null {
   const cleaned = fromLine.trim();
   
-  // Must be valid: has email, not honeytrap, reasonable length
-  if (cleaned.includes("@") && 
-      !cleaned.toLowerCase().includes("democratdonor@gmail.com") && 
-      cleaned.length > 5) {
-    return cleaned;
+  // Must be valid: has email, reasonable length, not a honeytrap email
+  if (!cleaned.includes("@") || cleaned.length <= 5) {
+    return null;
   }
   
-  return null;
+  // Check if this is a honeytrap email
+  const honeytrapEmails = env.HONEYTRAP_EMAILS 
+    ? env.HONEYTRAP_EMAILS.split(',').map(e => e.trim().toLowerCase()).filter(e => e.length > 0)
+    : [];
+  
+  const isHoneytrap = honeytrapEmails.some(email => cleaned.toLowerCase().includes(email));
+  
+  if (isHoneytrap) {
+    return null;
+  }
+  
+  return cleaned;
 }
 
 // Parse a bare email address from formats like:
