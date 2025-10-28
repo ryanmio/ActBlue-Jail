@@ -145,13 +145,6 @@ export function OnboardingModal({ open, onOpenChange, videoUrl }: OnboardingModa
             {step.description}
           </DialogDescription>
 
-          {/* Note */}
-          {step.note && (
-            <div className="text-sm text-slate-600 italic">
-              {step.note}
-            </div>
-          )}
-
           {/* Step indicators */}
           <div className="flex justify-center gap-2 pt-2">
             {STEPS.map((_, idx) => (
