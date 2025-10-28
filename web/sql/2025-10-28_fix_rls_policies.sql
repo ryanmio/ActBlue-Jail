@@ -11,7 +11,8 @@ DROP POLICY IF EXISTS "public_update_submissions_raw_text" ON submissions;
 
 -- Add RLS to related tables (read-only for anon, full access for service role)
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "public_read_comments" ON comments
+DROP POLICY IF EXISTS "public_read_comments" ON comments;
+CREATE POLICY "public_read_comments" ON comments
   FOR SELECT
   USING (
     EXISTS (
@@ -22,7 +23,8 @@ CREATE POLICY IF NOT EXISTS "public_read_comments" ON comments
   );
 
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "public_read_reports" ON reports
+DROP POLICY IF EXISTS "public_read_reports" ON reports;
+CREATE POLICY "public_read_reports" ON reports
   FOR SELECT
   USING (
     EXISTS (
@@ -33,7 +35,8 @@ CREATE POLICY IF NOT EXISTS "public_read_reports" ON reports
   );
 
 ALTER TABLE report_replies ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "public_read_replies" ON report_replies
+DROP POLICY IF EXISTS "public_read_replies" ON report_replies;
+CREATE POLICY "public_read_replies" ON report_replies
   FOR SELECT
   USING (
     EXISTS (
