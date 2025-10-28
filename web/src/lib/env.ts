@@ -23,6 +23,9 @@ const EnvSchema = z.object({
 
   GITHUB_TOKEN: z.string().optional(),
 
+  // Honeytrap emails (comma-separated for misdirection)
+  HONEYTRAP_EMAILS: z.string().optional(),
+
   // Dedupe tuning
   DEDUP_SIMHASH_DISTANCE: z.coerce.number().default(4),
 });
@@ -58,6 +61,8 @@ export const env: AppEnv = EnvSchema.parse({
   REPORT_EMAIL_FROM: process.env.REPORT_EMAIL_FROM || process.env.REPORT_FROM_EMAIL,
 
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+
+  HONEYTRAP_EMAILS: process.env.HONEYTRAP_EMAILS,
 
   DEDUP_SIMHASH_DISTANCE: process.env.DEDUP_SIMHASH_DISTANCE,
 });

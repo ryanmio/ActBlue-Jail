@@ -91,7 +91,7 @@ created_at timestamptz
    - Stores envelope sender as `envelopeSender` (forwarder's email)
    - Attempts to detect original sender from forwarded message body
    - Strips forwarded headers from text
-   - Redacts honeytrap email (democratdonor@gmail.com)
+   - Redacts honeytrap emails (from HONEYTRAP_EMAILS env var)
    - Cleans text via cleanTextForAI()
    - Sanitizes HTML via sanitizeEmailHtml()
    - Generates secure token: randomBytes(32).toString('base64url')
@@ -503,6 +503,9 @@ REPORT_EMAIL_FROM=reports@abjail.org
 # Site
 NEXT_PUBLIC_SITE_URL=https://abjail.org
 
+# Honeytrap emails (server-side only, comma-separated for multiple emails)
+HONEYTRAP_EMAILS=email1@example.com,email2@example.com
+
 # Deduplication
 DEDUP_SIMHASH_DISTANCE=4  # max hamming distance for duplicate detection
 ```
@@ -533,9 +536,11 @@ queued → ocr → classified → done
 - Marked as used BEFORE calling report-violation to prevent race conditions
 
 ### Honeytrap Email Protection
-- democratdonor@gmail.com is redacted throughout system
+- Honeytrap emails (configured via HONEYTRAP_EMAILS env var) are redacted server-side during ingestion
+- Supports multiple comma-separated emails for misdirection
 - Non-ActBlue links removed from email HTML
 - Prevents exposing honeytrap to third parties
+- No client-side redaction needed (data already clean from server)
 
 ### PII Redaction (Personalization Removal)
 - Runs after ingest as an isolated step for email/SMS/text

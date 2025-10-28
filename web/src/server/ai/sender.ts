@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { env } from "@/lib/env";
 
 export type SenderType = "org" | "pac" | "candidate" | "unknown";
 
@@ -43,7 +44,16 @@ export async function runSenderExtraction(submissionId: string) {
   type ContentPart = ImageUrlPart | TextPart;
   type Message = { role: "system" | "user"; content: string | ContentPart[] };
 
-  const system = `You are reviewing a political fundraising appeal to extract the ORIGINAL sending entity.\n\nGoals:\n- Identify the organization, PAC, or candidate responsible for the ORIGINAL message content (not any forwarder).\n- Ignore forwarding/relay info such as personal names or emails in headers like \'From:\' showing gmail/outlook/yahoo, \'Fwd:\', \'Forwarded message\', or \'via\'. These are often the person who forwarded the message.\n- Prefer explicit disclosures (e.g., \'Paid for by ...\'), unsubscribe/footer branding, sender lines, or signature blocks from the ORIGINAL content.\n- If the message was forwarded by an individual (e.g., democratdonor@gmail.com) but the original is from an entity (e.g., Stop Republicans PAC), USE THE ORIGINAL ENTITY as the sender.\n- Use the screenshot image (logos/branding) to corroborate when available.\n- If multiple entities appear, choose the one that claims responsibility for fundraising/spending in the disclaimer; otherwise pick the most prominent org/PAC/campaign.\n- If none is provided, return sender_name = null and sender_type = \"unknown\".\n\nOutput JSON only (no markdown), with keys:\n{\n  "sender_name": string | null,\n  "sender_type": "org" | "pac" | "candidate" | "unknown",\n  "confidence": number (0..1),\n  "notes": string\n}`;
+  // Build system prompt with honeytrap examples (if configured)
+  const honeytrapEmails = env.HONEYTRAP_EMAILS 
+    ? env.HONEYTRAP_EMAILS.split(',').map(e => e.trim()).filter(e => e.length > 0)
+    : [];
+  
+  const honeytrapExample = honeytrapEmails.length > 0 
+    ? `(e.g., ${honeytrapEmails[0]})` 
+    : "(e.g., personal email addresses)";
+  
+  const system = `You are reviewing a political fundraising appeal to extract the ORIGINAL sending entity.\n\nGoals:\n- Identify the organization, PAC, or candidate responsible for the ORIGINAL message content (not any forwarder).\n- Ignore forwarding/relay info such as personal names or emails in headers like \'From:\' showing gmail/outlook/yahoo, \'Fwd:\', \'Forwarded message\', or \'via\'. These are often the person who forwarded the message.\n- Prefer explicit disclosures (e.g., \'Paid for by ...\'), unsubscribe/footer branding, sender lines, or signature blocks from the ORIGINAL content.\n- If the message was forwarded by an individual ${honeytrapExample} but the original is from an entity (e.g., Stop Republicans PAC), USE THE ORIGINAL ENTITY as the sender.\n- Use the screenshot image (logos/branding) to corroborate when available.\n- If multiple entities appear, choose the one that claims responsibility for fundraising/spending in the disclaimer; otherwise pick the most prominent org/PAC/campaign.\n- If none is provided, return sender_name = null and sender_type = \"unknown\".\n\nOutput JSON only (no markdown), with keys:\n{\n  "sender_name": string | null,\n  "sender_type": "org" | "pac" | "candidate" | "unknown",\n  "confidence": number (0..1),\n  "notes": string\n}`;
 
   const userContent: ContentPart[] = [ { type: "text", text: String(sub.raw_text || "").trim() || "(none)" } ];
   if (signedUrl) userContent.push({ type: "image_url", image_url: { url: signedUrl } });
