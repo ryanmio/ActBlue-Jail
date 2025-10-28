@@ -1,35 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes, createHmac } from "crypto";
+import { randomBytes } from "crypto";
 import { ingestTextSubmission, triggerPipelines } from "@/server/ingest/save";
 import { cleanTextForAI } from "@/server/ingest/text-cleaner";
 import { sanitizeEmailHtml } from "@/server/ingest/html-sanitizer";
 
-// Verify Mailgun webhook signature to prevent fake submissions
-function verifyMailgunWebhook(req: NextRequest): boolean {
-  const timestamp = req.headers.get('X-Mailgun-Timestamp');
-  const token = req.headers.get('X-Mailgun-Token');
-  const signature = req.headers.get('X-Mailgun-Signature');
-  const signingKey = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
-  
-  if (!timestamp || !token || !signature || !signingKey) {
-    return false;
-  }
-  
-  const hmac = createHmac('sha256', signingKey);
-  hmac.update(timestamp + token);
-  const computedSignature = hmac.digest('hex');
-  
-  return computedSignature === signature;
-}
-
 // Mailgun sends POST with application/x-www-form-urlencoded by default
 export async function POST(req: NextRequest) {
-  // Verify webhook signature before processing
-  if (!verifyMailgunWebhook(req)) {
-    console.error("/api/inbound-email:unauthorized - invalid webhook signature");
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
   try {
     console.log("/api/inbound-email:start", {
       ct: req.headers.get("content-type") || null,

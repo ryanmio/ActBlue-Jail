@@ -22,8 +22,6 @@ const EnvSchema = z.object({
   REPORT_EMAIL_FROM: z.string().email().optional(),
 
   GITHUB_TOKEN: z.string().optional(),
-  
-  MAILGUN_WEBHOOK_SIGNING_KEY: z.string().optional(),
 
   // Dedupe tuning
   DEDUP_SIMHASH_DISTANCE: z.coerce.number().default(4),
@@ -60,8 +58,6 @@ export const env: AppEnv = EnvSchema.parse({
   REPORT_EMAIL_FROM: process.env.REPORT_EMAIL_FROM || process.env.REPORT_FROM_EMAIL,
 
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
-  
-  MAILGUN_WEBHOOK_SIGNING_KEY: process.env.MAILGUN_WEBHOOK_SIGNING_KEY,
 
   DEDUP_SIMHASH_DISTANCE: process.env.DEDUP_SIMHASH_DISTANCE,
 });
