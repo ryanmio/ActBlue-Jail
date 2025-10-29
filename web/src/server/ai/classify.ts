@@ -21,13 +21,13 @@ export async function runClassification(submissionId: string, opts: RunClassific
   // Load submission
   const { data: items, error } = await supabase
     .from("submissions")
-    .select("id, image_url, raw_text, landing_url, landing_screenshot_url, email_from")
+    .select("id, image_url, raw_text, landing_url, landing_screenshot_url, email_from, email_subject")
     .eq("id", submissionId)
     .limit(1);
   if (error || !items?.[0]) {
     return { ok: false, status: 404, error: "not_found" as const };
   }
-  const sub = items[0] as { id: string; image_url?: string | null; raw_text?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null; email_from?: string | null };
+  const sub = items[0] as { id: string; image_url?: string | null; raw_text?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null; email_from?: string | null; email_subject?: string | null };
 
   // Prepare signed image URL if applicable (and only if extension is supported by OpenAI image_url)
   let signedUrl: string | null = null;
@@ -75,10 +75,16 @@ export async function runClassification(submissionId: string, opts: RunClassific
 
   type Message = { role: "system" | "user"; content: any };
   
-  // Build the initial message text with raw From line and body
+  // Build the initial message text with raw From line, subject, and body
   let messageText = "";
   if (sub.email_from) {
-    messageText += `From: ${sub.email_from}\n\n`;
+    messageText += `From: ${sub.email_from}\n`;
+  }
+  if (sub.email_subject) {
+    messageText += `Subject: ${sub.email_subject}\n`;
+  }
+  if (sub.email_from || sub.email_subject) {
+    messageText += `\n`;
   }
   messageText += String(sub.raw_text || "").trim() || "(none)";
   
