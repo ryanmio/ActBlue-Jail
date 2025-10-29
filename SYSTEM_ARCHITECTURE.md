@@ -108,6 +108,7 @@ created_at timestamptz
    - If duplicate detected, returns 200 with duplicate: true
    - If fundraising detected, calls triggerPipelines(submissionId)
    - If landing URL detected, triggers screenshot-actblue
+   - If non-fundraising detected AND forwarded email, triggers send-non-fundraising-notice
    - Returns 200 {ok: true, id: submissionId}
 
 2. /server/ingest/save.ts: ingestTextSubmission()
@@ -359,6 +360,20 @@ created_at timestamptz
 - "Submit to ActBlue" button → /api/submit-report-via-email?token={token}
 - "Open on AB Jail" button → /cases/{id}
 
+### POST /api/send-non-fundraising-notice
+**Purpose:** Send notice email to forwarder when they submit non-fundraising emails
+**Input:** {submissionId: string}
+**Output:** {ok: true} or {ok: true, skipped: 'no_forwarder_email'}
+**Filtering:**
+- SKIP if forwarder_email is NULL
+**Side Effects:**
+- Sends HTML email via Resend
+**Email Contains:**
+- Message that AB Jail currently only supports fundraising emails
+- Campaign/org name (if detected)
+- Link to AB Jail website
+- No action buttons (submission not processed)
+
 ### GET /api/submit-report-via-email?token={token}
 **Purpose:** Handle one-click report submission from email
 **Input:** Query param: token (submission_token)
@@ -569,7 +584,12 @@ queued → ocr → classified → done
    - Contains: campaign, violations, landing URL, screenshot, action buttons
    - Sent after classification completes
 
-2. **Violation Report** (to REPORT_EMAIL_TO)
+2. **Non-Fundraising Notice** (to forwarder_email)
+   - Subject: "Thanks for your submission - Case #{shortId}"
+   - Contains: message that only fundraising emails are currently supported, campaign name, link to site
+   - Sent immediately after non-fundraising email detected
+
+3. **Violation Report** (to REPORT_EMAIL_TO)
    - Subject: "Reporting Possible Violation - Case #{shortId}"
    - Contains: campaign, violations, landing URL, screenshot, reporter note
    - Sent when user submits report (via UI or email button)
@@ -760,6 +780,16 @@ triggerPipelines() → /api/classify + /api/redact-pii
 /api/classify completes → /api/send-case-preview
   ↓
 /api/send-case-preview checks forwarder_email = NULL → SKIPS (no email sent)
+
+
+NON-FUNDRAISING EMAIL FORWARD:
+Mailgun → /api/inbound-email → ingestTextSubmission() → DB insert with forwarder_email
+  ↓
+Heuristic detects non-fundraising → /api/send-non-fundraising-notice (fire-and-forget)
+  ↓
+/api/send-non-fundraising-notice checks forwarder_email != NULL → sends notice email
+  ↓
+User receives email explaining only fundraising emails are supported
 ```
 
 ---
@@ -801,6 +831,7 @@ triggerPipelines() → /api/classify + /api/redact-pii
 - /web/src/app/api/sender/route.ts
 - /web/src/app/api/screenshot-actblue/route.ts
 - /web/src/app/api/send-case-preview/route.ts (NEW)
+- /web/src/app/api/send-non-fundraising-notice/route.ts (NEW)
 - /web/src/app/api/submit-report-via-email/route.ts (NEW)
 - /web/src/app/api/report-violation/route.ts
 - /web/src/app/api/upload/route.ts

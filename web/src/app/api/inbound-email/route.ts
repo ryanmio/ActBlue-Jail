@@ -233,6 +233,33 @@ export async function POST(req: NextRequest) {
         submissionId: result.id,
         isFundraising: result.isFundraising
       });
+      
+      // Send notice email to forwarder for non-fundraising submissions
+      if (result.id && isForwarded && envelopeSender) {
+        console.log("/api/inbound-email:triggering_non_fundraising_notice", {
+          submissionId: result.id,
+          forwarder: parseEmailAddress(envelopeSender) || envelopeSender
+        });
+        
+        const base = process.env.NEXT_PUBLIC_SITE_URL || "";
+        void fetch(`${base}/api/send-non-fundraising-notice`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ submissionId: result.id }),
+        }).then(async (r) => {
+          const text = await r.text().catch(() => "");
+          console.log("/api/inbound-email:non_fundraising_notice_triggered", { 
+            status: r.status, 
+            submissionId: result.id,
+            response: text?.slice(0, 200) 
+          });
+        }).catch((e) => {
+          console.error("/api/inbound-email:non_fundraising_notice_error", { 
+            submissionId: result.id,
+            error: String(e)
+          });
+        });
+      }
     }
 
     return NextResponse.json({ ok: true, id: result.id }, { status: 200 });
