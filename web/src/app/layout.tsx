@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   title: { default: "AB Jail", template: "%s - AB Jail" },
   description:
-    "Upload a screenshot or paste text. AI flags potential ActBlue AUP violations and adds a public record. Not affiliated with ActBlue.",
+    "Public database of political fundraising messages that may violate ActBlue's rules. AI analyzes submissions and messages from monitored accounts. Not affiliated with ActBlue.",
   manifest: "/site.webmanifest",
   icons: {
     icon: "/favicon.ico",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "AB Jail",
     description:
-      "Upload a screenshot or paste text. AI flags potential ActBlue AUP violations and adds a public record.",
+      "Public database of political fundraising messages that may violate ActBlue's rules. AI analyzes user submissions and auto-collected messages.",
     url: "/",
     siteName: "AB Jail",
     type: "website",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AB Jail",
     description:
-      "Upload a screenshot or paste text. AI flags potential ActBlue AUP violations and adds a public record.",
+      "Public database of political fundraising messages that may violate ActBlue's rules. AI analyzes user submissions and auto-collected messages.",
   },
   alternates: { canonical: "/" },
 };
