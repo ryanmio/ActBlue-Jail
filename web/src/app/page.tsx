@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { assertSupabaseBrowser } from "@/lib/supabase";
 import { cachedJsonFetch } from "@/lib/client-cache";
 import Footer from "@/components/Footer";
@@ -822,6 +822,7 @@ function RecentCases() {
 function WorstOffenders() {
   const { stats, loading } = useHomepageStats();
   const offenders = stats.worst_offenders || [];
+  const router = useRouter();
 
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
@@ -849,15 +850,22 @@ function WorstOffenders() {
               ))
             )}
             {!loading && offenders.slice(0, 5).map((o) => (
-              <tr key={o.sender_name} className="border-t hover:bg-slate-50">
+              <tr 
+                key={o.sender_name} 
+                className="border-t hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                role="button"
+                tabIndex={0}
+                aria-label={`View cases for ${o.sender_name}`}
+                onClick={() => router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`);
+                  }
+                }}
+              >
                 <td className="py-2 pr-4 text-slate-900">
-                  <Link
-                    href={`/cases?q=${encodeURIComponent(o.sender_name)}`}
-                    className="text-slate-900 hover:bg-slate-50 rounded px-1"
-                    aria-label={`View cases for ${o.sender_name}`}
-                  >
-                    {o.sender_name}
-                  </Link>
+                  {o.sender_name}
                 </td>
                 <td className="py-2 pr-4 tabular-nums text-slate-900">{o.violation_count}</td>
                 <td className="py-2 pr-4 text-slate-800">{formatWhen(o.latest_violation_at)}</td>

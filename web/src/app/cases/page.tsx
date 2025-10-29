@@ -9,6 +9,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { SenderSearchCombobox } from "@/components/sender-search-combobox";
 
 type SubmissionRow = {
   id: string;
@@ -59,7 +60,7 @@ function derivePreview(text?: string | null): string {
   return text.slice(0, 160);
 }
 
-async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
+async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], senders: string[] = []): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
 {
   try {
     const usp = new URLSearchParams();
@@ -70,6 +71,10 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = []): Pr
     if (codes && codes.length > 0) {
       // Send as comma-separated list for brevity
       usp.set("codes", codes.join(","));
+    }
+    if (senders && senders.length > 0) {
+      // Send as comma-separated list for brevity
+      usp.set("senders", senders.join(","));
     }
     const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases?${usp.toString()}`, { cache: "no-store" });
     if (!res.ok) return { items: [], page, limit, total: 0, hasMore: false, offset: 0 };
@@ -130,10 +135,17 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
     : typeof codesParam === "string" && codesParam.length > 0
       ? String(codesParam).split(",")
       : [];
+  // Parse senders from query (supports both repeated and comma-separated)
+  const sendersParam = sp["senders"];
+  const selectedSenders: string[] = Array.isArray(sendersParam)
+    ? sendersParam.flatMap((v) => String(v).split(","))
+    : typeof sendersParam === "string" && sendersParam.length > 0
+      ? String(sendersParam).split(",")
+      : [];
   const page = Number(pageParam) || 1;
   const pageSize = Number(limitParam) || 20;
   const q = (qParam || "").toString();
-  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes);
+  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders);
   return (
     <main 
       className="min-h-[calc(100vh+160px)] bg-white"
@@ -162,20 +174,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
               <div className="text-sm text-slate-600 md:hidden">{total} total</div>
             </div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-3 md:gap-4 md:-mt-8">
-              <form action="/cases" className="flex items-center gap-2 w-full md:w-auto" method="get">
-                <input type="hidden" name="page" value="1" />
-                <input type="hidden" name="limit" value={String(pageSize)} />
-                {selectedCodes.map((c) => (
-                  <input key={`code-${c}`} type="hidden" name="codes" value={c} />
-                ))}
-                <input
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Search sender..."
-                  className="flex-1 md:w-56 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                />
-                <button className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" type="submit">Search</button>
-              </form>
+              <SenderSearchCombobox selectedSenders={selectedSenders} pageSize={pageSize} codes={selectedCodes} />
               {/* Compact filter dropdown */}
               <div className="relative">
                 <details className="[&_summary::-webkit-details-marker]:hidden">
@@ -190,6 +189,9 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       <input type="hidden" name="page" value="1" />
                       <input type="hidden" name="limit" value={String(pageSize)} />
                       {q && <input type="hidden" name="q" value={q} />}
+                      {selectedSenders.map((sender) => (
+                        <input key={`sender-${sender}`} type="hidden" name="senders" value={sender} />
+                      ))}
                       <div className="grid grid-cols-1 gap-2">
                         {VIOLATION_OPTIONS.map((opt: { code: string; title: string }) => {
                           const checked = selectedCodes.includes(opt.code);
@@ -202,7 +204,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                         })}
                       </div>
                       <div className="flex gap-2 justify-end">
-                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
+                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
                         <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800">Apply</button>
                       </div>
                     </form>
@@ -315,7 +317,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                 ))}
               </div>
               <div className="mt-6 flex items-center justify-between">
-                <PaginationControls total={total} pageSize={limit} currentPage={page} hasMore={hasMore} q={q} />
+                <PaginationControls total={total} pageSize={limit} currentPage={page} hasMore={hasMore} q={q} senders={selectedSenders} codes={selectedCodes} />
               </div>
             </>
           )}
@@ -326,15 +328,26 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   );
 }
 
-function PaginationControls({ total, pageSize, currentPage, hasMore, q }: { total: number; pageSize: number; currentPage: number; hasMore: boolean; q?: string }) {
+function PaginationControls({ total, pageSize, currentPage, hasMore, q, senders, codes }: { total: number; pageSize: number; currentPage: number; hasMore: boolean; q?: string; senders?: string[]; codes?: string[] }) {
   const base = "/cases";
   const prevPage = Math.max(1, currentPage - 1);
   const nextPage = currentPage + 1;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  
+  const buildUrl = (page: number) => {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(pageSize));
+    if (q) params.set("q", q);
+    if (senders && senders.length > 0) params.set("senders", senders.join(","));
+    if (codes && codes.length > 0) params.set("codes", codes.join(","));
+    return `${base}?${params.toString()}`;
+  };
+  
   return (
     <div className="flex items-center gap-3 text-sm">
       <Link
-        href={`${base}?page=${prevPage}&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+        href={buildUrl(prevPage)}
         className={`px-3 py-1.5 rounded-md border ${currentPage <= 1 ? "text-slate-400 border-slate-200 pointer-events-none" : "text-slate-800 border-slate-300 hover:bg-slate-50"}`}
         aria-disabled={currentPage <= 1}
       >
@@ -342,7 +355,7 @@ function PaginationControls({ total, pageSize, currentPage, hasMore, q }: { tota
       </Link>
       <span className="text-slate-600">Page {currentPage} of {totalPages}</span>
       <Link
-        href={`${base}?page=${nextPage}&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+        href={buildUrl(nextPage)}
         className={`px-3 py-1.5 rounded-md border ${!hasMore ? "text-slate-400 border-slate-200 pointer-events-none" : "text-slate-800 border-slate-300 hover:bg-slate-50"}`}
         aria-disabled={!hasMore}
       >
