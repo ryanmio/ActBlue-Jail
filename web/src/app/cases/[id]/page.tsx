@@ -17,6 +17,7 @@ type CaseItem = {
   sender_name: string | null;
   raw_text: string | null;
   email_body?: string | null;
+  email_subject?: string | null;
   processing_status?: string | null;
   created_at?: string | null;
   ai_confidence?: number | string | null;
@@ -204,6 +205,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
                 <LiveSender id={id} initialSenderName={item.sender_name} initialSenderId={item.sender_id} />
               </h1>
+              {item.message_type === 'email' && item.email_subject && (
+                <p className="text-base text-slate-600 italic">
+                  {item.email_subject}
+                </p>
+              )}
               <div className="flex items-center gap-2 flex-wrap text-xs text-slate-700">
                 {createdAtIso && (
                   <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
