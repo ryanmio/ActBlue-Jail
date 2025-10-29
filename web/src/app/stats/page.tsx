@@ -865,11 +865,11 @@ function TopSendersTable({
                     role="button"
                     tabIndex={0}
                     aria-label={`View cases for ${s.sender}`}
-                    onClick={() => router.push(`/cases?q=${encodeURIComponent(s.sender)}`)}
+                    onClick={() => router.push(`/cases?senders=${encodeURIComponent(s.sender)}`)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        router.push(`/cases?q=${encodeURIComponent(s.sender)}`);
+                        router.push(`/cases?senders=${encodeURIComponent(s.sender)}`);
                       }
                     }}
                   >

@@ -14,6 +14,10 @@ export async function GET(req: NextRequest) {
   const multiCodes = searchParams.getAll("codes");
   const singleCodes = (searchParams.get("codes") || "").split(",").map((s) => s.trim()).filter(Boolean);
   const codes = Array.from(new Set([...(multiCodes || []), ...(singleCodes || [])])).filter(Boolean);
+  // Support both repeated ?senders=name1&senders=name2 and comma-separated ?senders=name1,name2
+  const multiSenders = searchParams.getAll("senders");
+  const singleSenders = (searchParams.get("senders") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const senders = Array.from(new Set([...(multiSenders || []), ...(singleSenders || [])])).filter(Boolean);
 
   try {
     const supabase = getSupabaseServer();
@@ -58,6 +62,12 @@ export async function GET(req: NextRequest) {
     if (q.length > 0) {
       const sanitized = q.replace(/[%]/g, "").replace(/,/g, " ");
       builder = builder.or(`sender_name.ilike.%${sanitized}%,sender_id.ilike.%${sanitized}%`);
+    }
+
+    // Filter by specific sender names if provided
+    if (senders.length > 0) {
+      // Use .in() for exact matches which handles special characters properly
+      builder = builder.or(`sender_name.in.(${senders.map(s => JSON.stringify(s)).join(",")}),sender_id.in.(${senders.map(s => JSON.stringify(s)).join(",")})`);
     }
 
     const { data, error, count } = await builder.range(offset, offset + limit - 1);
