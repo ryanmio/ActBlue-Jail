@@ -242,7 +242,8 @@ export async function POST(req: NextRequest) {
         });
         
         const base = process.env.NEXT_PUBLIC_SITE_URL || "";
-        void fetch(`${base}/api/send-non-fundraising-notice`, {
+        // Await to ensure completion in serverless environment
+        await fetch(`${base}/api/send-non-fundraising-notice`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ submissionId: result.id }),
