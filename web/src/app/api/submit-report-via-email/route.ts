@@ -149,7 +149,7 @@ function renderSuccessPage(caseId: string, caseUrl: string): string {
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
       line-height: 1.6;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ea580c 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -325,7 +325,7 @@ function renderInfoPage(title: string, message: string, caseUrl: string): string
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
       line-height: 1.6;
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      background: linear-gradient(135deg, #ea580c 0%, #7c3aed 50%, #2563eb 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
