@@ -31,10 +31,10 @@ export default function AboutPage() {
         <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
           <h2 className="text-lg font-semibold text-slate-900">What is AB Jail?</h2>
           <p className="text-sm text-slate-700">
-            AB Jail is an open-source, community-led transparency project for political fundraising. Donors – especially elderly small-dollar givers – are being bombarded with deceptive texts and emails that erode trust and poison the well for everyone. AB Jail shines a light on these practices: just drag and drop a screenshot, and AI extracts the sender, flags likely violations of ActBlue&apos;s own published rules, generates a ready-to-send report, and adds the case to a public ledger.
+            AB Jail is an open-source, community-led transparency project for political fundraising. Donors – especially elderly small-dollar givers – are being bombarded with deceptive texts and emails that erode trust and poison the well for everyone. AB Jail shines a light on these practices by accepting submissions and monitoring real-time feeds: Forward suspicious emails to <code className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono">submit@abjail.org</code>, upload screenshots, or paste text, and AI extracts the sender, flags likely violations of ActBlue&apos;s own published rules, generates a ready-to-send report, and adds the case to a public ledger.
           </p>
           <p className="text-sm text-slate-700">
-            In addition to uploads, AB Jail continuously parses messages from seeded phone numbers subscribed to campaigns, PACs, and list sellers, creating a real-time feed of fundraising solicitations. Email coverage is next.
+            Additionally, AB Jail continuously monitors messages from seeded phone numbers and email addresses subscribed to campaigns, PACs, and list sellers, creating a real-time feed of fundraising solicitations that builds our public database. This two-pronged approach – manual submission and automatic collection – ensures comprehensive coverage of deceptive practices.
           </p>
           <p className="text-sm text-slate-700">
             The goal is to protect donors and safeguard small-dollar fundraising by making patterns public. The entire project is open-source and community-driven – anyone can audit the <a href="https://github.com/ryanmio/ActBlue-Jail#" className="underline hover:no-underline" target="_blank" rel="noopener noreferrer">code</a> or contribute improvements directly.

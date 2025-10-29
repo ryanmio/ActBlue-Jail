@@ -8,7 +8,7 @@ import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
 export const metadata: Metadata = {
   title: "How it works",
   description:
-    "Learn how to use AB Jail to report potential ActBlue policy violations in political fundraising messages.",
+    "Submit fundraising messages or browse real-time feeds. AB Jail uses AI to flag potential ActBlue policy violations in political campaigns.",
 };
 
 export default function WelcomePage() {
@@ -239,6 +239,23 @@ export default function WelcomePage() {
                   </div>
                 </details>
               ))}
+            </div>
+        </section>
+
+        <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
+              Real-time monitoring through bots
+            </h2>
+            <p className="text-slate-700 leading-relaxed mb-4">
+              Beyond user submissions, AB Jail continuously monitors fundraising at scale using seeded phone numbers and email addresses. These &ldquo;honeytrap&rdquo; accounts subscribe to campaigns, PACs, and list sellers, capturing solicitations automatically.
+            </p>
+            <p className="text-slate-700 leading-relaxed mb-4">
+              All collected messages undergo the same AI analysis as manual submissions, appearing in the public database with the same violation flags and context. This two-pronged approach ensures we catch both individual cases flagged by donors and systemic patterns across campaigns.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900">
+                <span className="font-semibold">Browse by source:</span> On the <Link href="/cases" className="underline hover:no-underline">cases page</Link>, filter by &ldquo;user submitted&rdquo; or &ldquo;automated collection&rdquo; to see which messages came from donors and which from our monitoring systems.
+              </p>
             </div>
         </section>
 

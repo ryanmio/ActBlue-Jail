@@ -33,9 +33,6 @@ export function PageHeader() {
               <Link href="/welcome" className="cursor-pointer text-slate-900 hover:bg-slate-100">How it works</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/about" className="cursor-pointer text-slate-900 hover:bg-slate-100">About</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link href="/cases" className="cursor-pointer text-slate-900 hover:bg-slate-100">All Cases</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -74,6 +71,9 @@ export function PageHeader() {
           
           <DropdownMenuLabel className="text-slate-600 font-semibold">Contact</DropdownMenuLabel>
           <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link href="/about" className="cursor-pointer text-slate-900 hover:bg-slate-100">About</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a href="https://github.com/ryanmio/ActBlue-Jail/discussions" target="_blank" rel="noopener noreferrer" className="cursor-pointer text-slate-900 hover:bg-slate-100">
                 GitHub
