@@ -241,12 +241,11 @@ export async function POST(req: NextRequest) {
         
         console.log("/api/inbound-email:triggering_non_fundraising_notice", {
           submissionId: result.id,
-          forwarder: parseEmailAddress(envelopeSender) || envelopeSender,
-          base,
-          noticeUrl
+          forwarder: parseEmailAddress(envelopeSender) || envelopeSender
         });
         
-        void fetch(noticeUrl, {
+        // Await to ensure completion in serverless environment
+        await fetch(noticeUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ submissionId: result.id }),
