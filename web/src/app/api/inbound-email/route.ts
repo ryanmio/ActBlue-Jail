@@ -236,16 +236,14 @@ export async function POST(req: NextRequest) {
       
       // Send notice email to forwarder for non-fundraising submissions
       if (result.id && isForwarded && envelopeSender) {
-        const base = process.env.NEXT_PUBLIC_SITE_URL || "";
-        const noticeUrl = `${base}/api/send-non-fundraising-notice`;
-        
         console.log("/api/inbound-email:triggering_non_fundraising_notice", {
           submissionId: result.id,
           forwarder: parseEmailAddress(envelopeSender) || envelopeSender
         });
         
+        const base = process.env.NEXT_PUBLIC_SITE_URL || "";
         // Await to ensure completion in serverless environment
-        await fetch(noticeUrl, {
+        await fetch(`${base}/api/send-non-fundraising-notice`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ submissionId: result.id }),
