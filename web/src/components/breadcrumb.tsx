@@ -26,7 +26,7 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
               {item.href && !isLast ? (
                 <Link
                   href={item.href}
-                  className="text-base font-medium text-slate-800 transition-all hover:text-slate-950 hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
+                  className="text-base font-medium text-slate-900 visited:text-slate-900 transition-all hover:text-slate-950 hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
                 >
                   {item.label}
                 </Link>
