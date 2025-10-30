@@ -150,8 +150,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CaseDetailPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ id: string }>; 
+  searchParams: Promise<{ warning?: string; pages?: string }> 
+}) {
   const { id } = await params;
+  const { warning, pages } = await searchParams;
   const hdrs = await headers();
   const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
   const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
@@ -164,6 +171,10 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   if (!data.item) return <main className="mx-auto max-w-5xl p-6">Not found</main>;
 
   const item = data.item;
+  
+  // Check for page limit warning
+  const showPageLimitWarning = warning === "page_limit" && pages;
+  const totalPages = pages ? parseInt(pages, 10) : 0;
   const imgRes = await fetch(`${base}/api/cases/${id}/image-url`, { cache: "no-store" });
   const imgData = imgRes.ok ? await imgRes.json() : { url: null } as { url: string | null; mime?: string | null };
   const landRes = await fetch(`${base}/api/cases/${id}/landing-url?ts=${Date.now()}`, { cache: "no-store" });
@@ -197,6 +208,24 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           ]}
           className="mb-4"
         />
+
+        {/* Page limit warning banner */}
+        {showPageLimitWarning && totalPages > 0 && (
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg shadow-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-amber-800">
+                  <span className="font-medium">Note:</span> Your PDF has {totalPages} pages. Only the first 3 pages were reviewed for policy violations.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Hero section */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-8 md:p-10">

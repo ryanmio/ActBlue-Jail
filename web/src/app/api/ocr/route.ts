@@ -74,17 +74,33 @@ export async function POST(req: NextRequest) {
         signal: controller.signal,
       });
       const json = await resp.json();
-      if (!resp.ok || json?.IsErroredOnProcessing) {
+      
+      // Check if we have parsed results even if IsErroredOnProcessing is true
+      // OCR.space sets IsErroredOnProcessing=true for page limit warnings but still returns valid results
+      const allPages = json?.ParsedResults ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const hasResults = allPages.length > 0 && allPages.some((p: any) => p?.ParsedText);
+      
+      // Check if this is a page limit warning (has results despite error flag)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isPageLimitWarning = json?.IsErroredOnProcessing && 
+        hasResults &&
+        json?.ErrorMessage?.some((msg: any) => String(msg).includes('maximum page limit'));
+      
+      if (!resp.ok || (json?.IsErroredOnProcessing && !isPageLimitWarning)) {
         console.warn("/api/ocr:ocrspace_response_err", { status: resp.status, ms: Date.now() - attemptStart, detail: json });
         return { ok: false as const, json };
       }
+      
       // Extract text from up to 3 pages and concatenate
-      const pages = json?.ParsedResults?.slice(0, 3) ?? [];
+      const pages = allPages.slice(0, 3);
+      const totalPageCount = allPages.length;
+      const hasMorePages = isPageLimitWarning || totalPageCount > 3;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedText = pages.map((p: any) => p?.ParsedText ?? "").join("\n\n");
       const confidence = Number(json?.OCRExitCode === 1 ? 0.8 : 0.5);
-      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, ms: Date.now() - attemptStart });
-      return { ok: true as const, text: parsedText, confidence };
+      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, totalPages: totalPageCount, isPageLimitWarning, ms: Date.now() - attemptStart });
+      return { ok: true as const, text: parsedText, confidence, totalPageCount, hasMorePages };
     } catch (err) {
       console.warn("/api/ocr:ocrspace_fetch_err", String(err));
       return { ok: false as const, json: { error: String(err) } };
@@ -113,17 +129,33 @@ export async function POST(req: NextRequest) {
         signal: controller.signal,
       });
       const json = await resp.json();
-      if (!resp.ok || json?.IsErroredOnProcessing) {
+      
+      // Check if we have parsed results even if IsErroredOnProcessing is true
+      // OCR.space sets IsErroredOnProcessing=true for page limit warnings but still returns valid results
+      const allPages = json?.ParsedResults ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const hasResults = allPages.length > 0 && allPages.some((p: any) => p?.ParsedText);
+      
+      // Check if this is a page limit warning (has results despite error flag)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isPageLimitWarning = json?.IsErroredOnProcessing && 
+        hasResults &&
+        json?.ErrorMessage?.some((msg: any) => String(msg).includes('maximum page limit'));
+      
+      if (!resp.ok || (json?.IsErroredOnProcessing && !isPageLimitWarning)) {
         console.warn("/api/ocr:ocrspace_response_err", { status: resp.status, ms: Date.now() - attemptStart, detail: json });
         return { ok: false as const, json };
       }
+      
       // Extract text from up to 3 pages and concatenate
-      const pages = json?.ParsedResults?.slice(0, 3) ?? [];
+      const pages = allPages.slice(0, 3);
+      const totalPageCount = allPages.length;
+      const hasMorePages = isPageLimitWarning || totalPageCount > 3;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedText = pages.map((p: any) => p?.ParsedText ?? "").join("\n\n");
       const confidence = Number(json?.OCRExitCode === 1 ? 0.8 : 0.5);
-      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, ms: Date.now() - attemptStart });
-      return { ok: true as const, text: parsedText, confidence };
+      console.log("/api/ocr:ocrspace_ok", { textLen: parsedText?.length || 0, conf: confidence, pages: pages.length, totalPages: totalPageCount, isPageLimitWarning, ms: Date.now() - attemptStart });
+      return { ok: true as const, text: parsedText, confidence, totalPageCount, hasMorePages };
     } catch (err) {
       console.warn("/api/ocr:ocrspace_fetch_err", String(err));
       return { ok: false as const, json: { error: String(err) } };
@@ -136,7 +168,7 @@ export async function POST(req: NextRequest) {
   // Increase timeouts to reduce AbortError rate from OCR.space under load
   const t1 = isPdf ? 120000 : 60000;
   const t2 = isPdf ? 180000 : 120000;
-  let result: { ok: true; text: string; confidence: number } | { ok: false; json: unknown };
+  let result: { ok: true; text: string; confidence: number; totalPageCount?: number; hasMorePages?: boolean } | { ok: false; json: unknown };
   if (isPdf) {
     console.log("/api/ocr:attempt_1", { processed: false, mime: "application/pdf", timeoutMs: t1 });
     result = await callOcrSpaceFile(imgBuf, "application/pdf", `${submissionId}.pdf`, t1);
@@ -162,7 +194,9 @@ export async function POST(req: NextRequest) {
   }
   text = result.text;
   conf = result.confidence;
-  console.log("/api/ocr:success", { textLen: text.length, conf });
+  const totalPageCount = result.totalPageCount;
+  const hasMorePages = result.hasMorePages;
+  console.log("/api/ocr:success", { textLen: text.length, conf, totalPageCount, hasMorePages });
 
   const ocrMs = Date.now() - start;
 
@@ -302,5 +336,26 @@ export async function POST(req: NextRequest) {
     console.error("/api/ocr classify trigger setup error", err);
   }
 
-  return NextResponse.json({ ok: true, rawText: text, conf, ms: ocrMs });
+  const response: {
+    ok: boolean;
+    rawText: string;
+    conf: number;
+    ms: number;
+    warning?: string;
+    totalPageCount?: number;
+  } = {
+    ok: true,
+    rawText: text,
+    conf,
+    ms: ocrMs,
+  };
+
+  // Add warning if PDF has more than 3 pages
+  if (hasMorePages && totalPageCount) {
+    response.warning = "page_limit";
+    response.totalPageCount = totalPageCount;
+    console.log("/api/ocr:page_limit_warning", { totalPageCount, processedPages: 3 });
+  }
+
+  return NextResponse.json(response);
 }
