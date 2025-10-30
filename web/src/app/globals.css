@@ -26,3 +26,8 @@ body {
 }
 
 /* Removed page-specific body classes to avoid FOUC */
+
+/* Breadcrumb links - prevent visited link color */
+.breadcrumb-link:visited {
+  color: rgb(30, 41, 59) !important;
+}
