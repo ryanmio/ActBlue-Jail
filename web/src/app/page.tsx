@@ -316,10 +316,10 @@ export default function Home() {
                 <DropdownMenuLabel className="text-slate-600 font-semibold">AB Jail</DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href="/welcome" className="cursor-pointer text-slate-900 hover:bg-slate-100">How it works</Link>
+                    <Link href="/cases" className="cursor-pointer text-slate-900 hover:bg-slate-100">All Cases</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/cases" className="cursor-pointer text-slate-900 hover:bg-slate-100">All Cases</Link>
+                    <Link href="/welcome" className="cursor-pointer text-slate-900 hover:bg-slate-100">How it works</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/stats" className="cursor-pointer text-slate-900 hover:bg-slate-100">Stats</Link>
@@ -722,6 +722,7 @@ function useHomepageStats() {
 function RecentCases() {
   const { stats, loading } = useHomepageStats();
   const cases = stats.recent_cases || [];
+  const router = useRouter();
   
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
@@ -758,7 +759,20 @@ function RecentCases() {
           const showTypeBadge = messageType && messageType !== 'unknown';
           
           return (
-            <div key={r.id} className="py-3 flex items-center justify-between gap-3">
+            <div 
+              key={r.id} 
+              className="py-3 -mx-4 md:-mx-6 px-4 md:px-6 flex items-center justify-between gap-3 hover:bg-slate-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+              role="button"
+              tabIndex={0}
+              aria-label={`View case for ${r.sender_name || r.sender_id || "Unknown sender"}`}
+              onClick={() => router.push(`/cases/${r.id}`)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push(`/cases/${r.id}`);
+                }
+              }}
+            >
               <div className="min-w-0">
                 <div className="font-medium truncate max-w-[60vw] text-slate-900">{r.sender_name || r.sender_id || "Unknown sender"}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
