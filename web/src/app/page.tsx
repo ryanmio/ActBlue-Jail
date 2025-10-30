@@ -112,8 +112,21 @@ export default function Home() {
         const body = await ocrResp.text().catch(() => "");
         throw new Error(`/api/ocr failed ${ocrResp.status}: ${body}`);
       }
+      
+      // Check for page limit warning
+      const ocrData = (await ocrResp.json().catch(() => ({}))) as { 
+        warning?: string; 
+        totalPageCount?: number 
+      };
+      
       setStepIndex(2); // Extracting text -> Finishing up
-      window.location.href = `/cases/${submissionId}`;
+      
+      // Show warning if PDF has more than 3 pages - pass as query param to case page
+      if (ocrData.warning === "page_limit" && ocrData.totalPageCount) {
+        window.location.href = `/cases/${submissionId}?warning=page_limit&pages=${ocrData.totalPageCount}`;
+      } else {
+        window.location.href = `/cases/${submissionId}`;
+      }
     } catch (e) {
       console.error(e);
       const message = e instanceof Error ? e.message : String(e);
