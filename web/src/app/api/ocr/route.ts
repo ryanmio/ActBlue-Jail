@@ -82,10 +82,9 @@ export async function POST(req: NextRequest) {
       const hasResults = allPages.length > 0 && allPages.some((p: any) => p?.ParsedText);
       
       // Check if this is a page limit warning (has results despite error flag)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isPageLimitWarning = json?.IsErroredOnProcessing && 
         hasResults &&
-        json?.ErrorMessage?.some((msg: any) => String(msg).includes('maximum page limit'));
+        json?.ErrorMessage?.some((msg: unknown) => String(msg).includes('maximum page limit'));
       
       if (!resp.ok || (json?.IsErroredOnProcessing && !isPageLimitWarning)) {
         console.warn("/api/ocr:ocrspace_response_err", { status: resp.status, ms: Date.now() - attemptStart, detail: json });
@@ -137,10 +136,9 @@ export async function POST(req: NextRequest) {
       const hasResults = allPages.length > 0 && allPages.some((p: any) => p?.ParsedText);
       
       // Check if this is a page limit warning (has results despite error flag)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isPageLimitWarning = json?.IsErroredOnProcessing && 
         hasResults &&
-        json?.ErrorMessage?.some((msg: any) => String(msg).includes('maximum page limit'));
+        json?.ErrorMessage?.some((msg: unknown) => String(msg).includes('maximum page limit'));
       
       if (!resp.ok || (json?.IsErroredOnProcessing && !isPageLimitWarning)) {
         console.warn("/api/ocr:ocrspace_response_err", { status: resp.status, ms: Date.now() - attemptStart, detail: json });
