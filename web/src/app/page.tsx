@@ -374,9 +374,12 @@ export default function Home() {
         </div>
         
         {/* Header */}
-        <header className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">AB Jail</h1>
-          <p className="text-sm text-slate-700">Not affiliated with ActBlue.</p>
+        <header className="text-center space-y-3 mb-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">AB Jail</h1>
+            <p className="text-xs text-slate-500 mt-1">Not affiliated with ActBlue.</p>
+          </div>
+          <p className="text-base font-medium text-slate-700 max-w-2xl mx-auto mt-4 leading-relaxed">Report fundraising messages to ActBlue and make the submission public – collected by uploads, forwards, and automated feeds.</p>
         </header>
 
         {/* Upload card */}
@@ -634,7 +637,7 @@ export default function Home() {
         </section>
 
         {/* Lists */}
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 gap-10">
           <RecentCases />
           <WorstOffenders />
         </div>
