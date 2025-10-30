@@ -379,7 +379,7 @@ export default function Home() {
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">AB Jail</h1>
             <p className="text-xs text-slate-500 mt-1">Not affiliated with ActBlue.</p>
           </div>
-          <p className="text-base font-medium text-slate-700 max-w-2xl mx-auto mt-4 leading-relaxed">Report fundraising messages to ActBlue and make the submission public – collected by uploads, forwards, and automated feeds.</p>
+          <p className="text-base font-medium text-slate-700 max-w-2xl mx-auto mt-4 leading-relaxed">Submit evidence of potential violations and track cases in real-time. An open-source initiative for political transparency.</p>
         </header>
 
         {/* Upload card */}
@@ -761,7 +761,7 @@ function RecentCases() {
           return (
             <div 
               key={r.id} 
-              className="py-3 -mx-4 md:-mx-6 px-4 md:px-6 flex items-center justify-between gap-3 hover:bg-slate-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+              className="py-3 -mx-4 md:-mx-6 px-4 md:px-6 flex items-center justify-between gap-3 hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
               role="button"
               tabIndex={0}
               aria-label={`View case for ${r.sender_name || r.sender_id || "Unknown sender"}`}
