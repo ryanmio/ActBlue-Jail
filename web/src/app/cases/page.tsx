@@ -221,7 +221,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
             <>
               <div className="divide-y">
                 {items.map((it) => (
-                  <div key={it.id} className="py-4 flex items-center justify-between gap-4">
+                  <Link key={it.id} href={`/cases/${it.id}`} className="-mx-6 md:-mx-8 px-6 md:px-8 py-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
                     <div className="min-w-0">
                       <div className="font-medium text-slate-900 truncate max-w-[60vw]">
                         {it.senderName || it.senderId || "Unknown sender"}
@@ -309,11 +309,11 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-xs text-slate-700 tabular-nums">{formatWhen(it.createdAt)}</div>
-                      <Link className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" href={`/cases/${it.id}`}>
+                      <span className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white pointer-events-none">
                         View
-                      </Link>
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
               <div className="mt-6 flex items-center justify-between">
