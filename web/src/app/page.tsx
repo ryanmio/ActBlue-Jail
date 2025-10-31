@@ -26,6 +26,14 @@ import { isBotSubmitted } from "@/lib/badge-helpers";
 import { useOnboardingState } from "@/components/onboarding/useOnboardingState";
 import { OnboardingToast } from "@/components/onboarding/OnboardingToast";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 function OnboardingHandler({ onOpen }: { onOpen: () => void }) {
   const searchParams = useSearchParams();
@@ -54,6 +62,13 @@ export default function Home() {
   // Onboarding state
   const { shouldShowToast, markDismissed, markClicked } = useOnboardingState();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  // Pause overlay state - always show on homepage visit
+  const [showPauseOverlay, setShowPauseOverlay] = useState(true);
+
+  const handleContinueToSite = useCallback(() => {
+    setShowPauseOverlay(false);
+  }, []);
 
   const handleOnboardingOpen = useCallback(() => {
     setIsOnboardingOpen(true);
@@ -271,6 +286,27 @@ export default function Home() {
       <Suspense fallback={null}>
         <OnboardingHandler onOpen={handleOnboardingOpen} />
       </Suspense>
+
+      {/* Pause overlay - shows by default until dismissed */}
+      <Dialog open={showPauseOverlay} onOpenChange={() => {}}>
+        <DialogContent 
+          className="max-w-md [&>button]:hidden" 
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-xl">Project Temporarily Paused</DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              This project is temporarily paused. The website is not sending any reports to ActBlue while paused. We will have an update in early November. You can continue to the site if you wish.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={handleContinueToSite} className="bg-slate-900 hover:bg-slate-800">
+              Continue to Site
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Onboarding toast */}
       {shouldShowToast && (
