@@ -42,6 +42,46 @@ type ReportWithVerdict = {
   }>;
 };
 
+type ReportRow = {
+  id: string;
+  case_id: string;
+  to_email: string;
+  cc_email: string | null;
+  subject: string;
+  body: string;
+  screenshot_url: string | null;
+  landing_url: string;
+  status: string;
+  created_at: string;
+};
+
+type CaseRow = {
+  id: string;
+  sender_name: string | null;
+  sender_id: string | null;
+  raw_text: string | null;
+  image_url: string | null;
+  created_at: string | null;
+  message_type: string | null;
+  email_body: string | null;
+};
+
+type VerdictRow = {
+  id: string;
+  case_id: string;
+  verdict: string;
+  explanation: string | null;
+  determined_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+type ViolationRow = {
+  submission_id: string;
+  code: string;
+  title: string;
+};
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseServer();
@@ -59,7 +99,7 @@ export async function GET(req: NextRequest) {
     }
     
     // Get unique case IDs
-    const caseIds = Array.from(new Set(reportRows.map((r: any) => r.case_id)));
+    const caseIds = Array.from(new Set((reportRows as ReportRow[]).map((r) => r.case_id)));
     
     // Fetch case data
     const { data: caseRows, error: caseError } = await supabase
@@ -86,23 +126,23 @@ export async function GET(req: NextRequest) {
     if (violationError) throw violationError;
     
     // Build lookup maps
-    const casesMap = new Map((caseRows || []).map((c: any) => [c.id, c]));
-    const verdictsMap = new Map((verdictRows || []).map((v: any) => [v.case_id, v]));
+    const casesMap = new Map((caseRows as CaseRow[] || []).map((c) => [c.id, c]));
+    const verdictsMap = new Map((verdictRows as VerdictRow[] || []).map((v) => [v.case_id, v]));
     const violationsMap = new Map<string, Array<{ code: string; title: string }>>();
     
-    for (const v of violationRows || []) {
-      const caseId = (v as any).submission_id;
+    for (const v of (violationRows as ViolationRow[] || [])) {
+      const caseId = v.submission_id;
       if (!violationsMap.has(caseId)) {
         violationsMap.set(caseId, []);
       }
       violationsMap.get(caseId)!.push({
-        code: (v as any).code,
-        title: (v as any).title,
+        code: v.code,
+        title: v.title,
       });
     }
     
     // Build response
-    const reports: ReportWithVerdict[] = (reportRows || []).map((r: any) => {
+    const reports: ReportWithVerdict[] = (reportRows as ReportRow[] || []).map((r) => {
       const caseData = casesMap.get(r.case_id);
       const verdict = verdictsMap.get(r.case_id) || null;
       const violations = violationsMap.get(r.case_id) || [];
