@@ -1,6 +1,8 @@
 # AB Jail
 
-AB Jail is an open-source project that brings transparency to political fundraising through AI-powered analysis and real-time monitoring. 
+AB Jail is an open-source project that brings transparency to political fundraising through AI-powered analysis and real-time monitoring.
+
+** IMPORTANT: Submissions =/= Reports to ActBlue.** This is primarily a public transparency project tracking potentially deceptive fundraising practices gathered from user and bot submissions of fundraising messages to our site. We hope to allow for users to report potential account use policy violations to ActBlue via our site, but that feature is on hold pending further discussions.
 
 **Submit manually:** Forward emails to submit@abjail.org, paste text directly, or upload screenshots of deceptive messages. AI extracts senders, checks against ActBlue's rules, drafts reports, and adds cases to a public ledger.
 

@@ -5,6 +5,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const recentLimit = Math.min(Number(searchParams.get("recent")) || 5, 10);
   const offendersLimit = Math.min(Number(searchParams.get("offenders")) || 10, 20);
+  const reportsLimit = Math.min(Number(searchParams.get("reports")) || 5, 10);
   const days = searchParams.get("days"); // null = lifetime, number = last N days
 
   try {
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
       recent_limit: recentLimit,
       offenders_limit: offendersLimit,
       offenders_days: days ? Number(days) : null,
+      reports_limit: reportsLimit,
     });
 
     if (error) {
@@ -24,8 +26,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // data is already a JSON object with recent_cases and worst_offenders
-    return NextResponse.json(data || { recent_cases: [], worst_offenders: [] });
+    // data is already a JSON object with recent_cases, worst_offenders, and recent_reports
+    return NextResponse.json(data || { recent_cases: [], worst_offenders: [], recent_reports: [] });
   } catch (err) {
     console.error("/api/homepage-stats unexpected error:", err);
     return NextResponse.json(
