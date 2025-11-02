@@ -862,7 +862,7 @@ function RecentCases() {
                         <p className="text-xs text-slate-700 leading-relaxed">
                           {isBot ? (
                             <>
-                              One of our monitoring email addresses or phone numbers received this fundraising message and automatically added it to our public database for transparency. <strong>This is not a report to ActBlue</strong>—it's for public visibility only.
+                              One of our monitoring email addresses or phone numbers received this fundraising message and automatically added it to our public database for transparency. <strong>This is not a report to ActBlue</strong>—it&apos;s for public visibility only.
                             </>
                           ) : (
                             <>

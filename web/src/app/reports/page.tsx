@@ -68,7 +68,7 @@ export default async function ReportsPage() {
               and explain why the message may violate those terms.
             </p>
             <p>
-              This page provides transparency into what has been reported, the evidence submitted, and ActBlue's determinations. 
+              This page provides transparency into what has been reported, the evidence submitted, and ActBlue&apos;s determinations. 
               Our goal is accountability for all parties: organizations sending messages, ActBlue enforcing their policies, and 
               the public understanding outcomes.
             </p>
