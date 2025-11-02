@@ -72,12 +72,6 @@ function getVerdictDisplay(verdict: string | null): { label: string; color: stri
   }
 }
 
-function truncateText(text: string | null, maxLength: number = 100): string {
-  if (!text) return "—";
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + "…";
-}
-
 export default function ReportsTable({ initialData, showHeader = true }: { initialData: ReportData[]; showHeader?: boolean }) {
   const router = useRouter();
 

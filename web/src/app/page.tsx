@@ -8,15 +8,9 @@ import { cachedJsonFetch } from "@/lib/client-cache";
 import Footer from "@/components/Footer";
 import {
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NavigationMenu } from "@/components/PageHeader";
-import { BugReportDialog } from "@/components/bug-report-dialog";
 import {
   HoverCard,
   HoverCardContent,
@@ -985,12 +979,12 @@ function RecentReports() {
                   <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
                     <p>
                       All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
-                      When a user receives a fundraising message they believe violates ActBlue's policies, they can submit it to our platform. 
+                      When a user receives a fundraising message they believe violates ActBlue&apos;s policies, they can submit it to our platform. 
                       We prepare the case and send them a preview for review. The user can then edit or submit it to ActBlue—always their choice.
                     </p>
                     <p>
                       Each report includes comprehensive evidence: the original message content, screenshots when available, and the live 
-                      landing page URL for ActBlue to verify. Reports reference specific sections of ActBlue's Acceptable Use Policy (AUP) 
+                      landing page URL for ActBlue to verify. Reports reference specific sections of ActBlue&apos;s Acceptable Use Policy (AUP) 
                       and explain why the message may violate those terms.
                     </p>
                     <p>
@@ -1041,8 +1035,8 @@ function RecentReports() {
                 <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
                   <p>
                     All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
-                    When a user receives a fundraising message they believe violates ActBlue's policies, they can submit it to ActBlue for review through our platform. 
-                    We prepare the case and a preview submission for the user's review. The user can then edit or submit it to ActBlue.
+                    When a user receives a fundraising message they believe violates ActBlue&apos;s policies, they can submit it to ActBlue for review through our platform. 
+                    We prepare the case and a preview submission for the user&apos;s review. The user can then edit or submit it to ActBlue.
                   </p>
                   <p>
                     This streamlines the reporting process while adding public transparency. Our goal is accountability for all parties: 

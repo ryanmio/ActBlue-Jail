@@ -2,7 +2,6 @@ import { Metadata } from "next";
 import Footer from "@/components/Footer";
 import { PageHeader } from "@/components/PageHeader";
 import { Breadcrumb } from "@/components/breadcrumb";
-import Link from "next/link";
 import { headers } from "next/headers";
 import ReportsTable from "./ReportsTable";
 
@@ -60,12 +59,12 @@ export default async function ReportsPage() {
           <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
             <p>
               All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
-              When a user identifies a potential violation in our public transparency database, they can choose to generate and 
+              When a user receives a fundraising message they believe violates ActBlue&apos;s policies, they can choose to generate and 
               send a formal report to ActBlue.
             </p>
             <p>
               Each report includes comprehensive evidence: the original message content, screenshots when available, and the live 
-              landing page URL for ActBlue to verify. Reports reference specific sections of ActBlue's Acceptable Use Policy (AUP) 
+              landing page URL for ActBlue to verify. Reports reference specific sections of ActBlue&apos;s Acceptable Use Policy (AUP) 
               and explain why the message may violate those terms.
             </p>
             <p>
