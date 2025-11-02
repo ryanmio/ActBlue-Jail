@@ -51,9 +51,30 @@ export default async function ReportsPage() {
             Reports to ActBlue
           </h1>
           <p className="text-sm text-slate-700 max-w-2xl mx-auto">
-            Transparent record of all reports submitted to ActBlue, including evidence and outcomes.
+            Record of all reports submitted to ActBlue through our platform, including evidence and outcomes.
           </p>
         </header>
+
+        <section className="mx-auto max-w-3xl bg-blue-50 border border-blue-200 rounded-xl p-6 md:p-8">
+          <h2 className="text-lg font-semibold text-slate-900 mb-3">About Our Reporting Process</h2>
+          <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
+            <p>
+              All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
+              When a user identifies a potential violation in our public transparency database, they can choose to generate and 
+              send a formal report to ActBlue.
+            </p>
+            <p>
+              Each report includes comprehensive evidence: the original message content, screenshots when available, and the live 
+              landing page URL for ActBlue to verify. Reports reference specific sections of ActBlue's Acceptable Use Policy (AUP) 
+              and explain why the message may violate those terms.
+            </p>
+            <p>
+              This page provides transparency into what has been reported, the evidence submitted, and ActBlue's determinations. 
+              Our goal is accountability for all parties: organizations sending messages, ActBlue enforcing their policies, and 
+              the public understanding outcomes.
+            </p>
+          </div>
+        </section>
 
         <section className="mx-auto max-w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
           <ReportsTable initialData={data.reports || []} />

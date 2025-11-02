@@ -164,7 +164,7 @@ export default function WelcomePage() {
 
         <section className="mx-auto max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 space-y-4">
             <h2 className="text-2xl font-semibold text-slate-900 mb-4">
-              Submitting violations to ActBlue
+              Reporting violations to ActBlue
             </h2>
             <p className="text-slate-700 leading-relaxed mb-4">
               We make reporting fast and consistent by pre-filling the details ActBlue needs to investigate—so you can submit in seconds and track responses in one place.

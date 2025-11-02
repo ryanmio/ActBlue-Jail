@@ -78,7 +78,7 @@ function truncateText(text: string | null, maxLength: number = 100): string {
   return text.substring(0, maxLength) + "…";
 }
 
-export default function ReportsTable({ initialData }: { initialData: ReportData[] }) {
+export default function ReportsTable({ initialData, showHeader = true }: { initialData: ReportData[]; showHeader?: boolean }) {
   const router = useRouter();
 
   if (initialData.length === 0) {
@@ -97,12 +97,14 @@ export default function ReportsTable({ initialData }: { initialData: ReportData[
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">All Reports</h2>
-        <div className="text-sm text-slate-600 font-medium">
-          {initialData.length} {initialData.length === 1 ? "report" : "reports"} total
+      {showHeader && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-slate-900">All Reports</h2>
+          <div className="text-sm text-slate-600 font-medium">
+            {initialData.length} {initialData.length === 1 ? "report" : "reports"} total
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto -mx-4 md:mx-0">
         <div className="inline-block min-w-full align-middle">

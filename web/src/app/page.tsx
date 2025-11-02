@@ -22,6 +22,11 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
 import { isBotSubmitted } from "@/lib/badge-helpers";
 import { useOnboardingState } from "@/components/onboarding/useOnboardingState";
@@ -35,6 +40,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import ReportsTable from "@/app/reports/ReportsTable";
 
 function OnboardingHandler({ onOpen }: { onOpen: () => void }) {
   const searchParams = useSearchParams();
@@ -359,7 +365,7 @@ export default function Home() {
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">AB Jail</h1>
             <p className="text-xs text-slate-500 mt-1">Not affiliated with ActBlue.</p>
           </div>
-          <p className="text-base font-medium text-slate-700 max-w-2xl mx-auto mt-4 leading-relaxed">Submit evidence of potential violations and track cases in real-time. An open-source initiative for political transparency.</p>
+          <p className="text-base font-medium text-slate-700 max-w-2xl mx-auto mt-4 leading-relaxed">Submit evidence of deceptive fundraising practices to a public record. An open-source initiative for political transparency.</p>
         </header>
 
         {/* Upload card */}
@@ -620,6 +626,7 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-10">
           <RecentCases />
           <WorstOffenders />
+          <RecentReports />
         </div>
 
         <Footer />
@@ -669,13 +676,51 @@ type WorstOffender = {
   latest_violation_at: string;
 };
 
+type ReportData = {
+  report: {
+    id: string;
+    case_id: string;
+    to_email: string;
+    cc_email: string | null;
+    subject: string;
+    body: string;
+    screenshot_url: string | null;
+    landing_url: string;
+    status: string;
+    created_at: string;
+  };
+  case: {
+    id: string;
+    sender_name: string | null;
+    sender_id: string | null;
+    raw_text: string | null;
+    image_url: string | null;
+    created_at: string | null;
+    message_type: string | null;
+    email_body: string | null;
+  };
+  verdict: {
+    id: string;
+    verdict: string;
+    explanation: string | null;
+    determined_by: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+  } | null;
+  violations: Array<{
+    code: string;
+    title: string;
+  }>;
+};
+
 type HomepageStats = {
   recent_cases: RecentCase[];
   worst_offenders: WorstOffender[];
+  recent_reports: ReportData[];
 };
 
 function useHomepageStats() {
-  const [stats, setStats] = useState<HomepageStats>({ recent_cases: [], worst_offenders: [] });
+  const [stats, setStats] = useState<HomepageStats>({ recent_cases: [], worst_offenders: [], recent_reports: [] });
   const [loading, setLoading] = useState<boolean>(true);
   
   useEffect(() => {
@@ -684,9 +729,9 @@ function useHomepageStats() {
     (async () => {
       try {
         // Single API call gets both recent cases and worst offenders
-        const url = `/api/homepage-stats?recent=5&offenders=10&days=90`;
+        const url = `/api/homepage-stats?recent=5&offenders=10&days=90&reports=5`;
         const json = await cachedJsonFetch<HomepageStats>(url, 300_000); // 5 min cache
-        if (!cancelled) setStats(json || { recent_cases: [], worst_offenders: [] });
+        if (!cancelled) setStats(json || { recent_cases: [], worst_offenders: [], recent_reports: [] });
       } catch {
         // ignore
       } finally {
@@ -809,9 +854,31 @@ function RecentCases() {
                     </span>
                   )}
                   {/* Source badge - desktop only, neutral styling, without parentheses */}
-                  <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300">
-                    {isBot ? 'Bot Submitted' : 'User Submitted'}
-                  </span>
+                  <HoverCard openDelay={200}>
+                    <HoverCardTrigger asChild>
+                      <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 cursor-help">
+                        {isBot ? 'Bot Submitted' : 'User Submitted'}
+                      </span>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-80 bg-white border-slate-200" side="top">
+                      <div className="space-y-2">
+                        <div className="font-semibold text-sm text-slate-900">
+                          {isBot ? 'Bot Submission' : 'User Submission'}
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed">
+                          {isBot ? (
+                            <>
+                              One of our monitoring email addresses or phone numbers received this fundraising message and automatically added it to our public database for transparency. <strong>This is not a report to ActBlue</strong>—it's for public visibility only.
+                            </>
+                          ) : (
+                            <>
+                              A user forwarded or uploaded this fundraising message to our public database for transparency. <strong>This is not a report to ActBlue</strong> unless the user separately chose to file an official AUP report.
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -837,7 +904,7 @@ function WorstOffenders() {
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Worst Offenders</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Most Potential Violations</h2>
         <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/stats">All Stats</Link>
       </div>
       <div className="overflow-x-auto">
@@ -889,6 +956,106 @@ function WorstOffenders() {
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+function RecentReports() {
+  const { stats, loading } = useHomepageStats();
+  const reports = stats.recent_reports || [];
+
+  if (loading) {
+    return (
+      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Recent Reports to ActBlue</h2>
+            <p className="text-xs text-slate-600 mt-1">Reports sent to ActBlue are always user initiated and never automated.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">
+                  Our Process
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[90vw] max-w-lg bg-white border-slate-200" align="end">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-slate-900">About Our Reporting Process</h3>
+                  <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
+                    <p>
+                      All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
+                      When a user receives a fundraising message they believe violates ActBlue's policies, they can submit it to our platform. 
+                      We prepare the case and send them a preview for review. The user can then edit or submit it to ActBlue—always their choice.
+                    </p>
+                    <p>
+                      Each report includes comprehensive evidence: the original message content, screenshots when available, and the live 
+                      landing page URL for ActBlue to verify. Reports reference specific sections of ActBlue's Acceptable Use Policy (AUP) 
+                      and explain why the message may violate those terms.
+                    </p>
+                    <p>
+                      This streamlines the reporting process while adding public transparency. Our goal is accountability for all parties: 
+                      organizations sending messages, ActBlue enforcing their policies, and the public understanding outcomes.
+                    </p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/reports">View all</Link>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {[...Array(3)].map((_, idx) => (
+            <div key={`report-skeleton-${idx}`} className="animate-pulse py-4 border-t first:border-t-0">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-slate-200 rounded w-1/4" />
+                </div>
+                <div className="h-6 bg-slate-200 rounded w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Recent Reports to ActBlue</h2>
+          <p className="text-xs text-slate-600 mt-1">Reports sent to ActBlue are always user initiated and never automated.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">
+                Our Process
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[90vw] max-w-lg bg-white border-slate-200" align="end">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-slate-900">About Our Reporting Process</h3>
+                <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
+                  <p>
+                    All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
+                    When a user receives a fundraising message they believe violates ActBlue's policies, they can submit it to ActBlue for review through our platform. 
+                    We prepare the case and a preview submission for the user's review. The user can then edit or submit it to ActBlue.
+                  </p>
+                  <p>
+                    This streamlines the reporting process while adding public transparency. Our goal is accountability for all parties: 
+                    organizations sending messages, ActBlue enforcing their policies, and the public understanding outcomes.
+                  </p>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/reports">View all</Link>
+        </div>
+      </div>
+      <ReportsTable initialData={reports} showHeader={false} />
     </section>
   );
 }
