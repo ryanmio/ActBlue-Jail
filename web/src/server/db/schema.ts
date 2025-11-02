@@ -149,3 +149,21 @@ export const reports = pgTable(
   }
 );
 
+export const reportVerdicts = pgTable(
+  "report_verdicts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id").notNull(),
+    verdict: text("verdict").notNull(), // violation_confirmed, no_violation, pending, under_review, resolved
+    explanation: text("explanation"),
+    determinedBy: text("determined_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => {
+    return {
+      caseIdx: index("report_verdicts_case_idx").on(table.caseId),
+    };
+  }
+);
+

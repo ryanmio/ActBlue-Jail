@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NavigationMenu } from "@/components/PageHeader";
 import { BugReportDialog } from "@/components/bug-report-dialog";
 import {
   HoverCard,
@@ -348,64 +349,7 @@ export default function Home() {
                   </svg>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white border border-slate-200 shadow-lg text-slate-900" align="end">
-                <DropdownMenuLabel className="text-slate-600 font-semibold">AB Jail</DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <Link href="/cases" className="cursor-pointer text-slate-900 hover:bg-slate-100">All Cases</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/welcome" className="cursor-pointer text-slate-900 hover:bg-slate-100">How it works</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/stats" className="cursor-pointer text-slate-900 hover:bg-slate-100">Stats</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                
-                <DropdownMenuSeparator className="bg-slate-200" />
-                
-                <DropdownMenuLabel className="text-slate-600 font-semibold">Help Improve</DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <Link href="/evaluation" className="cursor-pointer text-slate-900 hover:bg-slate-100">AI Training</Link>
-                  </DropdownMenuItem>
-                  <BugReportDialog type="bug">
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-slate-900 hover:bg-slate-100">
-                      Bug Report
-                    </DropdownMenuItem>
-                  </BugReportDialog>
-                  <BugReportDialog type="feature">
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-slate-900 hover:bg-slate-100">
-                      Feature Request
-                    </DropdownMenuItem>
-                  </BugReportDialog>
-                  <DropdownMenuItem asChild>
-                    <a href="https://github.com/ryanmio/ActBlue-Jail" target="_blank" rel="noopener noreferrer" className="cursor-pointer text-slate-900 hover:bg-slate-100">
-                      Edit Code
-                      <svg className="w-3 h-3 ml-auto text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                
-                <DropdownMenuSeparator className="bg-slate-200" />
-                
-                <DropdownMenuLabel className="text-slate-600 font-semibold">Contact</DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <Link href="/about" className="cursor-pointer text-slate-900 hover:bg-slate-100">About</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a href="https://github.com/ryanmio/ActBlue-Jail/discussions" target="_blank" rel="noopener noreferrer" className="cursor-pointer text-slate-900 hover:bg-slate-100">
-                      GitHub
-                      <svg className="w-3 h-3 ml-auto text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
+              <NavigationMenu />
             </DropdownMenu>
         </div>
         

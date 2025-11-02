@@ -5,9 +5,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const limit = Math.min(Number(searchParams.get("limit")) || 20, 100);
   const pageParam = searchParams.get("page");
-  const explicitOffset = Number(searchParams.get("offset"));
+  const offsetParam = searchParams.get("offset");
+  const explicitOffset = offsetParam !== null ? Number(offsetParam) : null;
   const page = Math.max(Number(pageParam || 1) || 1, 1);
-  const offset = Number.isFinite(explicitOffset) && explicitOffset >= 0 ? explicitOffset : (page - 1) * limit;
+  const offset = explicitOffset !== null && Number.isFinite(explicitOffset) && explicitOffset >= 0 
+    ? explicitOffset 
+    : (page - 1) * limit;
   const q = (searchParams.get("q") || "").trim();
   const include = (searchParams.get("include") || "").split(",").map((s) => s.trim()).filter(Boolean);
   // Support both repeated ?codes=AB001&codes=AB003 and comma-separated ?codes=AB001,AB003
@@ -34,8 +37,7 @@ export async function GET(req: NextRequest) {
 
     let builder = supabase
       .from("submissions")
-      .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email, image_url", { count: "exact" })
-      .order("created_at", { ascending: false });
+      .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email, image_url", { count: "exact" });
 
     // Only show public cases
     builder = builder.eq("public", true);
@@ -69,6 +71,9 @@ export async function GET(req: NextRequest) {
       // Use .in() for exact matches which handles special characters properly
       builder = builder.or(`sender_name.in.(${senders.map(s => JSON.stringify(s)).join(",")}),sender_id.in.(${senders.map(s => JSON.stringify(s)).join(",")})`);
     }
+
+    // Apply ordering after all filters to ensure correct sort with .in() filters
+    builder = builder.order("created_at", { ascending: false });
 
     const { data, error, count } = await builder.range(offset, offset + limit - 1);
     if (error) throw error;
