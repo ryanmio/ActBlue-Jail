@@ -34,6 +34,7 @@ type Violation = {
   description?: string | null;
   severity?: number | null;
   confidence?: string | number | null;
+  actblue_verified?: boolean | null;
 };
 
 

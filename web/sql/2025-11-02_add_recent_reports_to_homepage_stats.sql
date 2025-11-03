@@ -40,12 +40,13 @@ begin
           s.forwarder_email,
           s.image_url,
           json_agg(
-            json_build_object('code', v.code, 'title', v.title)
+            json_build_object('code', v.code, 'title', v.title, 'actblue_verified', v.actblue_verified)
             order by v.severity desc, v.confidence desc
           ) filter (where v.code is not null) as violations
         from submissions s
         join violations v on v.submission_id = s.id
         where s.public = true
+          and v.actblue_verified = false
         group by s.id
         order by s.created_at desc
         limit recent_limit
@@ -68,6 +69,7 @@ begin
           from submissions s
           join violations v on v.submission_id = s.id
           where s.public = true
+            and v.actblue_verified = false
             and (offenders_days is null or s.created_at >= now() - (offenders_days || ' days')::interval)
         )
         select 

@@ -43,6 +43,7 @@ type ViolationRow = {
   submission_id: string;
   code: string;
   title: string;
+  actblue_verified?: boolean | null;
 };
 
 type ReportWithVerdict = {
@@ -52,6 +53,7 @@ type ReportWithVerdict = {
   violations: Array<{
     code: string;
     title: string;
+    actblue_verified?: boolean | null;
   }>;
 };
 
@@ -93,7 +95,7 @@ export async function GET() {
     // Fetch violations for all cases
     const { data: violationRows, error: violationError } = await supabase
       .from("violations")
-      .select("submission_id, code, title")
+      .select("submission_id, code, title, actblue_verified")
       .in("submission_id", caseIds);
     
     if (violationError) throw violationError;
@@ -101,7 +103,7 @@ export async function GET() {
     // Build lookup maps
     const casesMap = new Map((caseRows as CaseRow[] || []).map((c) => [c.id, c]));
     const verdictsMap = new Map((verdictRows as VerdictRow[] || []).map((v) => [v.case_id, v]));
-    const violationsMap = new Map<string, Array<{ code: string; title: string }>>();
+    const violationsMap = new Map<string, Array<{ code: string; title: string; actblue_verified?: boolean | null }>>();
     
     for (const v of (violationRows as ViolationRow[]) || []) {
       const caseId = v.submission_id;
@@ -111,6 +113,7 @@ export async function GET() {
       violationsMap.get(caseId)!.push({
         code: v.code,
         title: v.title,
+        actblue_verified: v.actblue_verified,
       });
     }
     

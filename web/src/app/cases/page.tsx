@@ -17,7 +17,7 @@ type SubmissionRow = {
   senderId: string | null;
   senderName: string | null;
   rawText: string | null;
-  issues: Array<{ code: string; title: string }>;
+  issues: Array<{ code: string; title: string; actblue_verified?: boolean | null }>;
   messageType?: string | null;
   forwarderEmail?: string | null;
   imageUrl?: string | null;
@@ -235,14 +235,21 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                           <>
                             {it.issues.map((v, idx) => {
                               const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
+                              const isVerified = v.actblue_verified === true;
                               return (
                                 <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
                                   <HoverCardTrigger asChild>
                                     <span
                                       title={v.code}
-                                      className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 max-w-[80%] md:max-w-none min-w-0 cursor-help`}
+                                      className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full px-2 py-0.5 text-[11px] font-medium border max-w-[80%] md:max-w-none min-w-0 cursor-help ${
+                                        isVerified
+                                          ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                          : 'bg-orange-50 text-orange-800 border-orange-200'
+                                      }`}
                                     >
-                                      <span className="truncate">{v.title}</span>
+                                      <span className="truncate">
+                                        {isVerified ? 'ActBlue Permitted Matching Program' : v.title}
+                                      </span>
                                     </span>
                                   </HoverCardTrigger>
                                   {policy && (
@@ -255,6 +262,11 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                           </div>
                                         </div>
                                         <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
+                                        {isVerified && (
+                                          <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
+                                            ✓ ActBlue has verified this does not violate their policy.
+                                          </div>
+                                        )}
                                         <a
                                           href={AUP_HELP_URL}
                                           target="_blank"

@@ -62,6 +62,7 @@ export const violations = pgTable("violations", {
   >(),
   severity: integer("severity").notNull(),
   confidence: numeric("confidence", { precision: 3, scale: 2 }).notNull(),
+  actblueVerified: boolean("actblue_verified").default(false),
 });
 
 export const auditLog = pgTable("audit_log", {
@@ -163,6 +164,24 @@ export const reportVerdicts = pgTable(
   (table) => {
     return {
       caseIdx: index("report_verdicts_case_idx").on(table.caseId),
+    };
+  }
+);
+
+export const senderViolationExemptions = pgTable(
+  "sender_violation_exemptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    senderPattern: text("sender_pattern").notNull(),
+    violationCode: text("violation_code").notNull(),
+    reason: text("reason"),
+    verifiedBy: text("verified_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => {
+    return {
+      codeIdx: index("sender_violation_exemptions_code_idx").on(table.violationCode),
     };
   }
 );

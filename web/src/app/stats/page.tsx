@@ -834,7 +834,7 @@ function TopSendersTable({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Senders</h3>
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">Most Frequent Senders</h3>
       {senders.length === 0 ? (
         <div className="py-12 text-center text-sm text-slate-500">
           No senders yet

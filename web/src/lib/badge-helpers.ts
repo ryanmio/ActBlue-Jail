@@ -37,3 +37,27 @@ export function isBotSubmitted(submission: SubmissionBadgeInfo): boolean {
   );
 }
 
+/**
+ * Get badge styling classes for a violation based on its verification status.
+ * 
+ * @param actblueVerified - Whether the violation has been verified by ActBlue
+ * @returns Object with className and optional title for tooltip
+ */
+export function getViolationBadgeStyle(actblueVerified?: boolean | null): {
+  className: string;
+  tooltip?: string;
+  prefix?: string;
+} {
+  if (actblueVerified) {
+    return {
+      className: 'bg-blue-100 text-blue-800 border-blue-200',
+      tooltip: 'ActBlue has reviewed this and does not consider it a violation',
+      prefix: '✓ ',
+    };
+  }
+  
+  return {
+    className: 'bg-orange-50 text-orange-800 border-orange-200',
+  };
+}
+
