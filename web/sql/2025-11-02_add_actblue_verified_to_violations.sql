@@ -15,7 +15,7 @@ returns integer as $$
 declare
   updated_count integer;
 begin
-  -- Update violations that match exemptions
+  -- Update violations that match exemptions using multiple flexible strategies
   with matched_exemptions as (
     select 
       v.id as violation_id
@@ -28,7 +28,15 @@ begin
         -- Exact normalized match
         normalize_sender_name(s.sender_name) = normalize_sender_name(e.sender_pattern)
         or
-        -- Wildcard pattern match (if sender_pattern contains %)
+        -- Initialism match (e.g., DCCC == Democratic Congressional Campaign Committee)
+        name_initialism(s.sender_name) = name_initialism(e.sender_pattern)
+        or
+        -- Substring match in either direction (covers appended/ prepended variants)
+        normalize_sender_name(s.sender_name) ilike ('%' || normalize_sender_name(e.sender_pattern) || '%')
+        or
+        normalize_sender_name(e.sender_pattern) ilike ('%' || normalize_sender_name(s.sender_name) || '%')
+        or
+        -- Wildcard pattern support: if pattern contains % treat it as already-wild; compare on normalized forms
         (e.sender_pattern like '%\%%' and normalize_sender_name(s.sender_name) ilike normalize_sender_name(e.sender_pattern))
       )
   )
@@ -52,6 +60,9 @@ $$ language plpgsql;
 --   AND v.actblue_verified = false
 --   AND (
 --     normalize_sender_name(s.sender_name) = normalize_sender_name(e.sender_pattern)
+--     OR name_initialism(s.sender_name) = name_initialism(e.sender_pattern)
+--     OR normalize_sender_name(s.sender_name) ILIKE ('%' || normalize_sender_name(e.sender_pattern) || '%')
+--     OR normalize_sender_name(e.sender_pattern) ILIKE ('%' || normalize_sender_name(s.sender_name) || '%')
 --     OR (e.sender_pattern LIKE '%\%%' AND normalize_sender_name(s.sender_name) ILIKE normalize_sender_name(e.sender_pattern))
 --   );
 
