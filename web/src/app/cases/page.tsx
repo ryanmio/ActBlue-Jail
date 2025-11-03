@@ -60,7 +60,7 @@ function derivePreview(text?: string | null): string {
   return text.slice(0, 160);
 }
 
-async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], senders: string[] = []): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
+async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], senders: string[] = [], base = ""): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
 {
   try {
     const usp = new URLSearchParams();
@@ -76,7 +76,7 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], sen
       // Send as comma-separated list for brevity
       usp.set("senders", senders.join(","));
     }
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases?${usp.toString()}`, { cache: "no-store" });
+    const res = await fetch(`${base}/api/cases?${usp.toString()}`, { cache: "no-store" });
     if (!res.ok) return { items: [], page, limit, total: 0, hasMore: false, offset: 0 };
     const data = await res.json();
     const rows = (data.items || []) as Array<{
@@ -124,6 +124,10 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], sen
 }
 
 export default async function CasesPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  const hdrs = await import("next/headers").then(m => m.headers());
+  const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
+  const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+  const base = `${proto}://${host}`;
   const sp: Record<string, string | string[] | undefined> = searchParams ? await searchParams : {};
   const pageParam = Array.isArray(sp["page"]) ? sp["page"][0] : sp["page"];
   const limitParam = Array.isArray(sp["limit"]) ? sp["limit"][0] : sp["limit"];
@@ -145,7 +149,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const page = Number(pageParam) || 1;
   const pageSize = Number(limitParam) || 20;
   const q = (qParam || "").toString();
-  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders);
+  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders, base);
   return (
     <main 
       className="min-h-[calc(100vh+160px)] bg-white"
