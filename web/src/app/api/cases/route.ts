@@ -65,24 +65,24 @@ export async function GET(req: NextRequest) {
 
     if (codes.length > 0) {
       try {
-        const { data: vioRows, error: vioErr } = await supabase
-          .from("violations")
-          .select("submission_id, code")
-          .in("code", codes);
+      const { data: vioRows, error: vioErr } = await supabase
+        .from("violations")
+        .select("submission_id, code")
+        .in("code", codes);
         if (vioErr) {
           console.error("/api/cases violation code filter error", { codes, error: vioErr });
           throw vioErr;
         }
-        const idSet = new Set<string>();
-        for (const r of vioRows || []) {
-          const sid = String((r as { submission_id: string }).submission_id);
-          if (sid) idSet.add(sid);
-        }
-        const ids = Array.from(idSet);
+      const idSet = new Set<string>();
+      for (const r of vioRows || []) {
+        const sid = String((r as { submission_id: string }).submission_id);
+        if (sid) idSet.add(sid);
+      }
+      const ids = Array.from(idSet);
         console.log(`/api/cases found ${ids.length} submissions for codes:`, codes);
-        if (ids.length === 0) {
-          return NextResponse.json({ items: [], total: 0, limit, offset, page, hasMore: false });
-        }
+      if (ids.length === 0) {
+        return NextResponse.json({ items: [], total: 0, limit, offset, page, hasMore: false });
+      }
 
         const chunkSize = 50;
         const rowMap = new Map<string, Row>();
@@ -125,22 +125,22 @@ export async function GET(req: NextRequest) {
         .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email, image_url", { count: "exact" });
       builder = applyCommonFilters(builder).order("created_at", { ascending: false });
 
-      const { data, error, count } = await builder.range(offset, offset + limit - 1);
+    const { data, error, count } = await builder.range(offset, offset + limit - 1);
       if (error) {
         console.error("/api/cases submissions query error", { codes, senders, q, error });
         throw error;
       }
-      const rows = (data || []) as Row[];
+    const rows = (data || []) as Row[];
       items = rows.map((r) => ({
-        id: r.id,
-        createdAt: r.created_at,
-        senderId: r.sender_id,
-        senderName: r.sender_name,
-        rawText: r.raw_text,
-        messageType: r.message_type,
-        forwarderEmail: r.forwarder_email,
-        imageUrl: r.image_url,
-      }));
+      id: r.id,
+      createdAt: r.created_at,
+      senderId: r.sender_id,
+      senderName: r.sender_name,
+      rawText: r.raw_text,
+      messageType: r.message_type,
+      forwarderEmail: r.forwarder_email,
+      imageUrl: r.image_url,
+    }));
       total = typeof count === "number" ? count : items.length + offset;
     }
 
