@@ -37,7 +37,10 @@ export async function GET(req: NextRequest) {
     const sanitizedQuery = q.length > 0 ? q.replace(/[%]/g, "").replace(/,/g, " ") : null;
     const sendersFilter = senders.length > 0 ? senders.map((s) => JSON.stringify(s)).join(",") : null;
 
-    const applyCommonFilters = (builder: any) => {
+    const applyCommonFilters = <T extends {
+      eq: (column: string, value: unknown) => T;
+      or: (filters: string) => T;
+    }>(builder: T): T => {
       let next = builder.eq("public", true);
       if (sanitizedQuery) {
         next = next.or(`sender_name.ilike.%${sanitizedQuery}%,sender_id.ilike.%${sanitizedQuery}%`);

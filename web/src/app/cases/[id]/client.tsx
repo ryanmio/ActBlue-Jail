@@ -204,7 +204,7 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
                   </div>
                   
                   <p className="text-sm leading-relaxed mb-3 text-blue-800">
-                    ActBlue has reviewed evidence submitted by this sender and verified that their matching program meets ActBlue's standards. This sender is permitted to promote this matching program.
+                    ActBlue has reviewed evidence submitted by this sender and verified that their matching program meets ActBlue&apos;s standards. This sender is permitted to promote this matching program.
                   </p>
                   
                   <button
@@ -845,7 +845,6 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [previewBody, setPreviewBody] = useState<string>("");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [reportSent, setReportSent] = useState(false);
@@ -868,8 +867,11 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
         if (!cancelled && item?.processing_status) {
           setStatus(item.processing_status);
           // Update landing URL if we got one and our field is empty
-          if (item.landing_url && !landingUrl) {
-            setLandingUrl(item.landing_url);
+          if (item.landing_url) {
+            setLandingUrl((prev) => {
+              if (prev && prev.trim().length > 0) return prev;
+              return item.landing_url ?? prev;
+            });
           }
           if (item.processing_status === "done") {
             clearInterval(interval);
@@ -986,14 +988,6 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
           shot = (j?.url as string) || null;
         }
       } catch {}
-
-      const sections: string[] = [];
-      sections.push(`Campaign/Org\n-----------\n${campaign}`);
-      sections.push(`Violations\n----------\n${vioText}`);
-      sections.push(`Landing page URL\n-----------------\n${landing || "(none)"}`);
-      if (note.trim()) sections.push(`Reporter note\n-------------\n${note.trim()}`);
-      if (shot) sections.push(`Screenshot\n---------\n${shot}`);
-      setPreviewBody(sections.join("\n\n"));
 
       // Build HTML matching the outbound email style
       const esc = (s: string) => String(s)
