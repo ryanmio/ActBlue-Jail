@@ -17,7 +17,7 @@ type SubmissionRow = {
   senderId: string | null;
   senderName: string | null;
   rawText: string | null;
-  issues: Array<{ code: string; title: string }>;
+  issues: Array<{ code: string; title: string; actblue_verified?: boolean | null }>;
   messageType?: string | null;
   forwarderEmail?: string | null;
   imageUrl?: string | null;
@@ -60,7 +60,7 @@ function derivePreview(text?: string | null): string {
   return text.slice(0, 160);
 }
 
-async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], senders: string[] = []): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
+async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], senders: string[] = [], base = ""): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
 {
   try {
     const usp = new URLSearchParams();
@@ -76,7 +76,7 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], sen
       // Send as comma-separated list for brevity
       usp.set("senders", senders.join(","));
     }
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/cases?${usp.toString()}`, { cache: "no-store" });
+    const res = await fetch(`${base}/api/cases?${usp.toString()}`, { cache: "no-store" });
     if (!res.ok) return { items: [], page, limit, total: 0, hasMore: false, offset: 0 };
     const data = await res.json();
     const rows = (data.items || []) as Array<{
@@ -124,6 +124,10 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], sen
 }
 
 export default async function CasesPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  const hdrs = await import("next/headers").then(m => m.headers());
+  const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "localhost:3000";
+  const proto = hdrs.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+  const base = `${proto}://${host}`;
   const sp: Record<string, string | string[] | undefined> = searchParams ? await searchParams : {};
   const pageParam = Array.isArray(sp["page"]) ? sp["page"][0] : sp["page"];
   const limitParam = Array.isArray(sp["limit"]) ? sp["limit"][0] : sp["limit"];
@@ -145,7 +149,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const page = Number(pageParam) || 1;
   const pageSize = Number(limitParam) || 20;
   const q = (qParam || "").toString();
-  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders);
+  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders, base);
   return (
     <main 
       className="min-h-[calc(100vh+160px)] bg-white"
@@ -235,14 +239,21 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                           <>
                             {it.issues.map((v, idx) => {
                               const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
+                              const isVerified = v.actblue_verified === true;
                               return (
                                 <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
                                   <HoverCardTrigger asChild>
                                     <span
                                       title={v.code}
-                                      className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 max-w-[80%] md:max-w-none min-w-0 cursor-help`}
+                                      className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full px-2 py-0.5 text-[11px] font-medium border max-w-[80%] md:max-w-none min-w-0 cursor-help ${
+                                        isVerified
+                                          ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                          : 'bg-orange-50 text-orange-800 border-orange-200'
+                                      }`}
                                     >
-                                      <span className="truncate">{v.title}</span>
+                                      <span className="truncate">
+                                        {isVerified ? 'ActBlue Permitted Matching Program' : v.title}
+                                      </span>
                                     </span>
                                   </HoverCardTrigger>
                                   {policy && (
@@ -255,6 +266,11 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                           </div>
                                         </div>
                                         <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
+                                        {isVerified && (
+                                          <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
+                                            ✓ ActBlue has verified this does not violate their policy.
+                                          </div>
+                                        )}
                                         <a
                                           href={AUP_HELP_URL}
                                           target="_blank"

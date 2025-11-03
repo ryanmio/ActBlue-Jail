@@ -77,6 +77,7 @@ type Violation = {
   description?: string | null;
   severity?: number | null;
   confidence?: string | number | null;
+  actblue_verified?: boolean | null;
 };
 
 type LiveViolationsProps = {
@@ -90,6 +91,7 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
   const [violations, setViolations] = useState<Array<Violation>>(initialViolations);
   const [status, setStatus] = useState<string | null | undefined>(initialStatus);
   const [overallConfidence, setOverallConfidence] = useState<number | null>(initialAiConfidence == null ? null : Number(initialAiConfidence));
+  const [expandedViolations, setExpandedViolations] = useState<Set<string>>(new Set());
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
@@ -172,6 +174,8 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
           {violations.map((v) => {
             const confidenceNum = v.confidence == null ? null : Number(v.confidence);
             const severityNum = v.severity == null ? null : Number(v.severity);
+            const isVerified = v.actblue_verified === true;
+            const isExpanded = expandedViolations.has(v.id);
             
             // Color coding based on severity
             const severityColors = {
@@ -184,6 +188,59 @@ export function LiveViolations({ id, initialViolations, initialStatus, initialAi
             
             const colorClass = severityColors[severityNum as keyof typeof severityColors] || "bg-slate-50 border-l-slate-400 text-slate-800";
             
+            // If ActBlue verified, show the permitted card
+            if (isVerified) {
+              return (
+                <div key={v.id} className="p-4 rounded-xl border-l-4 bg-blue-50 border-l-blue-400 text-blue-900">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start gap-3 flex-wrap min-w-0">
+                      <span className="inline-flex items-center bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-md shrink-0 border border-blue-200">
+                        ActBlue Permitted
+                      </span>
+                      <h3 className="font-semibold leading-snug break-words max-w-full min-w-0 text-blue-900">
+                        Matching Program Verified
+                      </h3>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm leading-relaxed mb-3 text-blue-800">
+                    ActBlue has reviewed evidence submitted by this sender and verified that their matching program meets ActBlue&apos;s standards. This sender is permitted to promote this matching program.
+                  </p>
+                  
+                  <button
+                    onClick={() => setExpandedViolations(prev => {
+                      const next = new Set(prev);
+                      if (next.has(v.id)) next.delete(v.id);
+                      else next.add(v.id);
+                      return next;
+                    })}
+                    className="text-xs text-blue-700 hover:text-blue-900 underline font-semibold"
+                  >
+                    {isExpanded ? '▼ Hide' : '▶ Show'} AI Detection Details
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="text-xs mb-2 text-blue-700">
+                        <span className="font-semibold">{v.code}</span> - {v.title}
+                      </div>
+                      {confidenceNum != null && !Number.isNaN(confidenceNum) && (
+                        <div className="text-xs mb-2 text-blue-700">
+                          AI Confidence: <span className="font-semibold">{(confidenceNum * 100).toFixed(0)}%</span>
+                        </div>
+                      )}
+                      {v.description && (
+                        <p className="text-xs leading-relaxed whitespace-pre-wrap text-blue-800 bg-blue-100 p-2 rounded">
+                          {v.description}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            // Otherwise show as normal violation
             return (
               <div key={v.id} className={`p-4 rounded-xl border-l-4 ${colorClass}`}>
                 <div className="flex items-start justify-between mb-2">
@@ -788,7 +845,6 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [previewBody, setPreviewBody] = useState<string>("");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [reportSent, setReportSent] = useState(false);
@@ -811,8 +867,11 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
         if (!cancelled && item?.processing_status) {
           setStatus(item.processing_status);
           // Update landing URL if we got one and our field is empty
-          if (item.landing_url && !landingUrl) {
-            setLandingUrl(item.landing_url);
+          if (item.landing_url) {
+            setLandingUrl((prev) => {
+              if (prev && prev.trim().length > 0) return prev;
+              return item.landing_url ?? prev;
+            });
           }
           if (item.processing_status === "done") {
             clearInterval(interval);
@@ -929,14 +988,6 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
           shot = (j?.url as string) || null;
         }
       } catch {}
-
-      const sections: string[] = [];
-      sections.push(`Campaign/Org\n-----------\n${campaign}`);
-      sections.push(`Violations\n----------\n${vioText}`);
-      sections.push(`Landing page URL\n-----------------\n${landing || "(none)"}`);
-      if (note.trim()) sections.push(`Reporter note\n-------------\n${note.trim()}`);
-      if (shot) sections.push(`Screenshot\n---------\n${shot}`);
-      setPreviewBody(sections.join("\n\n"));
 
       // Build HTML matching the outbound email style
       const esc = (s: string) => String(s)

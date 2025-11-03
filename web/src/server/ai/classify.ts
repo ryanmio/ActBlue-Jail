@@ -211,6 +211,14 @@ export async function runClassification(submissionId: string, opts: RunClassific
       await supabase.from("submissions").update({ processing_status: "error" }).eq("id", submissionId);
       return { ok: false, status: 500, error: "insert_failed" as const };
     }
+
+    // Check for ActBlue-verified exemptions and mark matching violations
+    try {
+      await supabase.rpc("mark_verified_violations", { submission_id_param: submissionId });
+    } catch (exemptionErr) {
+      // Log but don't fail classification if exemption check fails
+      console.warn("Failed to check exemptions:", exemptionErr);
+    }
   } else if (opts.replaceExisting) {
     // Ensure we reflect no violations after replacement
   }

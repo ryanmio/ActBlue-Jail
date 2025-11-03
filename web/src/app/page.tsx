@@ -658,10 +658,10 @@ type RecentCase = {
   sender_id: string | null;
   sender_name: string | null;
   raw_text: string | null;
+  image_url: string | null;
   message_type: string | null;
   forwarder_email: string | null;
-  image_url: string | null;
-  violations: Array<{ code: string; title: string }>;
+  violations: Array<{ code: string; title: string; actblue_verified?: boolean | null }>;
 };
 
 type WorstOffender = {
@@ -799,14 +799,19 @@ function RecentCases() {
                   {r.violations && r.violations.length > 0 ? (
                     r.violations.slice(0, 3).map((v, idx) => {
                       const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
+                      const isVerified = v.actblue_verified === true;
                       return (
                         <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
                           <HoverCardTrigger asChild>
                             <span
-                              className="inline-flex items-center rounded-full bg-orange-50 pl-3 pr-3.5 py-1 text-[11px] font-medium text-orange-800 border border-orange-200 whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw] cursor-help"
+                              className={`inline-flex items-center rounded-full pl-3 pr-3.5 py-1 text-[11px] font-medium border whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw] cursor-help ${
+                                isVerified
+                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                  : 'bg-orange-50 text-orange-800 border-orange-200'
+                              }`}
                               title={v.title}
                             >
-                              {v.title}
+                              {isVerified ? 'ActBlue Permitted Matching Program' : v.title}
                             </span>
                           </HoverCardTrigger>
                           {policy && (
@@ -819,6 +824,11 @@ function RecentCases() {
                                   </div>
                                 </div>
                                 <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
+                                {isVerified && (
+                                  <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
+                                    ✓ ActBlue has verified this does not violate their policy.
+                                  </div>
+                                )}
                                 <a
                                   href={AUP_HELP_URL}
                                   target="_blank"

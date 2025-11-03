@@ -34,72 +34,130 @@ export async function GET(req: NextRequest) {
       forwarder_email: string | null;
       image_url: string | null;
     };
+    const sanitizedQuery = q.length > 0 ? q.replace(/[%]/g, "").replace(/,/g, " ") : null;
+    const sendersFilter = senders.length > 0 ? senders.map((s) => JSON.stringify(s)).join(",") : null;
 
-    let builder = supabase
-      .from("submissions")
-      .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email, image_url", { count: "exact" });
+    const applyCommonFilters = <T extends {
+      eq: (column: string, value: unknown) => T;
+      or: (filters: string) => T;
+    }>(builder: T): T => {
+      let next = builder.eq("public", true);
+      if (sanitizedQuery) {
+        next = next.or(`sender_name.ilike.%${sanitizedQuery}%,sender_id.ilike.%${sanitizedQuery}%`);
+      }
+      if (sendersFilter) {
+        next = next.or(`sender_name.in.(${sendersFilter}),sender_id.in.(${sendersFilter})`);
+      }
+      return next;
+    };
 
-    // Only show public cases
-    builder = builder.eq("public", true);
+    let items: Array<{
+      id: string;
+      createdAt: string;
+      senderId: string | null;
+      senderName: string | null;
+      rawText: string | null;
+      messageType: string | null;
+      forwarderEmail: string | null;
+      imageUrl: string | null;
+    }> = [];
+    let total = 0;
 
-    // If violation codes are provided, filter submissions to those having at least one matching code
     if (codes.length > 0) {
-      const { data: vioRows, error: vioErr } = await supabase
-        .from("violations")
-        .select("submission_id, code")
-        .in("code", codes);
-      if (vioErr) throw vioErr;
-      const idSet = new Set<string>();
-      for (const r of vioRows || []) {
-        const sid = String((r as { submission_id: string }).submission_id);
-        if (sid) idSet.add(sid);
+      try {
+        const { data: vioRows, error: vioErr } = await supabase
+          .from("violations")
+          .select("submission_id, code")
+          .in("code", codes);
+        if (vioErr) {
+          console.error("/api/cases violation code filter error", { codes, error: vioErr });
+          throw vioErr;
+        }
+        const idSet = new Set<string>();
+        for (const r of vioRows || []) {
+          const sid = String((r as { submission_id: string }).submission_id);
+          if (sid) idSet.add(sid);
+        }
+        const ids = Array.from(idSet);
+        console.log(`/api/cases found ${ids.length} submissions for codes:`, codes);
+        if (ids.length === 0) {
+          return NextResponse.json({ items: [], total: 0, limit, offset, page, hasMore: false });
+        }
+
+        const chunkSize = 50;
+        const rowMap = new Map<string, Row>();
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const chunkIds = ids.slice(i, i + chunkSize);
+          let chunkBuilder = supabase
+            .from("submissions")
+            .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email, image_url");
+          chunkBuilder = applyCommonFilters(chunkBuilder).in("id", chunkIds);
+          const { data: chunkData, error: chunkError } = await chunkBuilder;
+          if (chunkError) {
+            console.error("/api/cases submissions chunk error", { codes, chunkSize: chunkIds.length, error: chunkError });
+            throw chunkError;
+          }
+          for (const row of (chunkData || []) as Row[]) {
+            rowMap.set(row.id, row);
+          }
+        }
+
+        const combined = Array.from(rowMap.values()).sort((a, b) => new Date(b.created_at).valueOf() - new Date(a.created_at).valueOf());
+        total = combined.length;
+        const paged = combined.slice(offset, offset + limit);
+        items = paged.map((r) => ({
+          id: r.id,
+          createdAt: r.created_at,
+          senderId: r.sender_id,
+          senderName: r.sender_name,
+          rawText: r.raw_text,
+          messageType: r.message_type,
+          forwarderEmail: r.forwarder_email,
+          imageUrl: r.image_url,
+        }));
+      } catch (codeFilterErr) {
+        console.error("/api/cases code filter exception", { codes, err: codeFilterErr });
+        throw codeFilterErr;
       }
-      const ids = Array.from(idSet);
-      if (ids.length === 0) {
-        return NextResponse.json({ items: [], total: 0, limit, offset, page, hasMore: false });
+    } else {
+      let builder = supabase
+        .from("submissions")
+        .select("id, created_at, sender_id, sender_name, raw_text, message_type, forwarder_email, image_url", { count: "exact" });
+      builder = applyCommonFilters(builder).order("created_at", { ascending: false });
+
+      const { data, error, count } = await builder.range(offset, offset + limit - 1);
+      if (error) {
+        console.error("/api/cases submissions query error", { codes, senders, q, error });
+        throw error;
       }
-      builder = builder.in("id", ids);
+      const rows = (data || []) as Row[];
+      items = rows.map((r) => ({
+        id: r.id,
+        createdAt: r.created_at,
+        senderId: r.sender_id,
+        senderName: r.sender_name,
+        rawText: r.raw_text,
+        messageType: r.message_type,
+        forwarderEmail: r.forwarder_email,
+        imageUrl: r.image_url,
+      }));
+      total = typeof count === "number" ? count : items.length + offset;
     }
-
-    if (q.length > 0) {
-      const sanitized = q.replace(/[%]/g, "").replace(/,/g, " ");
-      builder = builder.or(`sender_name.ilike.%${sanitized}%,sender_id.ilike.%${sanitized}%`);
-    }
-
-    // Filter by specific sender names if provided
-    if (senders.length > 0) {
-      // Use .in() for exact matches which handles special characters properly
-      builder = builder.or(`sender_name.in.(${senders.map(s => JSON.stringify(s)).join(",")}),sender_id.in.(${senders.map(s => JSON.stringify(s)).join(",")})`);
-    }
-
-    // Apply ordering after all filters to ensure correct sort with .in() filters
-    builder = builder.order("created_at", { ascending: false });
-
-    const { data, error, count } = await builder.range(offset, offset + limit - 1);
-    if (error) throw error;
-    const rows = (data || []) as Row[];
-    let items = rows.map((r) => ({
-      id: r.id,
-      createdAt: r.created_at,
-      senderId: r.sender_id,
-      senderName: r.sender_name,
-      rawText: r.raw_text,
-      messageType: r.message_type,
-      forwarderEmail: r.forwarder_email,
-      imageUrl: r.image_url,
-    }));
 
     // Optionally include top violations (deduped by code, max 3 per case)
     if (include.includes("top_violations") && items.length > 0) {
       try {
-        type VRow = { submission_id: string; code?: string | null; title?: string | null; severity?: number | string | null; confidence?: number | string | null };
+        type VRow = { submission_id: string; code?: string | null; title?: string | null; severity?: number | string | null; confidence?: number | string | null; actblue_verified?: boolean | null };
         const ids = items.map((i) => i.id);
         const { data: vioRows, error: vioErr } = await supabase
           .from("violations")
-          .select("submission_id, code, title, severity, confidence")
+          .select("submission_id, code, title, severity, confidence, actblue_verified")
           .in("submission_id", ids);
-        if (vioErr) throw vioErr;
-        const byCase = new Map<string, Array<{ code: string; title: string; severity: number; confidence: number }>>();
+        if (vioErr) {
+          console.error("/api/cases top_violations query error", { ids: ids.length, error: vioErr });
+          throw vioErr;
+        }
+        const byCase = new Map<string, Array<{ code: string; title: string; severity: number; confidence: number; actblue_verified?: boolean | null }>>();
         for (const v of (vioRows || []) as VRow[]) {
           const sid = String(v.submission_id);
           const code = typeof v.code === "string" ? v.code.trim() : "";
@@ -108,24 +166,26 @@ export async function GET(req: NextRequest) {
           const confidence = Number(v.confidence ?? 0) || 0;
           if (!code) continue;
           const arr = byCase.get(sid) || [];
-          arr.push({ code, title, severity, confidence });
+          arr.push({ code, title, severity, confidence, actblue_verified: v.actblue_verified });
           byCase.set(sid, arr);
         }
         items = items.map((it) => {
           const src = byCase.get(it.id) || [];
           const seen = new Set<string>();
-          const top: Array<{ code: string; title: string }> = [];
+          const top: Array<{ code: string; title: string; actblue_verified?: boolean | null }> = [];
           for (const v of src.sort((a, b) => b.severity - a.severity || b.confidence - a.confidence)) {
             if (seen.has(v.code)) continue;
             seen.add(v.code);
-            top.push({ code: v.code, title: v.title });
+            top.push({ code: v.code, title: v.title, actblue_verified: v.actblue_verified });
             if (top.length >= 3) break;
           }
-          return { ...it, issues: top } as typeof it & { issues: Array<{ code: string; title: string }> };
+          return { ...it, issues: top } as typeof it & { issues: Array<{ code: string; title: string; actblue_verified?: boolean | null }> };
         });
       } catch {}
     }
-    const total = typeof count === "number" ? count : items.length + offset; // fallback
+    if (codes.length > 0 && total === 0) {
+      total = offset + items.length;
+    }
     const hasMore = offset + items.length < total;
     return NextResponse.json({ items, total, limit, offset, page, hasMore });
   } catch (err) {

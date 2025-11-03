@@ -35,6 +35,7 @@ begin
   join submissions s on v.submission_id = s.id
   where s.created_at >= start_date and s.created_at <= end_date
     and s.public = true
+    and v.actblue_verified = false
     and (not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names));
 
   select count(*) into total_reports
@@ -94,6 +95,7 @@ begin
         join violations v on v.submission_id = s.id
         where s.created_at >= start_date and s.created_at <= end_date
           and s.public = true
+          and v.actblue_verified = false
           and (not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names))
         group by bucket_key
         order by bucket_key
@@ -123,7 +125,7 @@ begin
                count(distinct s.id) as capture_count,
                count(distinct v.submission_id) as violation_count
         from submissions s
-        left join violations v on v.submission_id = s.id
+        left join violations v on v.submission_id = s.id and v.actblue_verified = false
         where s.created_at >= start_date and s.created_at <= end_date
           and s.public = true
           and (not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names))
@@ -142,6 +144,7 @@ begin
         join submissions s on v.submission_id = s.id
         where s.created_at >= start_date and s.created_at <= end_date
           and s.public = true
+          and v.actblue_verified = false
           and (not filter_enabled or coalesce(s.sender_name, s.sender_id, 'Unknown') = any(sender_names))
         group by v.code
         order by violation_count desc

@@ -37,6 +37,7 @@ type ReportData = {
   violations: Array<{
     code: string;
     title: string;
+    actblue_verified?: boolean | null;
   }>;
 };
 
@@ -170,9 +171,14 @@ export default function ReportsTable({ initialData, showHeader = true }: { initi
                           {item.violations.slice(0, 2).map((v, idx) => (
                             <span
                               key={idx}
-                              className="inline-flex items-center rounded-full bg-orange-50 text-orange-800 border border-orange-200 px-2.5 py-1 text-xs font-medium"
+                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                                v.actblue_verified
+                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                  : 'bg-orange-50 text-orange-800 border-orange-200'
+                              }`}
+                              title={v.actblue_verified ? 'ActBlue has verified this and does not consider it a violation' : undefined}
                             >
-                              {v.title}
+                              {v.actblue_verified ? 'ActBlue Permitted Matching Program' : v.title}
                             </span>
                           ))}
                           {item.violations.length > 2 && (
