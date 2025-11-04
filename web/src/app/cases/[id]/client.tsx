@@ -1440,7 +1440,7 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
   // Note: Email redaction is now handled server-side during ingestion.
   // The data we receive here is already redacted, so no client-side redaction is needed.
 
-  const [tab, setTab] = useState<"primary" | "landing">("primary");
+  const [tab, setTab] = useState<"primary" | "plaintext" | "landing">("primary");
   const [scanUrl, setScanUrl] = useState("");
   const [scanStatus, setScanStatus] = useState<null | "idle" | "pending" | "success" | "failed">(null);
   const [error, setError] = useState<string | null>(null);
@@ -1527,6 +1527,15 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
         >
           {primaryLabel}
         </button>
+        {(emailBody || rawText) && (
+          <button
+            type="button"
+            onClick={() => setTab("plaintext")}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${tab === "plaintext" ? "bg-white text-slate-900 shadow" : "text-slate-700 hover:text-slate-900"}`}
+          >
+            Plain Text
+          </button>
+        )}
         {hasLanding && (
           <button
             type="button"
@@ -1564,6 +1573,16 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
               )}
             </div>
           )}
+        </div>
+      ) : tab === "plaintext" ? (
+        <div key="plaintext-tab">
+          <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+            {rawText ? (
+              <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto font-mono">{normalizePunctuation(repairMojibake(rawText))}</pre>
+            ) : (
+              <div className="text-slate-600 text-sm">No plain text available.</div>
+            )}
+          </div>
         </div>
       ) : (
         <div key="landing-tab">
