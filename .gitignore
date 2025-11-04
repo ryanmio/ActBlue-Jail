@@ -1,2 +1,4 @@
 /web/.npm-cache
 /.cursor
+web/sql/2025-11-03_insert_matching_program_verdicts.sql
+VERDICT_IMPLEMENTATION.md

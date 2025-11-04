@@ -46,7 +46,6 @@ begin
         from submissions s
         join violations v on v.submission_id = s.id
         where s.public = true
-          and v.actblue_verified = false
         group by s.id
         order by s.created_at desc
         limit recent_limit

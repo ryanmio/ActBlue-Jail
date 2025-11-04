@@ -4,7 +4,7 @@ export const fetchCache = "force-no-store";
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { headers } from "next/headers";
-import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceTabs, ReportingCard, ReportThread } from "./client";
+import { LiveViolations, LiveSender, LiveSummary, RequestDeletionButton, CommentsSection, EvidenceTabs, ReportingCard, ReportThread, CaseVerdict } from "./client";
 import { env } from "@/lib/env";
 import LocalTime from "@/components/LocalTime";
 import Footer from "@/components/Footer";
@@ -39,11 +39,21 @@ type Violation = {
 
 
 type Comment = { id: string; content: string; created_at?: string | null; kind?: string | null };
+type Verdict = {
+  id: string;
+  case_id: string;
+  verdict: string;
+  explanation: string | null;
+  determined_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
 type CaseData = {
   item: CaseItem | null;
   violations: Array<Violation>;
   comments?: Array<Comment>;
   reports?: Array<{ id: string }>;
+  verdict?: Verdict | null;
   hasReport?: boolean;
 };
 
@@ -270,6 +280,13 @@ export default async function CaseDetailPage({
           </div>
         </div>
 
+        {/* ActBlue Verdict (if exists) */}
+        {data.verdict && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8">
+            <CaseVerdict verdict={data.verdict} />
+          </div>
+        )}
+
         {/* Main content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left column */}
@@ -329,7 +346,7 @@ export default async function CaseDetailPage({
         )}
 
         {/* Report history and replies */}
-        <ReportThread id={id} />
+        <ReportThread id={id} verdict={data.verdict} />
         <Footer />
       </div>
     </main>
