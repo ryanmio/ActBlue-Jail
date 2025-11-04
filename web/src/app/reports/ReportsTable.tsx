@@ -55,21 +55,21 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function getVerdictDisplay(verdict: string | null): { label: string; color: string; bgColor: string } {
+function getVerdictDisplay(verdict: string | null): { label: string; color: string; bgColor: string; borderColor: string } {
   if (!verdict || verdict === "pending") {
-    return { label: "Pending", color: "text-slate-700", bgColor: "bg-slate-100" };
+    return { label: "Pending", color: "text-slate-700", bgColor: "bg-slate-100", borderColor: "border-slate-200" };
   }
   switch (verdict) {
     case "violation_confirmed":
-      return { label: "Violation Confirmed", color: "text-orange-800", bgColor: "bg-orange-50" };
+      return { label: "Violation Confirmed", color: "text-orange-800", bgColor: "bg-orange-50", borderColor: "border-orange-200" };
     case "no_violation":
-      return { label: "No Violation", color: "text-green-800", bgColor: "bg-green-50" };
+      return { label: "No Violation", color: "text-blue-800", bgColor: "bg-blue-50", borderColor: "border-blue-200" };
     case "under_review":
-      return { label: "Under Review", color: "text-blue-800", bgColor: "bg-blue-50" };
+      return { label: "Under Review", color: "text-blue-800", bgColor: "bg-blue-50", borderColor: "border-blue-200" };
     case "resolved":
-      return { label: "Resolved", color: "text-slate-700", bgColor: "bg-slate-100" };
+      return { label: "Resolved", color: "text-slate-700", bgColor: "bg-slate-100", borderColor: "border-slate-200" };
     default:
-      return { label: "Pending", color: "text-slate-700", bgColor: "bg-slate-100" };
+      return { label: "Pending", color: "text-slate-700", bgColor: "bg-slate-100", borderColor: "border-slate-200" };
   }
 }
 
@@ -110,7 +110,7 @@ export default function ReportsTable({ initialData, showHeader = true }: { initi
                 <th className="text-left py-4 px-6 font-semibold text-slate-900">Reported</th>
                 <th className="text-left py-4 px-6 font-semibold text-slate-900">Evidence</th>
                 <th className="text-left py-4 px-6 font-semibold text-slate-900">Potential Violations</th>
-                <th className="text-left py-4 px-6 font-semibold text-slate-900">Status</th>
+                <th className="text-left py-4 px-6 font-semibold text-slate-900">Verdict</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -171,14 +171,9 @@ export default function ReportsTable({ initialData, showHeader = true }: { initi
                           {item.violations.slice(0, 2).map((v, idx) => (
                             <span
                               key={idx}
-                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                                v.actblue_verified
-                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
-                                  : 'bg-orange-50 text-orange-800 border-orange-200'
-                              }`}
-                              title={v.actblue_verified ? 'ActBlue has verified this and does not consider it a violation' : undefined}
+                              className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium bg-orange-50 text-orange-800 border-orange-200"
                             >
-                              {v.actblue_verified ? 'ActBlue Permitted Matching Program' : v.title}
+                              {v.title}
                             </span>
                           ))}
                           {item.violations.length > 2 && (
@@ -194,7 +189,7 @@ export default function ReportsTable({ initialData, showHeader = true }: { initi
                     <td className="py-5 px-6">
                       {item.verdict ? (
                         <span
-                          className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium ${verdictDisplay.bgColor} ${verdictDisplay.color} border border-slate-200 w-fit`}
+                          className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium ${verdictDisplay.bgColor} ${verdictDisplay.color} border ${verdictDisplay.borderColor} w-fit`}
                         >
                           {verdictDisplay.label}
                         </span>

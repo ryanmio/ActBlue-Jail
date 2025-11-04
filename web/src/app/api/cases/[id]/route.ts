@@ -66,8 +66,18 @@ export async function GET(
       .eq("case_id", id)
       .order("created_at", { ascending: true });
 
+    // Load verdict if exists
+    const { data: verdictRows } = await supabase
+      .from("report_verdicts")
+      .select("id, case_id, verdict, explanation, determined_by, created_at, updated_at")
+      .eq("case_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    
+    const verdict = verdictRows?.[0] || null;
+
     const hasReport = (Array.isArray(reportRows) && reportRows.length > 0) || (Array.isArray(landingNotes) && landingNotes.length > 0);
-    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [], reports: reportRows || [], report_replies: replyRows || [], hasReport });
+    return NextResponse.json({ item, violations: vios || [], summary, comments: commentsRows || [], reports: reportRows || [], report_replies: replyRows || [], verdict, hasReport });
   } catch (err) {
     console.error("/api/cases/[id] supabase error", err);
     return NextResponse.json({ item: null, violations: [], comments: [], reports: [], report_replies: [] }, { status: 500 });
