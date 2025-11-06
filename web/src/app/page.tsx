@@ -302,7 +302,7 @@ export default function Home() {
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-end">
-            <Button onClick={handleContinueToSite} className="bg-slate-900 hover:bg-slate-800">
+            <Button onClick={handleContinueToSite} className="bg-slate-900 hover:bg-slate-800 text-white">
               Continue to Site
             </Button>
           </div>
