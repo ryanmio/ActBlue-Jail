@@ -75,9 +75,15 @@ type StatsData = {
 
 type RangeOption = "7" | "30" | "90" | "lifetime";
 
+type ViolationFilterOption = {
+  code: string;
+  label: string;
+  isPermitted?: boolean;
+};
+
 const CHART_COLORS = {
   // Unified shades of blue for the entire dashboard
-  captures: "hsl(217, 91%, 60%)", // blue-500
+  captures: "hsl(142, 76%, 36%)", // green-600
   violations: "hsl(224, 76%, 48%)", // blue-600
   reports: "hsl(213, 94%, 68%)", // blue-400
   userUpload: "hsl(213, 94%, 68%)", // blue-400
@@ -96,6 +102,17 @@ const PIE_COLORS = [
   "hsl(215, 28%, 17%)", // deep slate blue
 ];
 
+// Build violation filter options with AB008 split into verified/unverified
+const VIOLATION_FILTER_OPTIONS: ViolationFilterOption[] = VIOLATION_POLICIES.flatMap((policy) => {
+  if (policy.code === "AB008") {
+    return [
+      { code: "AB008", label: `${policy.code} - ${policy.title}`, isPermitted: false },
+      { code: "AB008", label: `${policy.code} - ActBlue Permitted Matching Program`, isPermitted: true },
+    ];
+  }
+  return [{ code: policy.code, label: `${policy.code} - ${policy.title}` }];
+});
+
 export default function StatsPage() {
   const [range, setRange] = useState<RangeOption>("30");
   const [data, setData] = useState<StatsData | null>(null);
@@ -106,6 +123,9 @@ export default function StatsPage() {
   const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedViolations, setSelectedViolations] = useState<ViolationFilterOption[]>([]);
+  const [violationFilterOpen, setViolationFilterOpen] = useState(false);
+  const [violationSearchQuery, setViolationSearchQuery] = useState("");
 
   useEffect(() => {
     async function fetchStats() {
@@ -114,6 +134,15 @@ export default function StatsPage() {
       try {
         const qs = new URLSearchParams({ range });
         selectedSenders.forEach((s) => qs.append("sender", s));
+        selectedViolations.forEach((v) => {
+          if (v.isPermitted === true) {
+            qs.append("violation", `${v.code}:permitted`);
+          } else if (v.isPermitted === false) {
+            qs.append("violation", `${v.code}:unverified`);
+          } else {
+            qs.append("violation", v.code);
+          }
+        });
         const res = await fetch(`/api/stats?${qs.toString()}`);
         if (!res.ok) {
           throw new Error(`Failed to fetch stats: ${res.status}`);
@@ -128,7 +157,7 @@ export default function StatsPage() {
       }
     }
     void fetchStats();
-  }, [range, selectedSenders]);
+  }, [range, selectedSenders, selectedViolations]);
 
   // Fetch sender options independent of current selection so list doesn't collapse
   useEffect(() => {
@@ -215,6 +244,101 @@ export default function StatsPage() {
                       </button>
                     ))}
                   </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Violation filter - Multi-select */}
+              <Popover open={violationFilterOpen} onOpenChange={setViolationFilterOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[120px] md:min-w-[150px] shrink-0"
+                  >
+                    {selectedViolations.length === 0 ? (
+                      "Violations"
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
+                          {selectedViolations.length}
+                        </span>
+                        <span>selected</span>
+                      </span>
+                    )}
+                    <svg className="w-3 h-3 opacity-50 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="z-50 w-[min(92vw,420px)] max-w-[92vw] p-0 bg-white border border-slate-200 shadow-xl rounded-xl" align="start">
+                  <div className="p-2 border-b border-slate-200">
+                    <input
+                      type="text"
+                      placeholder="Search violations..."
+                      value={violationSearchQuery}
+                      onChange={(e) => setViolationSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-300 text-slate-900 placeholder:text-slate-500"
+                    />
+                  </div>
+                  <div className="max-h-[60vh] overflow-y-auto p-2">
+                    {VIOLATION_FILTER_OPTIONS
+                      .filter((v) =>
+                        v.label.toLowerCase().includes(violationSearchQuery.toLowerCase())
+                      )
+                      .map((v, idx) => {
+                        const isSelected = selectedViolations.some(
+                          (sv) => sv.code === v.code && sv.isPermitted === v.isPermitted
+                        );
+                        return (
+                          <button
+                            key={`${v.code}-${v.isPermitted ?? 'none'}-${idx}`}
+                            onClick={() => {
+                              setSelectedViolations((prev) => {
+                                const exists = prev.some(
+                                  (sv) => sv.code === v.code && sv.isPermitted === v.isPermitted
+                                );
+                                if (exists) {
+                                  return prev.filter(
+                                    (sv) => !(sv.code === v.code && sv.isPermitted === v.isPermitted)
+                                  );
+                                }
+                                return [...prev, v];
+                              });
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                          >
+                            <div
+                              className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${
+                                isSelected
+                                  ? "bg-slate-900 border-slate-900"
+                                  : "border-slate-300"
+                              }`}
+                            >
+                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                            <span className="flex-1 text-slate-900 text-left break-words">{v.label}</span>
+                          </button>
+                        );
+                      })}
+                    {VIOLATION_FILTER_OPTIONS.filter((v) =>
+                      v.label.toLowerCase().includes(violationSearchQuery.toLowerCase())
+                    ).length === 0 && (
+                      <div className="py-6 text-center text-sm text-slate-500">
+                        No violations found
+                      </div>
+                    )}
+                  </div>
+                  {selectedViolations.length > 0 && (
+                    <div className="border-t border-slate-200 p-2 flex items-center justify-between bg-white">
+                      <span className="text-xs text-slate-600">
+                        {selectedViolations.length} selected
+                      </span>
+                      <button
+                        className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        onClick={() => setSelectedViolations([])}
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
                 </PopoverContent>
               </Popover>
 
@@ -358,9 +482,9 @@ export default function StatsPage() {
               {/* KPI Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard
-                  label="Violations Detected"
-                  value={data.kpis.captures_with_violations}
-                  description="Cases flagged with violations"
+                  label={selectedViolations.length === 1 && selectedViolations[0].code === "AB008" && selectedViolations[0].isPermitted === true ? "Captures Detected" : "Violations Detected"}
+                  value={selectedViolations.length === 1 && selectedViolations[0].code === "AB008" && selectedViolations[0].isPermitted === true ? data.kpis.total_captures : data.kpis.captures_with_violations}
+                  description={selectedViolations.length === 1 && selectedViolations[0].code === "AB008" && selectedViolations[0].isPermitted === true ? "Permitted matching program activity" : "Cases flagged with violations"}
                 />
                 <KpiCard
                   label="Reports Sent"
@@ -382,10 +506,12 @@ export default function StatsPage() {
               {/* Combined Line Chart */}
               <CombinedTimelineChart
                 violationsBuckets={data.violations_by_bucket || []}
+                capturesBuckets={data.captures_by_bucket || []}
                 reportsBuckets={data.reports_by_bucket || []}
                 days={data.period.days}
                 periodStart={data.period.start}
                 periodEnd={data.period.end}
+                showingPermittedOnly={selectedViolations.length === 1 && selectedViolations[0].code === "AB008" && selectedViolations[0].isPermitted === true}
               />
 
               {/* Pie Charts Side by Side */}
@@ -430,18 +556,26 @@ function KpiCard({
 
 function CombinedTimelineChart({
   violationsBuckets,
+  capturesBuckets,
   reportsBuckets,
   days,
   periodStart,
   periodEnd,
+  showingPermittedOnly = false,
 }: {
   violationsBuckets: Array<{ bucket: string; count: number }>;
+  capturesBuckets: Array<{ bucket: string; count: number }>;
   reportsBuckets: Array<{ bucket: string; count: number }>;
   days: number;
   periodStart?: string;
   periodEnd?: string;
+  showingPermittedOnly?: boolean;
 }) {
   const useWeeks = days > 45;
+  
+  // Use captures instead of violations when showing permitted matches only
+  const primaryBuckets = showingPermittedOnly ? capturesBuckets : violationsBuckets;
+  const primaryLabel = showingPermittedOnly ? "Captures" : "Violations";
 
 
   // Helpers to build stable NY-local keys (YYYY-MM-DD)
@@ -473,7 +607,7 @@ function CombinedTimelineChart({
   // Build a complete sequence of keys to ensure chart reaches end of period
   function buildKeys(): string[] {
     try {
-      if (!periodStart || !periodEnd) return violationsBuckets.map((b) => nyDateKey(new Date(b.bucket)));
+      if (!periodStart || !periodEnd) return primaryBuckets.map((b) => nyDateKey(new Date(b.bucket)));
       const keys: string[] = [];
       const start = new Date(periodStart);
       const end = new Date(periodEnd);
@@ -488,7 +622,7 @@ function CombinedTimelineChart({
       }
       return keys;
     } catch {
-      return violationsBuckets.map((b) => nyDateKey(new Date(b.bucket)));
+      return primaryBuckets.map((b) => nyDateKey(new Date(b.bucket)));
     }
   }
   // Server now returns buckets as 'YYYY-MM-DD' strings; fall back to converting if needed
@@ -497,11 +631,11 @@ function CombinedTimelineChart({
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
     return nyDateKey(new Date(v));
   }
-  const vio = new Map(violationsBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
+  const primary = new Map(primaryBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
   const rep = new Map(reportsBuckets.map((b) => [normalizeKey(String(b.bucket)), Number(b.count || 0)] as const));
   const mergedData = buildKeys().map((k) => ({
     date: k.replace(/^\d{4}-/, () => ""), // short display (MM-DD)
-    violations: vio.get(k) || 0,
+    primary: primary.get(k) || 0,
     reports: rep.get(k) || 0,
   }));
 
@@ -509,7 +643,7 @@ function CombinedTimelineChart({
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">
-          Violations & Reports Over Time
+          {showingPermittedOnly ? "Captures & Reports Over Time" : "Violations & Reports Over Time"}
         </h3>
         <div className="py-12 text-center text-sm text-slate-500">
           No data available
@@ -519,9 +653,9 @@ function CombinedTimelineChart({
   }
 
   const chartConfig = {
-    violations: {
-      label: "Violations",
-      color: CHART_COLORS.violations,
+    primary: {
+      label: primaryLabel,
+      color: showingPermittedOnly ? "hsl(142, 76%, 36%)" : CHART_COLORS.violations,
     },
     reports: {
       label: "Reports",
@@ -532,7 +666,7 @@ function CombinedTimelineChart({
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6">
       <h3 className="text-lg font-semibold text-slate-900 mb-4">
-        Violations & Reports Over Time
+        {showingPermittedOnly ? "Captures & Reports Over Time" : "Violations & Reports Over Time"}
       </h3>
       <ChartContainer config={chartConfig} className="h-[300px] w-full aspect-auto">
         <LineChart data={mergedData}>
@@ -560,10 +694,10 @@ function CombinedTimelineChart({
           <Legend content={<ChartLegendContent payload={undefined} />} />
           <Line
             type="monotone"
-            dataKey="violations"
-            stroke="var(--color-violations)"
+            dataKey="primary"
+            stroke="var(--color-primary)"
             strokeWidth={2}
-            dot={{ fill: "var(--color-violations)", r: 4 }}
+            dot={{ fill: "var(--color-primary)", r: 4 }}
             activeDot={{ r: 6 }}
           />
           <Line
