@@ -109,7 +109,7 @@ export default function ReportsTable({ initialData, showHeader = true }: { initi
                 <th className="text-left py-4 px-6 font-semibold text-slate-900">Case</th>
                 <th className="text-left py-4 px-6 font-semibold text-slate-900">Reported</th>
                 <th className="text-left py-4 px-6 font-semibold text-slate-900">Evidence</th>
-                <th className="text-left py-4 px-6 font-semibold text-slate-900">Potential Violations</th>
+                <th className="text-left py-4 px-6 font-semibold text-slate-900">Reported Violations</th>
                 <th className="text-left py-4 px-6 font-semibold text-slate-900">Verdict</th>
               </tr>
             </thead>

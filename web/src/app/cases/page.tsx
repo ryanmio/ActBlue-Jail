@@ -268,7 +268,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                         <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
                                         {isVerified && (
                                           <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
-                                            ✓ ActBlue has verified this does not violate their policy.
+                                            ✓ ActBlue has determined this matching program meets their standards.
                                           </div>
                                         )}
                                         <a
