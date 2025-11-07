@@ -820,13 +820,15 @@ function RecentCases() {
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
                                     <div className="font-mono text-xs text-slate-500">{policy.code}</div>
-                                    <div className="font-semibold text-sm text-slate-900">{policy.title}</div>
+                                    <div className="font-semibold text-sm text-slate-900">
+                                      {isVerified && policy.code === "AB008" ? "Permitted Matching Program" : policy.title}
+                                    </div>
                                   </div>
                                 </div>
                                 <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
                                 {isVerified && (
                                   <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
-                                    ✓ ActBlue has determined this matching program meets their standards.
+                                    ActBlue has determined this matching program meets their standards. However, political committees almost never run genuine donor matching programs and donors should remain skeptical of such claims even when permitted by ActBlue.
                                   </div>
                                 )}
                                 <a
