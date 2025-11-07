@@ -278,7 +278,6 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
-                                          onClick={(e) => e.stopPropagation()}
                                         >
                                           View full policy
                                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
