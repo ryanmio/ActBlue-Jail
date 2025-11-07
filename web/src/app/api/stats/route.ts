@@ -12,6 +12,23 @@ export async function GET(req: NextRequest) {
     .filter(Boolean);
   const senderNames = Array.from(new Set([...(sendersMulti || []), ...(sendersSingle || [])])).filter(Boolean);
 
+  // Optional violation filter: support repeated `violation` values
+  // Format: "AB001" or "AB008:permitted" or "AB008:unverified"
+  const violationsRaw = searchParams.getAll("violation");
+  const violationCodes: string[] = [];
+  const violationPermittedFlags: (boolean | null)[] = [];
+  
+  violationsRaw.forEach((v) => {
+    if (v.includes(":")) {
+      const [code, flag] = v.split(":");
+      violationCodes.push(code);
+      violationPermittedFlags.push(flag === "permitted" ? true : flag === "unverified" ? false : null);
+    } else {
+      violationCodes.push(v);
+      violationPermittedFlags.push(null);
+    }
+  });
+
   try {
     const supabase = getSupabaseServer();
     
@@ -39,6 +56,8 @@ export async function GET(req: NextRequest) {
       start_date: startDate,
       end_date: now.toISOString(),
       sender_names: senderNames.length > 0 ? senderNames : null,
+      violation_codes: violationCodes.length > 0 ? violationCodes : null,
+      violation_permitted_flags: violationPermittedFlags.length > 0 ? violationPermittedFlags : null,
     });
 
     if (error) {

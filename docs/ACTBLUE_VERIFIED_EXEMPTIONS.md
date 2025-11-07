@@ -23,7 +23,11 @@ WHERE v.submission_id = s.id
 
 ## How it works
 
-- Sender names are normalized: `"DLCC"`, `"DLCC (PAC)"`, `"democratic legislative campaign committee"` all match the pattern `'democratic legislative campaign committee'`
+- Sender names are normalized: `"DCCC (Democratic Congressional Campaign Committee)"`, `"Democratic Congressional Campaign Committee (DCCC)"` both match the pattern `'democratic congressional campaign committee'`
+- Matching uses two simple strategies:
+  1. **Exact match** (after normalization): Pattern matches sender exactly
+  2. **Sender contains pattern**: Sender name includes the pattern (e.g., `"DCCC - Democratic Congressional Campaign Committee"` matches pattern `"democratic congressional campaign committee"`)
+- **Important**: Patterns must be specific enough to avoid false positives. The matching is intentionally one-directional (sender must contain pattern, not vice versa) to prevent partial word matches
 - Violations marked as `actblue_verified = true` appear as blue badges "ActBlue Permitted Matching Program" instead of orange "Unverified Matching Program"
 - These violations are excluded from "Most Potential Violations" card and stats page sender counts
 - The violations remain publicly visible for transparency
