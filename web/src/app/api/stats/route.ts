@@ -29,6 +29,16 @@ export async function GET(req: NextRequest) {
     }
   });
 
+  // Optional source filter: support repeated `source` values
+  // Format: "user_upload" or "honeytrap"
+  const sourcesRaw = searchParams.getAll("source");
+  const sources = Array.from(new Set(sourcesRaw.filter(Boolean)));
+
+  // Optional type filter: support repeated `type` values
+  // Format: "sms", "email", "unknown"
+  const typesRaw = searchParams.getAll("type");
+  const types = Array.from(new Set(typesRaw.filter(Boolean)));
+
   try {
     const supabase = getSupabaseServer();
     
@@ -58,6 +68,8 @@ export async function GET(req: NextRequest) {
       sender_names: senderNames.length > 0 ? senderNames : null,
       violation_codes: violationCodes.length > 0 ? violationCodes : null,
       violation_permitted_flags: violationPermittedFlags.length > 0 ? violationPermittedFlags : null,
+      sources: sources.length > 0 ? sources : null,
+      message_types: types.length > 0 ? types : null,
     });
 
     if (error) {

@@ -28,7 +28,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Check } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 type StatsData = {
   period: {
@@ -126,6 +126,9 @@ export default function StatsPage() {
   const [selectedViolations, setSelectedViolations] = useState<ViolationFilterOption[]>([]);
   const [violationFilterOpen, setViolationFilterOpen] = useState(false);
   const [violationSearchQuery, setViolationSearchQuery] = useState("");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchStats() {
@@ -143,6 +146,8 @@ export default function StatsPage() {
             qs.append("violation", v.code);
           }
         });
+        selectedSource.forEach((s) => qs.append("source", s));
+        selectedTypes.forEach((t) => qs.append("type", t));
         const res = await fetch(`/api/stats?${qs.toString()}`);
         if (!res.ok) {
           throw new Error(`Failed to fetch stats: ${res.status}`);
@@ -157,7 +162,7 @@ export default function StatsPage() {
       }
     }
     void fetchStats();
-  }, [range, selectedSenders, selectedViolations]);
+  }, [range, selectedSenders, selectedViolations, selectedSource, selectedTypes]);
 
   // Fetch sender options independent of current selection so list doesn't collapse
   useEffect(() => {
@@ -210,16 +215,17 @@ export default function StatsPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-                Transparent Reporting
+                Statistics
               </h1>
               <p className="text-sm text-slate-600 mt-1">
                 Public statistics on captures, violations, and reports
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 items-center justify-end md:justify-start ml-auto md:ml-0">
-              {/* Range filter */}
-              <Popover>
-                <PopoverTrigger asChild>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2 items-center justify-end md:justify-start ml-auto md:ml-0">
+                {/* Range filter */}
+                <Popover>
+                  <PopoverTrigger asChild>
                   <button
                     className="inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[150px] shrink-0"
                     aria-label="Select date range"
@@ -428,6 +434,158 @@ export default function StatsPage() {
                   )}
                 </PopoverContent>
               </Popover>
+
+              {/* Source Filter (Bot vs User) - Only shown when expanded */}
+              {showAdvancedFilters && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[120px] md:min-w-[150px] shrink-0"
+                    >
+                      {selectedSource.length === 0 ? (
+                        "Source"
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
+                            {selectedSource.length}
+                          </span>
+                          <span>selected</span>
+                        </span>
+                      )}
+                      <svg className="w-3 h-3 opacity-50 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="z-50 w-[min(92vw,280px)] max-w-[92vw] p-2 bg-white border border-slate-200 shadow-xl rounded-xl" align="start">
+                    {["user_upload", "honeytrap"].map((source) => {
+                      const isSelected = selectedSource.includes(source);
+                      const label = source === "user_upload" ? "User Submitted" : "Bot Submitted";
+                      return (
+                        <button
+                          key={source}
+                          onClick={() => {
+                            setSelectedSource((prev) =>
+                              prev.includes(source)
+                                ? prev.filter((x) => x !== source)
+                                : [...prev, source]
+                            );
+                          }}
+                          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                        >
+                          <div
+                            className={`flex h-4 w-4 items-center justify-center rounded border ${
+                              isSelected
+                                ? "bg-slate-900 border-slate-900"
+                                : "border-slate-300"
+                            }`}
+                          >
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <span className="flex-1 text-slate-900">{label}</span>
+                        </button>
+                      );
+                    })}
+                    {selectedSource.length > 0 && (
+                      <div className="border-t border-slate-200 mt-2 pt-2 flex items-center justify-between">
+                        <span className="text-xs text-slate-600">
+                          {selectedSource.length} selected
+                        </span>
+                        <button
+                          className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                          onClick={() => setSelectedSource([])}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              )}
+
+              {/* Type Filter (SMS, Email, Other) - Only shown when expanded */}
+              {showAdvancedFilters && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      className="ml-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[120px] md:min-w-[150px] shrink-0"
+                    >
+                      {selectedTypes.length === 0 ? (
+                        "Type"
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
+                            {selectedTypes.length}
+                          </span>
+                          <span>selected</span>
+                        </span>
+                      )}
+                      <svg className="w-3 h-3 opacity-50 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="z-50 w-[min(92vw,280px)] max-w-[92vw] p-2 bg-white border border-slate-200 shadow-xl rounded-xl" align="start">
+                    {[
+                      { value: "sms", label: "SMS" },
+                      { value: "email", label: "Email" },
+                      { value: "unknown", label: "Other" },
+                    ].map(({ value, label }) => {
+                      const isSelected = selectedTypes.includes(value);
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => {
+                            setSelectedTypes((prev) =>
+                              prev.includes(value)
+                                ? prev.filter((x) => x !== value)
+                                : [...prev, value]
+                            );
+                          }}
+                          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                        >
+                          <div
+                            className={`flex h-4 w-4 items-center justify-center rounded border ${
+                              isSelected
+                                ? "bg-slate-900 border-slate-900"
+                                : "border-slate-300"
+                            }`}
+                          >
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <span className="flex-1 text-slate-900">{label}</span>
+                        </button>
+                      );
+                    })}
+                    {selectedTypes.length > 0 && (
+                      <div className="border-t border-slate-200 mt-2 pt-2 flex items-center justify-between">
+                        <span className="text-xs text-slate-600">
+                          {selectedTypes.length} selected
+                        </span>
+                        <button
+                          className="text-xs px-2 py-1 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                          onClick={() => setSelectedTypes([])}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              )}
+
+              </div>
+
+              {/* More/Less Filters Button - Below filters, right aligned */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="text-xs text-slate-600 hover:text-slate-900 px-1.5 py-0.5 hover:bg-slate-50 rounded transition-colors w-fit"
+                  title={showAdvancedFilters ? "Hide additional filters" : "Show additional filters"}
+                >
+                  {showAdvancedFilters ? "Less Filters" : "More Filters"}
+                </button>
+              </div>
             </div>
           </div>
 
