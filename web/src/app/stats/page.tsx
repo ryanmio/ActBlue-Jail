@@ -589,6 +589,98 @@ export default function StatsPage() {
             </div>
           </div>
 
+          {/* Active Filter Badges */}
+          {(selectedViolations.length > 0 || selectedSenders.length > 0 || selectedSource.length > 0 || selectedTypes.length > 0) && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-slate-600 font-medium">Active filters:</span>
+              
+              {/* Violation badges */}
+              {selectedViolations.map((v, idx) => (
+                <button
+                  key={`violation-badge-${v.code}-${v.isPermitted ?? 'none'}-${idx}`}
+                  onClick={() => {
+                    setSelectedViolations((prev) =>
+                      prev.filter((sv) => !(sv.code === v.code && sv.isPermitted === v.isPermitted))
+                    );
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                  title="Click to remove filter"
+                >
+                  <span className="truncate max-w-[200px]">
+                    {v.isPermitted === true ? `${v.code} (Permitted)` : v.isPermitted === false ? `${v.code} (Unverified)` : v.code}
+                  </span>
+                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+
+              {/* Sender badges */}
+              {selectedSenders.map((sender) => (
+                <button
+                  key={`sender-badge-${sender}`}
+                  onClick={() => {
+                    setSelectedSenders((prev) => prev.filter((s) => s !== sender));
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors"
+                  title="Click to remove filter"
+                >
+                  <span className="truncate max-w-[200px]">{sender}</span>
+                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+
+              {/* Source badges */}
+              {selectedSource.map((source) => (
+                <button
+                  key={`source-badge-${source}`}
+                  onClick={() => {
+                    setSelectedSource((prev) => prev.filter((s) => s !== source));
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                  title="Click to remove filter"
+                >
+                  <span>{source === "user_upload" ? "User Submitted" : "Bot Submitted"}</span>
+                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+
+              {/* Type badges */}
+              {selectedTypes.map((type) => (
+                <button
+                  key={`type-badge-${type}`}
+                  onClick={() => {
+                    setSelectedTypes((prev) => prev.filter((t) => t !== type));
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+                  title="Click to remove filter"
+                >
+                  <span>{type === "sms" ? "SMS" : type === "email" ? "Email" : "Other"}</span>
+                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+
+              {/* Clear all button */}
+              <button
+                onClick={() => {
+                  setSelectedViolations([]);
+                  setSelectedSenders([]);
+                  setSelectedSource([]);
+                  setSelectedTypes([]);
+                }}
+                className="text-xs text-slate-600 hover:text-slate-900 underline ml-2"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+
           {loading && (
             <>
               {/* KPI skeletons */}
