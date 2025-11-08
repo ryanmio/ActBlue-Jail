@@ -20,6 +20,13 @@ import {
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -28,7 +35,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
 
 type StatsData = {
   period: {
@@ -129,6 +136,8 @@ export default function StatsPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedSource, setSelectedSource] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStats() {
@@ -180,6 +189,29 @@ export default function StatsPage() {
     return () => { cancelled = true; };
   }, [range]);
 
+  // Prevent layout shift when modal opens (compensate for scrollbar removal)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    if (mobileFiltersOpen) {
+      // Calculate scrollbar width
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      
+      // Add padding to body to compensate for removed scrollbar
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+    } else {
+      // Remove padding when modal closes
+      document.body.style.paddingRight = "";
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      document.body.style.paddingRight = "";
+    };
+  }, [mobileFiltersOpen]);
+
   const rangeLabels: Record<RangeOption, string> = {
     "7": "Last 7 days",
     "30": "Last 30 days",
@@ -221,7 +253,25 @@ export default function StatsPage() {
                 Public statistics on captures, violations, and reports
               </p>
             </div>
-            <div className="flex flex-col gap-2">
+            
+            {/* Mobile: Single Filters Button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setMobileFiltersOpen(true)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 w-full"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Filters</span>
+                {(selectedViolations.length + selectedSenders.length + selectedSource.length + selectedTypes.length) > 0 && (
+                  <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
+                    {selectedViolations.length + selectedSenders.length + selectedSource.length + selectedTypes.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Desktop: Inline Filters */}
+            <div className="hidden md:flex flex-col gap-2">
               <div className="flex flex-wrap gap-2 items-center justify-end md:justify-start ml-auto md:ml-0">
                 {/* Range filter */}
                 <Popover>
@@ -680,6 +730,291 @@ export default function StatsPage() {
               </button>
             </div>
           )}
+
+          {/* Mobile Filter Dialog */}
+          <Dialog open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+            <DialogContent
+              className="w-full sm:max-w-lg p-0 max-h-[90vh] overflow-hidden flex flex-col"
+              style={{ width: "calc(100vw - 3rem)", maxWidth: "460px" }}
+            >
+              <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+                <DialogTitle>Filters</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Select filters to refine statistics
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="px-6 pb-6 space-y-1 overflow-y-auto flex-1">
+                {/* Range Filter - Collapsible */}
+                <div className="border-b border-slate-200 pb-1">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'range' ? null : 'range')}
+                    className="w-full flex items-center justify-between py-3 text-left"
+                  >
+                    <span className="text-sm font-medium text-slate-900">
+                      Time Range {range && `(${rangeLabels[range]})`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'range' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSection === 'range' && (
+                    <div className="pb-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {rangeOrder.map((opt) => (
+                          <button
+                            key={`mobile-range-${opt}`}
+                            onClick={() => setRange(opt)}
+                            className={`px-3 py-2 rounded-md text-sm transition-colors ${
+                              range === opt 
+                                ? "bg-slate-900 text-white" 
+                                : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                            }`}
+                          >
+                            {rangeLabels[opt]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Violations Filter - Collapsible */}
+                <div className="border-b border-slate-200 pb-1">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'violations' ? null : 'violations')}
+                    className="w-full flex items-center justify-between py-3 text-left"
+                  >
+                    <span className="text-sm font-medium text-slate-900">
+                      Violations {selectedViolations.length > 0 && `(${selectedViolations.length})`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'violations' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSection === 'violations' && (
+                    <div className="pb-3">
+                      <input
+                        type="text"
+                        placeholder="Search violations..."
+                        value={violationSearchQuery}
+                        onChange={(e) => setViolationSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2 placeholder:text-slate-700"
+                      />
+                      <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                        {VIOLATION_FILTER_OPTIONS
+                          .filter((v) =>
+                            v.label.toLowerCase().includes(violationSearchQuery.toLowerCase())
+                          )
+                          .map((v, idx) => {
+                            const isSelected = selectedViolations.some(
+                              (sv) => sv.code === v.code && sv.isPermitted === v.isPermitted
+                            );
+                            return (
+                              <button
+                                key={`mobile-${v.code}-${v.isPermitted ?? 'none'}-${idx}`}
+                                onClick={() => {
+                                  setSelectedViolations((prev) => {
+                                    const exists = prev.some(
+                                      (sv) => sv.code === v.code && sv.isPermitted === v.isPermitted
+                                    );
+                                    if (exists) {
+                                      return prev.filter(
+                                        (sv) => !(sv.code === v.code && sv.isPermitted === v.isPermitted)
+                                      );
+                                    }
+                                    return [...prev, v];
+                                  });
+                                }}
+                                className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                              >
+                                <div
+                                  className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${
+                                    isSelected
+                                      ? "bg-slate-900 border-slate-900"
+                                      : "border-slate-300"
+                                  }`}
+                                >
+                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                </div>
+                                <span className="flex-1 text-slate-900 text-left break-words text-xs">{v.label}</span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Senders Filter - Collapsible */}
+                <div className="border-b border-slate-200 pb-1">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'senders' ? null : 'senders')}
+                    className="w-full flex items-center justify-between py-3 text-left"
+                  >
+                    <span className="text-sm font-medium text-slate-900">
+                      Senders {selectedSenders.length > 0 && `(${selectedSenders.length})`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'senders' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSection === 'senders' && (
+                    <div className="pb-3">
+                      <input
+                        type="text"
+                        placeholder="Search senders..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2 placeholder:text-slate-700"
+                      />
+                      <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                        {(allSenders || [])
+                          .filter((s) =>
+                            s.toLowerCase().includes(searchQuery.toLowerCase())
+                          )
+                          .map((s) => {
+                            const isSelected = selectedSenders.includes(s);
+                            return (
+                              <button
+                                key={`mobile-sender-${s}`}
+                                onClick={() => {
+                                  setSelectedSenders((prev) =>
+                                    prev.includes(s)
+                                      ? prev.filter((x) => x !== s)
+                                      : [...prev, s]
+                                  );
+                                }}
+                                className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                              >
+                                <div
+                                  className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                    isSelected
+                                      ? "bg-slate-900 border-slate-900"
+                                      : "border-slate-300"
+                                  }`}
+                                >
+                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                </div>
+                                <span className="flex-1 truncate text-slate-900 text-sm">{s}</span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Source Filter - Collapsible */}
+                <div className="border-b border-slate-200 pb-1">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'source' ? null : 'source')}
+                    className="w-full flex items-center justify-between py-3 text-left"
+                  >
+                    <span className="text-sm font-medium text-slate-900">
+                      Source {selectedSource.length > 0 && `(${selectedSource.length})`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'source' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSection === 'source' && (
+                    <div className="space-y-1 pb-3">
+                      {["user_upload", "honeytrap"].map((source) => {
+                        const isSelected = selectedSource.includes(source);
+                        const label = source === "user_upload" ? "User Submitted" : "Bot Submitted";
+                        return (
+                          <button
+                            key={`mobile-source-${source}`}
+                            onClick={() => {
+                              setSelectedSource((prev) =>
+                                prev.includes(source)
+                                  ? prev.filter((x) => x !== source)
+                                  : [...prev, source]
+                              );
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                          >
+                            <div
+                              className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                isSelected
+                                  ? "bg-slate-900 border-slate-900"
+                                  : "border-slate-300"
+                              }`}
+                            >
+                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                            <span className="flex-1 text-slate-900">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Type Filter - Collapsible */}
+                <div className="border-b border-slate-200 pb-1">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'type' ? null : 'type')}
+                    className="w-full flex items-center justify-between py-3 text-left"
+                  >
+                    <span className="text-sm font-medium text-slate-900">
+                      Type {selectedTypes.length > 0 && `(${selectedTypes.length})`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'type' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSection === 'type' && (
+                    <div className="space-y-1 pb-3">
+                      {[
+                        { value: "sms", label: "SMS" },
+                        { value: "email", label: "Email" },
+                        { value: "unknown", label: "Other" },
+                      ].map(({ value, label }) => {
+                        const isSelected = selectedTypes.includes(value);
+                        return (
+                          <button
+                            key={`mobile-type-${value}`}
+                            onClick={() => {
+                              setSelectedTypes((prev) =>
+                                prev.includes(value)
+                                  ? prev.filter((x) => x !== value)
+                                  : [...prev, value]
+                              );
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                          >
+                            <div
+                              className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                isSelected
+                                  ? "bg-slate-900 border-slate-900"
+                                  : "border-slate-300"
+                              }`}
+                            >
+                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                            <span className="flex-1 text-slate-900">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-4">
+                  <button
+                    onClick={() => {
+                      setSelectedViolations([]);
+                      setSelectedSenders([]);
+                      setSelectedSource([]);
+                      setSelectedTypes([]);
+                    }}
+                    className="flex-1 px-4 py-2.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    Clear All
+                  </button>
+                  <button
+                    onClick={() => setMobileFiltersOpen(false)}
+                    className="flex-1 px-4 py-2.5 text-sm rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {loading && (
             <>
