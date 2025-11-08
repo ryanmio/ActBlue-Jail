@@ -1621,7 +1621,7 @@ function TopSendersTable({
                 Showing {startIndex + 1}-{Math.min(endIndex, senders.length)} of {senders.length} senders
               </p>
               <Pagination>
-                <PaginationContent className="[&_a]:text-slate-800 [&_a]:hover:text-slate-900">
+                <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
                       href="#"
@@ -1647,7 +1647,7 @@ function TopSendersTable({
                             onPageChange(page);
                           }}
                           isActive={currentPage === page}
-                          className="cursor-pointer text-slate-800 hover:text-slate-900"
+                          className={`cursor-pointer ${currentPage === page ? "!text-white" : "text-slate-800 hover:text-slate-900"}`}
                         >
                           {page}
                         </PaginationLink>
