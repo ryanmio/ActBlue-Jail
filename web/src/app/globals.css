@@ -28,6 +28,15 @@ body {
 /* Removed page-specific body classes to avoid FOUC */
 
 /* Breadcrumb links - prevent visited link color */
+.breadcrumb-link {
+  color: rgb(30, 41, 59) !important; /* text-slate-800 */
+  text-decoration: none !important;
+  font-weight: 500; /* match font-medium */
+}
+.breadcrumb-link:hover {
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+}
 .breadcrumb-link:visited {
-  color: rgb(30, 41, 59) !important;
+  color: rgb(30, 41, 59) !important; /* keep same as default to avoid purple */
 }
