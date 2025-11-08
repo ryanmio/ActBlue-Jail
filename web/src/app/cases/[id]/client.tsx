@@ -1196,7 +1196,7 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
           const text = vios.length > 0
             ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
             : "";
-          if (text) setViolationsOverride(text.slice(0, 500));
+          if (text) setViolationsOverride(text.slice(0, 2000));
         }
       } catch {}
     };
@@ -1279,16 +1279,16 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
         {advancedOpen && (
           <>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Edit violations for report (max 500)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Edit violations for report (max 2000)</label>
               <textarea
                 value={violationsOverride}
-                onChange={(e) => setViolationsOverride(e.target.value.slice(0, 500))}
+                onChange={(e) => setViolationsOverride(e.target.value.slice(0, 2000))}
                 rows={4}
                 placeholder="Optionally summarize or edit violations in your own words…"
                 className="w-full border rounded-xl p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 placeholder-slate-600 shadow-sm"
-                maxLength={500}
+                maxLength={2000}
               />
-              <div className="mt-1 text-xs text-slate-600">{500 - violationsOverride.length} characters left</div>
+              <div className="mt-1 text-xs text-slate-600">{2000 - violationsOverride.length} characters left</div>
             </div>
 
             <div className="md:col-span-2">
