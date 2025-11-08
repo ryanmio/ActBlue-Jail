@@ -745,24 +745,36 @@ export default function StatsPage() {
               </DialogHeader>
               
               <div className="px-6 pb-6 space-y-1 overflow-y-auto flex-1">
-                {/* Range Filter - Always visible */}
-                <div className="pb-3 border-b border-slate-200">
-                  <label className="text-sm font-medium text-slate-900 mb-2 block">Time Range</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {rangeOrder.map((opt) => (
-                      <button
-                        key={`mobile-range-${opt}`}
-                        onClick={() => setRange(opt)}
-                        className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                          range === opt 
-                            ? "bg-slate-900 text-white" 
-                            : "bg-slate-100 text-slate-800 hover:bg-slate-200"
-                        }`}
-                      >
-                        {rangeLabels[opt]}
-                      </button>
-                    ))}
-                  </div>
+                {/* Range Filter - Collapsible */}
+                <div className="border-b border-slate-200 pb-1">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'range' ? null : 'range')}
+                    className="w-full flex items-center justify-between py-3 text-left"
+                  >
+                    <span className="text-sm font-medium text-slate-900">
+                      Time Range {range && `(${rangeLabels[range]})`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'range' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSection === 'range' && (
+                    <div className="pb-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {rangeOrder.map((opt) => (
+                          <button
+                            key={`mobile-range-${opt}`}
+                            onClick={() => setRange(opt)}
+                            className={`px-3 py-2 rounded-md text-sm transition-colors ${
+                              range === opt 
+                                ? "bg-slate-900 text-white" 
+                                : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                            }`}
+                          >
+                            {rangeLabels[opt]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Violations Filter - Collapsible */}
@@ -783,7 +795,7 @@ export default function StatsPage() {
                         placeholder="Search violations..."
                         value={violationSearchQuery}
                         onChange={(e) => setViolationSearchQuery(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2"
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2 placeholder:text-slate-700"
                       />
                       <div className="space-y-1 max-h-[200px] overflow-y-auto">
                         {VIOLATION_FILTER_OPTIONS
@@ -848,7 +860,7 @@ export default function StatsPage() {
                         placeholder="Search senders..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2"
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2 placeholder:text-slate-700"
                       />
                       <div className="space-y-1 max-h-[200px] overflow-y-auto">
                         {(allSenders || [])
