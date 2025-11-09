@@ -97,21 +97,6 @@ export default function WelcomePage() {
                 </p>
               </div>
 
-              {/* Paste text (FALLBACK) */}
-              <div className="border border-slate-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Paste text <span className="ml-2 text-xs font-medium text-white bg-slate-500 rounded px-2 py-0.5">Fallback</span>
-                </h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  Switch to the &ldquo;Paste text&rdquo; tab and paste the message content. Quickest option when forwarding or screenshots aren&apos;t possible.
-                </p>
-                <p className="text-sm text-slate-600">
-                  Fast, but loses formatting, images, and email metadata.
-                </p>
-              </div>
             </div>
         </section>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { assertSupabaseBrowser } from "@/lib/supabase";
@@ -52,9 +53,7 @@ export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [stepIndex, setStepIndex] = useState<number>(0);
-  const [mode, setMode] = useState<"image" | "text" | "forward">("image");
-  const [textValue, setTextValue] = useState<string>("");
-  const [textError, setTextError] = useState<string>("");
+  const [mode, setMode] = useState<"image" | "forward">("image");
   const [forwardedCases, setForwardedCases] = useState<Array<{ id: string; status: 'processing' | 'complete'; senderName?: string | null }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState<boolean>(false);
@@ -170,64 +169,8 @@ export default function Home() {
     if (files.length > 0) {
       e.preventDefault();
       void handleFile(files[0]);
-      return;
-    }
-    const pasted = e.clipboardData?.getData("text/plain")?.trim() || "";
-    if (pasted.length > 0) {
-      e.preventDefault();
-      setMode("text");
-      setTextValue(pasted);
-      setTextError("");
     }
   }, [handleFile, isUploading]);
-
-  const submitText = useCallback(async () => {
-    const value = textValue.trim();
-    if (value.length < 10) {
-      setTextError("Please paste at least 10 characters of text.");
-      return;
-    }
-    setTextError("");
-    setIsUploading(true);
-    setStatus("");
-    setStepIndex(2); // Jump to finishing up for text flow
-    try {
-      const create = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: "text.txt", contentType: "text/plain", mode: "text" }),
-      });
-      if (!create.ok) throw new Error("Failed to create submission");
-      const { submissionId } = (await create.json()) as { submissionId: string };
-
-      const start = Date.now();
-      const resp = await fetch("/api/ocr-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionId, text: value, conf: 1, ms: Date.now() - start }),
-      });
-      if (resp.status === 409) {
-        const j = (await resp.json().catch(() => null)) as { url?: string; caseId?: string } | null;
-        const url = j?.url || (j?.caseId ? `/cases/${j.caseId}` : null);
-        setStatus("We already have this case. Opening the original...");
-        if (url) {
-          window.location.href = url;
-          return;
-        }
-        throw new Error("Duplicate detected but no URL provided");
-      }
-      if (!resp.ok) {
-        const body = await resp.text().catch(() => "");
-        throw new Error(`/api/ocr-text failed ${resp.status}: ${body}`);
-      }
-      window.location.href = `/cases/${submissionId}`;
-    } catch (e) {
-      console.error(e);
-      const message = e instanceof Error ? e.message : String(e);
-      setStatus(`Processing failed: ${message}`);
-      setIsUploading(false);
-    }
-  }, [textValue]);
 
   // Poll for forwarded email cases when in forward mode
   useEffect(() => {
@@ -372,8 +315,8 @@ export default function Home() {
             onDragLeave={mode !== "forward" ? () => setIsDragOver(false) : undefined}
             onDrop={mode !== "forward" ? onDrop : undefined}
             onPaste={mode !== "forward" ? onCardPaste : undefined}
-            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 border-dashed p-8 md:p-10 text-center transition-colors ${
-              isDragOver
+            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 ${mode === "forward" ? "border-solid" : "border-dashed"} p-8 md:p-10 pb-6 md:pb-8 text-center transition-colors ${
+              isDragOver || mode === "forward"
                 ? "border-slate-400 bg-white"
                 : "border-slate-300 bg-white/60 hover:border-slate-400 hover:bg-white"
             }`}
@@ -382,25 +325,19 @@ export default function Home() {
             {!isUploading && (
               <>
                 {/* Segmented control */}
+                <div className="text-sm text-slate-700 mb-2">Choose your submission method</div>
                 <div className="inline-flex items-center rounded-full border border-slate-300 bg-white overflow-hidden text-sm mb-5">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setMode("image"); }}
-                    className={`px-3 py-1.5 ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+                    className={`px-3 py-1.5 transition-colors ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
                   >
                     Screenshot
                   </button>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setMode("text"); }}
-                    className={`px-3 py-1.5 border-l border-slate-300 ${mode === "text" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
-                  >
-                    Paste text
-                  </button>
-                  <button
-                    type="button"
                     onClick={(e) => { e.stopPropagation(); setMode("forward"); }}
-                    className={`px-3 py-1.5 border-l border-slate-300 ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+                    className={`px-3 py-1.5 border-l border-slate-300 transition-colors ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
                   >
                     Forward
                   </button>
@@ -426,7 +363,7 @@ export default function Home() {
                     </div>
                     <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
                     <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
-                    <div className="mt-4 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                    <div className="mt-3 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
                       By uploading, you confirm you have the right to share this content and accept the <Link
                         href="/about#terms"
                         onClick={(e) => e.stopPropagation()}
@@ -440,49 +377,8 @@ export default function Home() {
                   </div>
                 )}
 
-                {mode === "text" && (
-                  <div className="max-w-lg mx-auto text-left min-h-[280px]">
-                    <label className="block text-sm font-medium text-slate-900 mb-2">Paste the message text</label>
-                    <textarea
-                      value={textValue}
-                      onChange={(e) => setTextValue(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full h-32 md:h-40 rounded-xl border border-slate-300 p-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
-                      placeholder="Paste here (Cmd/Ctrl + V). We also detect pasted text automatically on this card."
-                    />
-                    {textError && <div className="mt-2 text-sm text-red-700">{textError}</div>}
-                    <div className="mt-4 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); void submitText(); }}
-                        className="px-4 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800"
-                      >
-                        Submit text
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            const t = (await navigator.clipboard.readText?.()) || "";
-                            if (t.trim().length > 0) {
-                              setTextValue(t);
-                              setTextError("");
-                            }
-                          } catch {
-                            // ignore
-                          }
-                        }}
-                        className="px-3 py-2 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50"
-                      >
-                        Paste from clipboard
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {mode === "forward" && (
-                  <div className="max-w-lg mx-auto text-center min-h-[280px]">
+                  <div className="min-h-[280px] max-w-lg mx-auto text-center flex flex-col justify-center">
                     <div className="mb-4">
                       <div className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">Forward emails to</div>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg border border-slate-300">
@@ -520,12 +416,12 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    <div className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
+                    <div className="text-sm text-slate-600 mb-4 max-w-md mx-auto">
                       Please redact any personally identifying information you wish before forwarding.
                     </div>
 
                     {forwardedCases.length > 0 && (
-                      <div className="mt-6 space-y-2">
+                      <div className="mt-4 space-y-2">
                         {forwardedCases.map((case_) => (
                           <div key={case_.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <div className="min-w-0">
@@ -565,7 +461,7 @@ export default function Home() {
                     )}
 
                     {forwardedCases.length === 0 && (
-                      <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
+                      <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
                         Recently forwarded emails will appear here
                       </div>
                     )}
@@ -806,7 +702,7 @@ function RecentCases() {
                             <span
                               className={`inline-flex items-center rounded-full pl-3 pr-3.5 py-1 text-[11px] font-medium border whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw] cursor-help ${
                                 isVerified
-                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                  ? 'bg-sky-50 text-sky-700 border-sky-200'
                                   : 'bg-orange-50 text-orange-800 border-orange-200'
                               }`}
                               title={v.title}
@@ -827,7 +723,7 @@ function RecentCases() {
                                 </div>
                                 <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
                                 {isVerified && (
-                                  <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
+                                  <div className="text-xs text-sky-700 bg-sky-50 p-2 rounded border border-sky-200">
                                     ActBlue has determined this matching program meets their standards. However, political committees almost never run genuine donor matching programs and donors should remain skeptical of such claims even when permitted by ActBlue.
                                   </div>
                                 )}
@@ -910,7 +806,10 @@ function WorstOffenders() {
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Most Potential Violations</h2>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Repeat Offender Leaderboard</h2>
+          <p className="text-xs text-slate-600 mt-1">Senders with the highest volume of suspected deceptive fundraising.</p>
+        </div>
         <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/stats">All Stats</Link>
       </div>
       <div className="overflow-x-auto">
@@ -918,21 +817,21 @@ function WorstOffenders() {
           <thead className="text-left text-slate-700">
             <tr>
               <th className="py-2 pr-4">Organization</th>
-              <th className="py-2 pr-4">Cases</th>
-              <th className="py-2 pr-4">Most recent</th>
+              <th className="py-2 pr-4 text-center">Cases</th>
+              <th className="py-2 pr-2 pl-8 text-center">Most recent</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               [...Array(3)].map((_, idx) => (
                 <tr key={`table-skeleton-${idx}`} className="border-t animate-pulse">
-                  <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-48" /></td>
-                  <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-10" /></td>
-                  <td className="py-3 pr-4"><div className="h-4 bg-slate-200 rounded w-24" /></td>
+                  <td className="py-4 pr-4"><div className="h-4 bg-slate-200 rounded w-48" /></td>
+                  <td className="py-4 pr-4 text-center"><div className="h-4 bg-slate-200 rounded w-10 mx-auto" /></td>
+                  <td className="py-4 pr-2 pl-8 text-center"><div className="h-4 bg-slate-200 rounded w-24 mx-auto" /></td>
                 </tr>
               ))
             )}
-            {!loading && offenders.slice(0, 5).map((o) => (
+            {!loading && offenders.slice(0, 5).map((o, index) => (
               <tr 
                 key={o.sender_name} 
                 className="border-t hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
@@ -947,11 +846,20 @@ function WorstOffenders() {
                   }
                 }}
               >
-                <td className="py-2 pr-4 text-slate-900">
-                  {o.sender_name}
+                <td className="py-4 pr-4 text-slate-900">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/icons/leader-broken.webp"
+                      alt="Leaderboard rank"
+                      width={24}
+                      height={24}
+                      className="object-contain"
+                    />
+                    <span>{o.sender_name}</span>
+                  </div>
                 </td>
-                <td className="py-2 pr-4 tabular-nums text-slate-900">{o.violation_count}</td>
-                <td className="py-2 pr-4 text-slate-800">{formatWhen(o.latest_violation_at)}</td>
+                <td className="py-4 pr-4 text-center tabular-nums text-slate-900">{o.violation_count}</td>
+                <td className="py-4 pr-2 pl-8 text-center text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
               </tr>
             ))}
             {!loading && offenders.length === 0 && (
