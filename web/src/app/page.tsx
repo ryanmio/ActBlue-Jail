@@ -408,7 +408,7 @@ export default function Home() {
                 </div>
 
                 {mode === "image" && (
-                  <div className="flex flex-col items-center justify-center">
+                  <div className="min-h-[280px] flex flex-col items-center justify-center">
                     <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
                       <svg
                         className="w-7 h-7 md:w-8 md:h-8"
@@ -442,7 +442,7 @@ export default function Home() {
                 )}
 
                 {mode === "text" && (
-                  <div className="max-w-lg mx-auto text-left">
+                  <div className="min-h-[280px] max-w-lg mx-auto text-left flex flex-col justify-center">
                     <label className="block text-sm font-medium text-slate-900 mb-2">Paste the message text</label>
                     <textarea
                       value={textValue}
@@ -483,7 +483,7 @@ export default function Home() {
                 )}
 
                 {mode === "forward" && (
-                  <div className="max-w-lg mx-auto text-center">
+                  <div className="min-h-[280px] max-w-lg mx-auto text-center flex flex-col justify-center">
                     <div className="mb-4">
                       <div className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">Forward emails to</div>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg border border-slate-300">
