@@ -52,9 +52,7 @@ export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [stepIndex, setStepIndex] = useState<number>(0);
-  const [mode, setMode] = useState<"image" | "text" | "forward">("image");
-  const [textValue, setTextValue] = useState<string>("");
-  const [textError, setTextError] = useState<string>("");
+  const [mode, setMode] = useState<"image" | "forward">("image");
   const [forwardedCases, setForwardedCases] = useState<Array<{ id: string; status: 'processing' | 'complete'; senderName?: string | null }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState<boolean>(false);
@@ -170,64 +168,8 @@ export default function Home() {
     if (files.length > 0) {
       e.preventDefault();
       void handleFile(files[0]);
-      return;
-    }
-    const pasted = e.clipboardData?.getData("text/plain")?.trim() || "";
-    if (pasted.length > 0) {
-      e.preventDefault();
-      setMode("text");
-      setTextValue(pasted);
-      setTextError("");
     }
   }, [handleFile, isUploading]);
-
-  const submitText = useCallback(async () => {
-    const value = textValue.trim();
-    if (value.length < 10) {
-      setTextError("Please paste at least 10 characters of text.");
-      return;
-    }
-    setTextError("");
-    setIsUploading(true);
-    setStatus("");
-    setStepIndex(2); // Jump to finishing up for text flow
-    try {
-      const create = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: "text.txt", contentType: "text/plain", mode: "text" }),
-      });
-      if (!create.ok) throw new Error("Failed to create submission");
-      const { submissionId } = (await create.json()) as { submissionId: string };
-
-      const start = Date.now();
-      const resp = await fetch("/api/ocr-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionId, text: value, conf: 1, ms: Date.now() - start }),
-      });
-      if (resp.status === 409) {
-        const j = (await resp.json().catch(() => null)) as { url?: string; caseId?: string } | null;
-        const url = j?.url || (j?.caseId ? `/cases/${j.caseId}` : null);
-        setStatus("We already have this case. Opening the original...");
-        if (url) {
-          window.location.href = url;
-          return;
-        }
-        throw new Error("Duplicate detected but no URL provided");
-      }
-      if (!resp.ok) {
-        const body = await resp.text().catch(() => "");
-        throw new Error(`/api/ocr-text failed ${resp.status}: ${body}`);
-      }
-      window.location.href = `/cases/${submissionId}`;
-    } catch (e) {
-      console.error(e);
-      const message = e instanceof Error ? e.message : String(e);
-      setStatus(`Processing failed: ${message}`);
-      setIsUploading(false);
-    }
-  }, [textValue]);
 
   // Poll for forwarded email cases when in forward mode
   useEffect(() => {
@@ -393,13 +335,6 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setMode("text"); }}
-                    className={`px-3 py-1.5 border-l border-slate-300 ${mode === "text" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
-                  >
-                    Paste text
-                  </button>
-                  <button
-                    type="button"
                     onClick={(e) => { e.stopPropagation(); setMode("forward"); }}
                     className={`px-3 py-1.5 border-l border-slate-300 ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
                   >
@@ -437,47 +372,6 @@ export default function Home() {
                       >
                         Terms
                       </Link>.
-                    </div>
-                  </div>
-                )}
-
-                {mode === "text" && (
-                  <div className="min-h-[280px] max-w-lg mx-auto text-left flex flex-col justify-center">
-                    <label className="block text-sm font-medium text-slate-900 mb-2">Paste the message text</label>
-                    <textarea
-                      value={textValue}
-                      onChange={(e) => setTextValue(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full h-32 md:h-40 rounded-xl border border-slate-300 p-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
-                      placeholder="Paste here (Cmd/Ctrl + V). We also detect pasted text automatically on this card."
-                    />
-                    {textError && <div className="mt-2 text-sm text-red-700">{textError}</div>}
-                    <div className="mt-4 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); void submitText(); }}
-                        className="px-4 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800"
-                      >
-                        Submit text
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            const t = (await navigator.clipboard.readText?.()) || "";
-                            if (t.trim().length > 0) {
-                              setTextValue(t);
-                              setTextError("");
-                            }
-                          } catch {
-                            // ignore
-                          }
-                        }}
-                        className="px-3 py-2 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50"
-                      >
-                        Paste from clipboard
-                      </button>
                     </div>
                   </div>
                 )}

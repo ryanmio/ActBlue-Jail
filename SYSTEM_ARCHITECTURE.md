@@ -256,38 +256,6 @@ created_at timestamptz
 
 ---
 
-### 3. TEXT PASTE FLOW
-
-**User Action:** Paste text directly via web UI at /
-
-**Flow:**
-```
-1. Frontend form submission
-   - User pastes text into textarea
-   - Optional: adds sender info, message type
-   - POST to /api/cases (or similar text submission endpoint)
-
-2. Text submission handler
-   - Calls ingestTextSubmission() with:
-     * text: pasted text
-     * messageType: from form or 'unknown'
-     * imageUrlPlaceholder: 'text://no-image'
-     * forwarderEmail: NULL (no email forwarding)
-     * submissionToken: NULL (no token needed)
-   - Returns {ok: true, id: submissionId}
-
-3. (Same as email flow from step 2 onwards)
-   - ingestTextSubmission() runs heuristic
-   - If fundraising, calls triggerPipelines() (includes redact-pii)
-   - Classification completes
-   - /api/send-case-preview is called but SKIPS because forwarder_email is NULL
-   - No email sent to user
-```
-
-**Key Difference:** forwarder_email = NULL, so no preview email sent
-
----
-
 ## API Routes Reference
 
 ### POST /api/inbound-email
@@ -696,13 +664,6 @@ These are NOT displayed in the UI but are included when re-classifying with `inc
 2. Check submission created with forwarder_email = NULL
 3. Wait for OCR + classification
 4. Verify NO email sent (forwarder_email is NULL)
-5. Case visible at /cases/{id}
-
-### Text Paste
-1. Paste text via web UI
-2. Check submission created with forwarder_email = NULL
-3. Wait for classification
-4. Verify NO email sent
 5. Case visible at /cases/{id}
 
 ### Duplicate Detection
