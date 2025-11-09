@@ -50,7 +50,7 @@ export function getViolationBadgeStyle(actblueVerified?: boolean | null): {
 } {
   if (actblueVerified) {
     return {
-      className: 'bg-blue-100 text-blue-800 border-blue-200',
+      className: 'bg-sky-50 text-sky-700 border-sky-200',
       tooltip: 'ActBlue has reviewed this and does not consider it a violation',
       prefix: '✓ ',
     };

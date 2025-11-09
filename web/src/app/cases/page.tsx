@@ -232,7 +232,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 md:flex-wrap">
                         {it.issues.length === 0 ? (
-                          <span className="inline-flex items-center rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-800 border border-cyan-800">
+                          <span className="inline-flex items-center rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-700 border border-cyan-100">
                             No Violations Detected
                           </span>
                         ) : (
@@ -247,7 +247,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                       title={v.code}
                                       className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full px-2 py-0.5 text-[11px] font-medium border max-w-[80%] md:max-w-none min-w-0 cursor-help ${
                                         isVerified
-                                          ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                          ? 'bg-sky-50 text-sky-700 border-sky-200'
                                           : 'bg-orange-50 text-orange-800 border-orange-200'
                                       }`}
                                     >
@@ -269,7 +269,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                         </div>
                                         <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
                                         {isVerified && (
-                                          <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
+                                          <div className="text-xs text-sky-700 bg-sky-50 p-2 rounded border border-sky-200">
                                             ActBlue has determined this matching program meets their standards. However, political committees almost never run genuine donor matching programs and donors should remain skeptical of such claims even when permitted by ActBlue.
                                           </div>
                                         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { assertSupabaseBrowser } from "@/lib/supabase";
@@ -701,7 +702,7 @@ function RecentCases() {
                             <span
                               className={`inline-flex items-center rounded-full pl-3 pr-3.5 py-1 text-[11px] font-medium border whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw] cursor-help ${
                                 isVerified
-                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                  ? 'bg-sky-50 text-sky-700 border-sky-200'
                                   : 'bg-orange-50 text-orange-800 border-orange-200'
                               }`}
                               title={v.title}
@@ -722,7 +723,7 @@ function RecentCases() {
                                 </div>
                                 <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
                                 {isVerified && (
-                                  <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
+                                  <div className="text-xs text-sky-700 bg-sky-50 p-2 rounded border border-sky-200">
                                     ActBlue has determined this matching program meets their standards. However, political committees almost never run genuine donor matching programs and donors should remain skeptical of such claims even when permitted by ActBlue.
                                   </div>
                                 )}
@@ -830,7 +831,7 @@ function WorstOffenders() {
                 </tr>
               ))
             )}
-            {!loading && offenders.slice(0, 5).map((o) => (
+            {!loading && offenders.slice(0, 5).map((o, index) => (
               <tr 
                 key={o.sender_name} 
                 className="border-t hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
@@ -846,7 +847,16 @@ function WorstOffenders() {
                 }}
               >
                 <td className="py-4 pr-4 text-slate-900">
-                  {o.sender_name}
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/icons/leader-broken.webp"
+                      alt="Leaderboard rank"
+                      width={20}
+                      height={20}
+                      className="object-contain"
+                    />
+                    <span>{o.sender_name}</span>
+                  </div>
                 </td>
                 <td className="py-4 pr-4 text-center tabular-nums text-slate-900">{o.violation_count}</td>
                 <td className="py-4 pr-2 pl-8 text-center text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
