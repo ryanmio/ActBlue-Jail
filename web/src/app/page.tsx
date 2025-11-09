@@ -314,8 +314,8 @@ export default function Home() {
             onDragLeave={mode !== "forward" ? () => setIsDragOver(false) : undefined}
             onDrop={mode !== "forward" ? onDrop : undefined}
             onPaste={mode !== "forward" ? onCardPaste : undefined}
-            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 border-dashed p-8 md:p-10 pb-6 md:pb-8 text-center transition-colors ${
-              isDragOver
+            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 ${mode === "forward" ? "border-solid" : "border-dashed"} p-8 md:p-10 pb-6 md:pb-8 text-center transition-colors ${
+              isDragOver || mode === "forward"
                 ? "border-slate-400 bg-white"
                 : "border-slate-300 bg-white/60 hover:border-slate-400 hover:bg-white"
             }`}
@@ -329,14 +329,14 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setMode("image"); }}
-                    className={`px-3 py-1.5 ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+                    className={`px-3 py-1.5 transition-colors ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
                   >
                     Screenshot
                   </button>
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setMode("forward"); }}
-                    className={`px-3 py-1.5 border-l border-slate-300 ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+                    className={`px-3 py-1.5 border-l border-slate-300 transition-colors ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
                   >
                     Forward
                   </button>
