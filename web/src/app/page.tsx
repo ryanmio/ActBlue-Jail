@@ -849,7 +849,7 @@ function WorstOffenders() {
                 <td className="py-4 pr-4 text-slate-900">
                   <div className="flex items-center gap-2">
                     <Image
-                      src="/icons/leader-broken.webp"
+                      src="/icons/leaderboard-icon.webp"
                       alt="Leaderboard rank"
                       width={24}
                       height={24}
