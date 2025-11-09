@@ -372,7 +372,7 @@ export default function Home() {
             onDragLeave={mode !== "forward" ? () => setIsDragOver(false) : undefined}
             onDrop={mode !== "forward" ? onDrop : undefined}
             onPaste={mode !== "forward" ? onCardPaste : undefined}
-            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 border-dashed p-8 md:p-10 text-center transition-colors ${
+            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 border-dashed p-8 md:p-10 pb-6 md:pb-8 text-center transition-colors ${
               isDragOver
                 ? "border-slate-400 bg-white"
                 : "border-slate-300 bg-white/60 hover:border-slate-400 hover:bg-white"
@@ -382,6 +382,7 @@ export default function Home() {
             {!isUploading && (
               <>
                 {/* Segmented control */}
+                <div className="text-sm text-slate-700 mb-2">Choose your submission method</div>
                 <div className="inline-flex items-center rounded-full border border-slate-300 bg-white overflow-hidden text-sm mb-5">
                   <button
                     type="button"
@@ -407,7 +408,7 @@ export default function Home() {
                 </div>
 
                 {mode === "image" && (
-                  <div className="min-h-[280px] flex flex-col items-center justify-center">
+                  <div className="flex flex-col items-center justify-center">
                     <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
                       <svg
                         className="w-7 h-7 md:w-8 md:h-8"
@@ -426,7 +427,7 @@ export default function Home() {
                     </div>
                     <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
                     <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
-                    <div className="mt-4 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                    <div className="mt-3 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
                       By uploading, you confirm you have the right to share this content and accept the <Link
                         href="/about#terms"
                         onClick={(e) => e.stopPropagation()}
@@ -441,7 +442,7 @@ export default function Home() {
                 )}
 
                 {mode === "text" && (
-                  <div className="max-w-lg mx-auto text-left min-h-[280px]">
+                  <div className="max-w-lg mx-auto text-left">
                     <label className="block text-sm font-medium text-slate-900 mb-2">Paste the message text</label>
                     <textarea
                       value={textValue}
@@ -482,7 +483,7 @@ export default function Home() {
                 )}
 
                 {mode === "forward" && (
-                  <div className="max-w-lg mx-auto text-center min-h-[280px]">
+                  <div className="max-w-lg mx-auto text-center">
                     <div className="mb-4">
                       <div className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">Forward emails to</div>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg border border-slate-300">
@@ -520,12 +521,12 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    <div className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
+                    <div className="text-sm text-slate-600 mb-4 max-w-md mx-auto">
                       Please redact any personally identifying information you wish before forwarding.
                     </div>
 
                     {forwardedCases.length > 0 && (
-                      <div className="mt-6 space-y-2">
+                      <div className="mt-4 space-y-2">
                         {forwardedCases.map((case_) => (
                           <div key={case_.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <div className="min-w-0">
@@ -565,7 +566,7 @@ export default function Home() {
                     )}
 
                     {forwardedCases.length === 0 && (
-                      <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
+                      <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
                         Recently forwarded emails will appear here
                       </div>
                     )}
