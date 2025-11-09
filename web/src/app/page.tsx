@@ -817,7 +817,7 @@ function WorstOffenders() {
             <tr>
               <th className="py-2 pr-4">Organization</th>
               <th className="py-2 pr-4 text-center">Cases</th>
-              <th className="py-2 pr-4 text-right">Most recent</th>
+              <th className="py-2 pr-2 pl-8 text-center">Most recent</th>
             </tr>
           </thead>
           <tbody>
@@ -826,7 +826,7 @@ function WorstOffenders() {
                 <tr key={`table-skeleton-${idx}`} className="border-t animate-pulse">
                   <td className="py-4 pr-4"><div className="h-4 bg-slate-200 rounded w-48" /></td>
                   <td className="py-4 pr-4 text-center"><div className="h-4 bg-slate-200 rounded w-10 mx-auto" /></td>
-                  <td className="py-4 pr-4 text-right"><div className="h-4 bg-slate-200 rounded w-24 ml-auto" /></td>
+                  <td className="py-4 pr-2 pl-8 text-center"><div className="h-4 bg-slate-200 rounded w-24 mx-auto" /></td>
                 </tr>
               ))
             )}
@@ -849,7 +849,7 @@ function WorstOffenders() {
                   {o.sender_name}
                 </td>
                 <td className="py-4 pr-4 text-center tabular-nums text-slate-900">{o.violation_count}</td>
-                <td className="py-4 pr-4 text-right text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
+                <td className="py-4 pr-2 pl-8 text-center text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
               </tr>
             ))}
             {!loading && offenders.length === 0 && (
