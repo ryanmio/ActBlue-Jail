@@ -807,7 +807,7 @@ function WorstOffenders() {
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Repeat Offenders Leaderboard</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Repeat Offender Leaderboard</h2>
           <p className="text-xs text-slate-600 mt-1">Senders with the highest volume of suspected deceptive fundraising.</p>
         </div>
         <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/stats">All Stats</Link>
@@ -851,8 +851,8 @@ function WorstOffenders() {
                     <Image
                       src="/icons/leader-broken.webp"
                       alt="Leaderboard rank"
-                      width={20}
-                      height={20}
+                      width={24}
+                      height={24}
                       className="object-contain"
                     />
                     <span>{o.sender_name}</span>
