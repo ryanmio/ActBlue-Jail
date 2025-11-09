@@ -806,7 +806,7 @@ function WorstOffenders() {
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Potential Violations Leaderboard</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Repeat Offenders Leaderboard</h2>
           <p className="text-xs text-slate-600 mt-1">Senders with the highest volume of suspected deceptive fundraising.</p>
         </div>
         <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/stats">All Stats</Link>
@@ -816,8 +816,8 @@ function WorstOffenders() {
           <thead className="text-left text-slate-700">
             <tr>
               <th className="py-2 pr-4">Organization</th>
-              <th className="py-2 pr-4">Cases</th>
-              <th className="py-2 pr-4">Most recent</th>
+              <th className="py-2 pr-4 text-center">Cases</th>
+              <th className="py-2 pr-4 text-right">Most recent</th>
             </tr>
           </thead>
           <tbody>
@@ -825,8 +825,8 @@ function WorstOffenders() {
               [...Array(3)].map((_, idx) => (
                 <tr key={`table-skeleton-${idx}`} className="border-t animate-pulse">
                   <td className="py-4 pr-4"><div className="h-4 bg-slate-200 rounded w-48" /></td>
-                  <td className="py-4 pr-4"><div className="h-4 bg-slate-200 rounded w-10" /></td>
-                  <td className="py-4 pr-4"><div className="h-4 bg-slate-200 rounded w-24" /></td>
+                  <td className="py-4 pr-4 text-center"><div className="h-4 bg-slate-200 rounded w-10 mx-auto" /></td>
+                  <td className="py-4 pr-4 text-right"><div className="h-4 bg-slate-200 rounded w-24 ml-auto" /></td>
                 </tr>
               ))
             )}
@@ -848,8 +848,8 @@ function WorstOffenders() {
                 <td className="py-4 pr-4 text-slate-900">
                   {o.sender_name}
                 </td>
-                <td className="py-4 pr-4 tabular-nums text-slate-900">{o.violation_count}</td>
-                <td className="py-4 pr-4 text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
+                <td className="py-4 pr-4 text-center tabular-nums text-slate-900">{o.violation_count}</td>
+                <td className="py-4 pr-4 text-right text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
               </tr>
             ))}
             {!loading && offenders.length === 0 && (
