@@ -832,35 +832,83 @@ function WorstOffenders() {
               ))
             )}
             {!loading && offenders.slice(0, 5).map((o, index) => (
-              <tr 
-                key={o.sender_name} 
-                className="border-t hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
-                role="button"
-                tabIndex={0}
-                aria-label={`View cases for ${o.sender_name}`}
-                onClick={() => router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`);
-                  }
-                }}
-              >
-                <td className="py-4 pr-4 text-slate-900">
-                  <div className="flex items-center gap-2">
-                    <Image
-                      src="/icons/leaderboard-icon.webp"
-                      alt="Leaderboard rank"
-                      width={24}
-                      height={24}
-                      className="object-contain"
-                    />
-                    <span>{o.sender_name}</span>
+              <HoverCard key={o.sender_name} openDelay={300}>
+                <HoverCardTrigger asChild>
+                  <tr 
+                    className="border-t hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View cases for ${o.sender_name}`}
+                    onClick={() => router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`);
+                      }
+                    }}
+                  >
+                    <td className="py-4 pr-4 text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/icons/leaderboard-icon.webp"
+                          alt="Leaderboard rank"
+                          width={24}
+                          height={24}
+                          className="object-contain"
+                        />
+                        <span>{o.sender_name}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 pr-4 text-center tabular-nums text-slate-900">{o.violation_count}</td>
+                    <td className="py-4 pr-2 pl-8 text-center text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
+                  </tr>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-[280px] bg-white border-slate-200 shadow-lg" side="top">
+                  <div className="space-y-4">
+                    {/* Leaderboard Image */}
+                    <div className="flex justify-center">
+                      <Image
+                        src="/icons/leaderboard-image.png"
+                        alt="Leaderboard trophy"
+                        width={80}
+                        height={80}
+                        className="object-contain"
+                      />
+                    </div>
+                    
+                    {/* Organization Info */}
+                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                      <div>
+                        <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Organization</div>
+                        <div className="font-semibold text-base text-slate-900 break-words">{o.sender_name}</div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Total Cases</div>
+                          <div className="text-2xl font-bold text-slate-900 tabular-nums">{o.violation_count}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Most Recent</div>
+                          <div className="text-sm font-medium text-slate-900">{formatWhen(o.latest_violation_at)}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* CTA */}
+                    <div className="pt-2">
+                      <Link
+                        href={`/cases?senders=${encodeURIComponent(o.sender_name)}`}
+                        className="w-full inline-flex items-center justify-center text-sm px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                        aria-label={`View cases from ${o.sender_name}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View cases
+                      </Link>
+                    </div>
                   </div>
-                </td>
-                <td className="py-4 pr-4 text-center tabular-nums text-slate-900">{o.violation_count}</td>
-                <td className="py-4 pr-2 pl-8 text-center text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
-              </tr>
+                </HoverCardContent>
+              </HoverCard>
             ))}
             {!loading && offenders.length === 0 && (
               <tr>
