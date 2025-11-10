@@ -868,7 +868,7 @@ function WorstOffenders() {
                     {/* Leaderboard Image */}
                     <div className="flex justify-center">
                       <Image
-                        src="/icons/leaderboard-image.png"
+                        src="/icons/leaderboard-image.webp"
                         alt="Leaderboard trophy"
                         width={80}
                         height={80}
