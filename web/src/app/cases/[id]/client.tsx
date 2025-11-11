@@ -480,7 +480,7 @@ export function ReportThread({ id, verdict }: ReportThreadProps) {
             <div className="px-4 py-3">
               <div className="text-sm font-medium text-slate-900">ActBlue Decision: {getVerdictLabel(verdict.verdict)}</div>
               {verdict.created_at && (
-                <div className="text-xs text-slate-600 mt-0.5"><LocalTime iso={verdict.created_at} /></div>
+                <div className="text-xs text-slate-600 mt-0.5"><LocalTime iso={verdict.created_at} options={{ year: "numeric", month: "short", day: "numeric" }} /></div>
               )}
             </div>
             {verdict.explanation && (
@@ -806,7 +806,7 @@ export function CaseVerdict({ verdict }: CaseVerdictProps) {
         </div>
         {verdict.created_at && (
           <div className="text-xs text-slate-600">
-            <LocalTime iso={verdict.created_at} />
+            <LocalTime iso={verdict.created_at} options={{ year: "numeric", month: "short", day: "numeric" }} />
           </div>
         )}
       </div>

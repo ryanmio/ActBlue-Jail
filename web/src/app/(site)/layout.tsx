@@ -5,7 +5,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="border-b bg-white">
         <div className="mx-auto max-w-6xl p-4 flex items-center justify-between">
-          <Link href="/" className="font-semibold">ActBlue Jail</Link>
+          <Link href="/" className="font-semibold">AB Jail</Link>
           <nav className="text-sm space-x-4">
             <Link className="underline" href="/cases">Cases</Link>
             <Link className="underline" href="/about">About</Link>

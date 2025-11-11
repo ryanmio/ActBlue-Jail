@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 type ReportData = {
   report: {
@@ -53,6 +58,30 @@ function formatDate(iso: string | null): string {
   } catch {
     return "—";
   }
+}
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function truncateAtWordBoundary(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  const truncated = text.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > maxLength * 0.7 ? truncated.slice(0, lastSpace) : truncated;
 }
 
 function getVerdictDisplay(verdict: string | null): { label: string; color: string; bgColor: string; borderColor: string } {
@@ -186,17 +215,88 @@ export default function ReportsTable({ initialData, showHeader = true }: { initi
                         <span className="text-slate-400 italic">None</span>
                       )}
                     </td>
-                    <td className="py-5 px-6">
+                    <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
                       {item.verdict ? (
-                        <span
-                          className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium ${verdictDisplay.bgColor} ${verdictDisplay.color} border ${verdictDisplay.borderColor} w-fit`}
-                        >
-                          {verdictDisplay.label}
-                        </span>
+                        <HoverCard openDelay={100}>
+                          <HoverCardTrigger asChild>
+                            <button
+                              className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium ${verdictDisplay.bgColor} ${verdictDisplay.color} border ${verdictDisplay.borderColor} w-fit cursor-pointer hover:opacity-80 transition-opacity`}
+                            >
+                              {verdictDisplay.label}
+                            </button>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-[380px] bg-white border-slate-200 shadow-xl" align="end" sideOffset={8}>
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-3 pb-2.5 border-b border-slate-200">
+                                <h3 className="text-base font-semibold text-slate-900">ActBlue Decision</h3>
+                                <span className="text-xs text-slate-500 whitespace-nowrap mt-0.5">
+                                  {formatDate(item.verdict.created_at)}
+                                </span>
+                              </div>
+                              
+                              <div className="space-y-2.5">
+                                <div className="flex items-center justify-center">
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-3.5 py-1 text-sm font-semibold ${verdictDisplay.bgColor} ${verdictDisplay.color} border-2 ${verdictDisplay.borderColor}`}
+                                  >
+                                    {verdictDisplay.label}
+                                  </span>
+                                </div>
+
+                                {item.verdict.explanation && (
+                                  <div className="text-sm text-slate-700 leading-snug bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                                    {item.verdict.explanation.length > 180
+                                      ? `${truncateAtWordBoundary(item.verdict.explanation, 180)}... [More]`
+                                      : item.verdict.explanation}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="pt-2.5 border-t border-slate-200">
+                                <Link
+                                  href={caseUrl}
+                                  className="w-full inline-flex items-center justify-center text-sm px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800 font-medium transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  View case
+                                </Link>
+                              </div>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1.5 text-xs font-medium">
-                          Pending
-                        </span>
+                        <HoverCard openDelay={100}>
+                          <HoverCardTrigger asChild>
+                            <button className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1.5 text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity">
+                              Pending
+                            </button>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-[340px] bg-white border-slate-200 shadow-xl" align="end" sideOffset={8}>
+                            <div className="space-y-3">
+                              <h3 className="text-base font-semibold text-slate-900">ActBlue Decision</h3>
+                              
+                              <div className="flex items-center justify-center">
+                                <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border-2 border-slate-200 px-3.5 py-1 text-sm font-semibold">
+                                  Pending
+                                </span>
+                              </div>
+
+                              <div className="text-sm text-slate-700 leading-snug bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                                As of {formatDate(new Date().toISOString())}, ActBlue has not responded to our community report.
+                              </div>
+
+                              <div className="pt-2 border-t border-slate-200">
+                                <Link
+                                  href={caseUrl}
+                                  className="w-full inline-flex items-center justify-center text-sm px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800 font-medium transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  View case
+                                </Link>
+                              </div>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
                       )}
                     </td>
                   </tr>
