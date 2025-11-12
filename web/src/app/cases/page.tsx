@@ -10,6 +10,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { SenderSearchCombobox } from "@/components/sender-search-combobox";
+import { CasesFilterForm } from "@/components/cases-filter-form";
 
 type SubmissionRow = {
   id: string;
@@ -35,13 +36,6 @@ function formatWhen(iso: string): string {
   if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
   return d.toLocaleDateString();
 }
-
-// Filter to show only these violation codes in the cases page
-const DISPLAYED_VIOLATION_CODES = ["AB001", "AB003", "AB004", "AB007", "AB008", "AB009"];
-
-const VIOLATION_OPTIONS = VIOLATION_POLICIES.filter((v: { code: string; title: string; policy: string }) =>
-  DISPLAYED_VIOLATION_CODES.includes(v.code)
-);
 
 // Derive a clean one-line preview that skips email metadata headers
 function derivePreview(text?: string | null): string {
@@ -189,29 +183,12 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                     )}
                   </summary>
                   <div className="absolute right-0 mt-2 w-72 z-20 rounded-xl border border-slate-200 bg-white p-3 shadow-xl md:w-80">
-                    <form action="/cases" method="get" className="space-y-3">
-                      <input type="hidden" name="page" value="1" />
-                      <input type="hidden" name="limit" value={String(pageSize)} />
-                      {q && <input type="hidden" name="q" value={q} />}
-                      {selectedSenders.map((sender) => (
-                        <input key={`sender-${sender}`} type="hidden" name="senders" value={sender} />
-                      ))}
-                      <div className="grid grid-cols-1 gap-2">
-                        {VIOLATION_OPTIONS.map((opt: { code: string; title: string }) => {
-                          const checked = selectedCodes.includes(opt.code);
-                          return (
-                            <label key={opt.code} className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
-                              <input type="checkbox" name="codes" value={opt.code} defaultChecked={checked} className="accent-slate-900" />
-                              <span className="truncate"><span className="text-xs text-slate-500 mr-1">{opt.code}</span>{opt.title}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800">Apply</button>
-                      </div>
-                    </form>
+                    <CasesFilterForm
+                      pageSize={pageSize}
+                      q={q}
+                      selectedSenders={selectedSenders}
+                      selectedCodes={selectedCodes}
+                    />
                   </div>
                 </details>
               </div>

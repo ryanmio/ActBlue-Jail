@@ -63,23 +63,79 @@ export async function GET(req: NextRequest) {
     }> = [];
     let total = 0;
 
-    if (codes.length > 0) {
+    // Check for special filter codes
+    const hasAnyViolation = codes.includes("ANY_VIOLATION");
+    const hasNoViolation = codes.includes("NO_VIOLATION");
+    const specificCodes = codes.filter(c => c !== "ANY_VIOLATION" && c !== "NO_VIOLATION");
+
+    if (hasAnyViolation || hasNoViolation || specificCodes.length > 0) {
       try {
-      const { data: vioRows, error: vioErr } = await supabase
-        .from("violations")
-        .select("submission_id, code")
-        .in("code", codes);
-        if (vioErr) {
-          console.error("/api/cases violation code filter error", { codes, error: vioErr });
-          throw vioErr;
+        let ids: string[] = [];
+        
+        if (hasAnyViolation) {
+          // Get all submissions that have at least one violation
+          const { data: vioRows, error: vioErr } = await supabase
+            .from("violations")
+            .select("submission_id");
+          if (vioErr) {
+            console.error("/api/cases ANY_VIOLATION filter error", { error: vioErr });
+            throw vioErr;
+          }
+          const idSet = new Set<string>();
+          for (const r of vioRows || []) {
+            const sid = String((r as { submission_id: string }).submission_id);
+            if (sid) idSet.add(sid);
+          }
+          ids = Array.from(idSet);
+          console.log(`/api/cases found ${ids.length} submissions with ANY_VIOLATION`);
+        } else if (hasNoViolation) {
+          // Get all submissions, then exclude those with violations
+          const { data: allSubs, error: allErr } = await supabase
+            .from("submissions")
+            .select("id")
+            .eq("public", true);
+          if (allErr) {
+            console.error("/api/cases NO_VIOLATION all submissions error", { error: allErr });
+            throw allErr;
+          }
+          
+          const { data: vioRows, error: vioErr } = await supabase
+            .from("violations")
+            .select("submission_id");
+          if (vioErr) {
+            console.error("/api/cases NO_VIOLATION violations error", { error: vioErr });
+            throw vioErr;
+          }
+          
+          const withViolations = new Set<string>();
+          for (const r of vioRows || []) {
+            const sid = String((r as { submission_id: string }).submission_id);
+            if (sid) withViolations.add(sid);
+          }
+          
+          ids = (allSubs || [])
+            .map(s => String((s as { id: string }).id))
+            .filter(id => !withViolations.has(id));
+          console.log(`/api/cases found ${ids.length} submissions with NO_VIOLATION`);
+        } else if (specificCodes.length > 0) {
+          // Original behavior for specific codes
+          const { data: vioRows, error: vioErr } = await supabase
+            .from("violations")
+            .select("submission_id, code")
+            .in("code", specificCodes);
+          if (vioErr) {
+            console.error("/api/cases violation code filter error", { codes: specificCodes, error: vioErr });
+            throw vioErr;
+          }
+          const idSet = new Set<string>();
+          for (const r of vioRows || []) {
+            const sid = String((r as { submission_id: string }).submission_id);
+            if (sid) idSet.add(sid);
+          }
+          ids = Array.from(idSet);
+          console.log(`/api/cases found ${ids.length} submissions for codes:`, specificCodes);
         }
-      const idSet = new Set<string>();
-      for (const r of vioRows || []) {
-        const sid = String((r as { submission_id: string }).submission_id);
-        if (sid) idSet.add(sid);
-      }
-      const ids = Array.from(idSet);
-        console.log(`/api/cases found ${ids.length} submissions for codes:`, codes);
+        
       if (ids.length === 0) {
         return NextResponse.json({ items: [], total: 0, limit, offset, page, hasMore: false });
       }
