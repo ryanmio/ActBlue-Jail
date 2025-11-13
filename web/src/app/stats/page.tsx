@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
 import Footer from "@/components/Footer";
@@ -35,7 +35,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Check, ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { Check, ChevronDown, SlidersHorizontal } from "lucide-react";
 
 type StatsData = {
   period: {
@@ -88,6 +88,16 @@ type ViolationFilterOption = {
   isPermitted?: boolean;
 };
 
+const DATA_REQUEST_FIELD_OPTIONS = [
+  { value: "reviewed_messages", label: "Reviewed Messages" },
+  { value: "detected_violations", label: "Detected Violations" },
+  { value: "email_html", label: "Email HTML" },
+  { value: "non_fundraising", label: "Non-Fundraising" },
+  { value: "verdicts", label: "Verdicts" },
+] as const;
+
+type DataRequestField = (typeof DATA_REQUEST_FIELD_OPTIONS)[number]["value"];
+
 const CHART_COLORS = {
   // Unified shades of blue for the entire dashboard
   captures: "hsl(142, 76%, 36%)", // green-600
@@ -138,6 +148,87 @@ export default function StatsPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [dataRequestExpanded, setDataRequestExpanded] = useState(false);
+  const [dataRequestSubmitting, setDataRequestSubmitting] = useState(false);
+  const [dataRequestError, setDataRequestError] = useState<string | null>(null);
+  const [dataRequestBanner, setDataRequestBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [dataRequestName, setDataRequestName] = useState("");
+  const [dataRequestEmail, setDataRequestEmail] = useState("");
+  const [dataRequestDescription, setDataRequestDescription] = useState("");
+  const [dataRequestFields, setDataRequestFields] = useState<DataRequestField[]>([]);
+
+  const toggleDataRequestField = (field: DataRequestField) => {
+    setDataRequestFields((prev) =>
+      prev.includes(field) ? prev.filter((value) => value !== field) : [...prev, field],
+    );
+  };
+
+  const resetDataRequestForm = () => {
+    setDataRequestName("");
+    setDataRequestEmail("");
+    setDataRequestDescription("");
+    setDataRequestFields([]);
+    setDataRequestError(null);
+  };
+
+  const handleDataRequestSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setDataRequestError(null);
+
+    const trimmedName = dataRequestName.trim();
+    const trimmedEmail = dataRequestEmail.trim();
+    const trimmedDescription = dataRequestDescription.trim();
+
+    if (
+      !trimmedName ||
+      !trimmedEmail ||
+      !trimmedDescription ||
+      dataRequestFields.length === 0
+    ) {
+      setDataRequestError("Please complete all fields and choose at least one dataset.");
+      return;
+    }
+
+    setDataRequestSubmitting(true);
+
+    try {
+      const response = await fetch("/api/data-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          email: trimmedEmail,
+          description: trimmedDescription,
+          dateRange: "All available data",
+          fields: dataRequestFields,
+        }),
+      });
+
+      if (!response.ok) {
+        let message = "Something went wrong. Please try again.";
+        const details = await response.json().catch(() => null);
+        if (details?.error === "validation_failed") {
+          message = "Please double-check the form fields.";
+        } else if (typeof details?.error === "string") {
+          message = details.error.replace(/_/g, " ");
+        }
+        setDataRequestError(message);
+        return;
+      }
+
+      setDataRequestBanner({
+        type: "success",
+        message: "Request received. We'll review and follow up via email.",
+      });
+      resetDataRequestForm();
+      setDataRequestExpanded(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to send request.";
+      setDataRequestError(message);
+    } finally {
+      setDataRequestSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchStats() {
@@ -1111,6 +1202,149 @@ export default function StatsPage() {
                 currentPage={sendersPage}
                 onPageChange={setSendersPage}
               />
+
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDataRequestExpanded(!dataRequestExpanded);
+                    setDataRequestError(null);
+                    if (dataRequestBanner) setDataRequestBanner(null);
+                  }}
+                  className="w-full p-6 text-left hover:bg-slate-50 transition-colors rounded-2xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900">Request Data Export</h3>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Researchers can request an export of AB Jail data for analysis.
+                      </p>
+                    </div>
+                    <svg 
+                      className={`w-5 h-5 text-slate-600 transition-transform shrink-0 ml-4 ${dataRequestExpanded ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+
+                {dataRequestBanner && (
+                  <div className="px-6 pb-4">
+                    <div
+                      className={`rounded-md border px-4 py-3 text-sm ${
+                        dataRequestBanner.type === "success"
+                          ? "border-green-200 bg-green-50 text-green-700"
+                          : "border-red-200 bg-red-50 text-red-700"
+                      }`}
+                    >
+                      {dataRequestBanner.message}
+                    </div>
+                  </div>
+                )}
+
+                {dataRequestExpanded && (
+                  <form onSubmit={handleDataRequestSubmit} className="px-6 pb-6 space-y-4 border-t border-slate-200 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-slate-700" htmlFor="data-request-name">
+                          Name
+                        </label>
+                        <input
+                          id="data-request-name"
+                          type="text"
+                          value={dataRequestName}
+                          onChange={(e) => setDataRequestName(e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                          placeholder="Your full name"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-slate-700" htmlFor="data-request-email">
+                          Email
+                        </label>
+                        <input
+                          id="data-request-email"
+                          type="email"
+                          value={dataRequestEmail}
+                          onChange={(e) => setDataRequestEmail(e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                          placeholder="you@example.com"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-sm font-medium text-slate-700">Include:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {DATA_REQUEST_FIELD_OPTIONS.map((option) => {
+                          const checked = dataRequestFields.includes(option.value);
+                          return (
+                            <label
+                              key={option.value}
+                              className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleDataRequestField(option.value)}
+                                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+                              />
+                              <span className="text-sm text-slate-700">{option.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-slate-700" htmlFor="data-request-description">
+                        How will you use this data?
+                      </label>
+                      <textarea
+                        id="data-request-description"
+                        value={dataRequestDescription}
+                        onChange={(e) => setDataRequestDescription(e.target.value)}
+                        className="min-h-[100px] w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                        placeholder="Brief description of your research or intended use"
+                        required
+                      />
+                    </div>
+
+                    {dataRequestError && (
+                      <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {dataRequestError}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDataRequestExpanded(false);
+                          resetDataRequestForm();
+                        }}
+                        disabled={dataRequestSubmitting}
+                        className="px-4 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={dataRequestSubmitting}
+                        className="px-4 py-2 bg-slate-900 text-white text-sm rounded-md hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        {dataRequestSubmitting ? "Sending..." : "Submit Request"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </section>
             </>
           )}
         </section>

@@ -27,7 +27,7 @@ export function NavigationMenu() {
           <Link href="/welcome" className="cursor-pointer text-slate-900 hover:bg-slate-100">How it works</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/stats" className="cursor-pointer text-slate-900 hover:bg-slate-100">Stats</Link>
+          <Link href="/stats" className="cursor-pointer text-slate-900 hover:bg-slate-100">Stats and Data</Link>
         </DropdownMenuItem>
       </DropdownMenuGroup>
       
