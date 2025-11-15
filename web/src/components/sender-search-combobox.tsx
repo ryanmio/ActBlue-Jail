@@ -13,9 +13,10 @@ type SenderSearchComboboxProps = {
   selectedSenders: string[];
   pageSize: number;
   codes: string[];
+  sources: string[];
 };
 
-export function SenderSearchCombobox({ selectedSenders, pageSize, codes }: SenderSearchComboboxProps) {
+export function SenderSearchCombobox({ selectedSenders, pageSize, codes, sources }: SenderSearchComboboxProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -104,6 +105,11 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes }: Sende
       params.append("codes", code);
     });
 
+    // Add sources filter if present
+    sources.forEach((source) => {
+      params.append("sources", source);
+    });
+
     // Add selected senders
     if (selection.size > 0) {
       params.set("senders", Array.from(selection).join(","));
@@ -128,14 +134,14 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes }: Sende
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full md:w-[300px] justify-between text-left font-normal bg-white hover:bg-slate-50 border-slate-300"
+            className="w-full md:w-[180px] justify-between text-left font-normal bg-white hover:bg-slate-50 border-slate-300"
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <Search className="h-4 w-4 shrink-0 text-slate-400" />
               <span className="truncate text-slate-900">
                 {selected.size > 0 
                   ? `${selected.size} sender${selected.size === 1 ? '' : 's'} selected`
-                  : "Search senders..."}
+                  : "Search senders"}
               </span>
             </div>
             {selected.size > 0 && (
