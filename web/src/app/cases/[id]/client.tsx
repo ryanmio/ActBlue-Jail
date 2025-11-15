@@ -1556,20 +1556,23 @@ export function EvidenceTabs({ caseId, messageType, rawText, emailBody, screensh
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+            <div className="rounded-2xl overflow-hidden bg-white border border-slate-200">
               {emailBody ? (
-                <div className="max-h-96 overflow-auto flex justify-center">
-                  <div className="scale-[0.5] origin-top" style={{ width: "calc(100% / 0.5)" }}>
-                    <div 
-                      className="prose prose-sm max-w-none text-slate-900 text-xs prose-headings:text-sm"
-                      dangerouslySetInnerHTML={{ __html: emailBody }}
-                    />
-                  </div>
+                <div className="w-full h-[500px] overflow-auto bg-slate-50">
+                  <iframe
+                    srcDoc={`<style>body { margin: 20px !important; padding: 20px !important; box-sizing: border-box !important; }</style>${emailBody}`}
+                    title="Email preview"
+                    className="w-full border-0"
+                    style={{ height: '125%', zoom: 0.8 }}
+                    sandbox="allow-same-origin"
+                  />
                 </div>
               ) : rawText ? (
-                <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{normalizePunctuation(repairMojibake(rawText))}</pre>
+                <div className="p-4">
+                  <pre className="whitespace-pre-wrap break-words text-sm text-slate-900 max-h-96 overflow-auto">{normalizePunctuation(repairMojibake(rawText))}</pre>
+                </div>
               ) : (
-                <div className="text-slate-600 text-sm">No primary evidence available.</div>
+                <div className="p-4 text-slate-600 text-sm">No primary evidence available.</div>
               )}
             </div>
           )}
