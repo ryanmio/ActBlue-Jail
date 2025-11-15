@@ -13,9 +13,10 @@ interface CasesFilterFormProps {
   q?: string;
   selectedSenders: string[];
   selectedCodes: string[];
+  selectedSources: string[];
 }
 
-export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes }: CasesFilterFormProps) {
+export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, selectedSources }: CasesFilterFormProps) {
   return (
     <form action="/cases" method="get" className="space-y-3">
       <input type="hidden" name="page" value="1" />
@@ -23,6 +24,9 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes }:
       {q && <input type="hidden" name="q" value={q} />}
       {selectedSenders.map((sender) => (
         <input key={`sender-${sender}`} type="hidden" name="senders" value={sender} />
+      ))}
+      {selectedSources.map((source) => (
+        <input key={`source-${source}`} type="hidden" name="sources" value={source} />
       ))}
       <div className="grid grid-cols-1 gap-2">
         {/* Special violation status filters */}
@@ -96,7 +100,7 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes }:
         })}
       </div>
       <div className="flex gap-2 justify-end">
-        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
+        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedSources.length > 0 ? `&sources=${selectedSources.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
         <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800">Apply</button>
       </div>
     </form>

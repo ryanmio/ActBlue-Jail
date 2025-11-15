@@ -21,6 +21,10 @@ export async function GET(req: NextRequest) {
   const multiSenders = searchParams.getAll("senders");
   const singleSenders = (searchParams.get("senders") || "").split(",").map((s) => s.trim()).filter(Boolean);
   const senders = Array.from(new Set([...(multiSenders || []), ...(singleSenders || [])])).filter(Boolean);
+  // Support source filtering (user_submitted, bot_submitted)
+  const multiSources = searchParams.getAll("sources");
+  const singleSources = (searchParams.get("sources") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const sources = Array.from(new Set([...(multiSources || []), ...(singleSources || [])])).filter(Boolean);
 
   try {
     const supabase = getSupabaseServer();
@@ -47,6 +51,21 @@ export async function GET(req: NextRequest) {
       }
       if (sendersFilter) {
         next = next.or(`sender_name.in.(${sendersFilter}),sender_id.in.(${sendersFilter})`);
+      }
+      // Apply source filtering
+      if (sources.length > 0) {
+        const hasBotSubmitted = sources.includes("bot_submitted");
+        const hasUserSubmitted = sources.includes("user_submitted");
+        
+        if (hasBotSubmitted && !hasUserSubmitted) {
+          // Bot submitted only: (sms with sender_id) OR (email without forwarder)
+          next = next.or(`and(message_type.eq.sms,sender_id.not.is.null),and(message_type.eq.email,forwarder_email.is.null)`);
+        } else if (hasUserSubmitted && !hasBotSubmitted) {
+          // User submitted only: manual uploads OR (email with forwarder) OR SMS without sender_id OR other types
+          // Manual uploads have image_url starting with 'supabase://'
+          next = next.or(`image_url.like.supabase://*,and(message_type.eq.email,forwarder_email.not.is.null),and(message_type.eq.sms,sender_id.is.null),message_type.not.in.(email,sms)`);
+        }
+        // If both are selected, don't filter (show all)
       }
       return next;
     };
