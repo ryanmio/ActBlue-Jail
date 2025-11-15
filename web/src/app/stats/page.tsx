@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, memo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
 import Footer from "@/components/Footer";
@@ -1373,15 +1373,7 @@ function KpiCard({
   );
 }
 
-function CombinedTimelineChart({
-  violationsBuckets,
-  capturesBuckets,
-  reportsBuckets,
-  days,
-  periodStart,
-  periodEnd,
-  showingPermittedOnly = false,
-}: {
+type CombinedTimelineChartProps = {
   violationsBuckets: Array<{ bucket: string; count: number }>;
   capturesBuckets: Array<{ bucket: string; count: number }>;
   reportsBuckets: Array<{ bucket: string; count: number }>;
@@ -1389,7 +1381,17 @@ function CombinedTimelineChart({
   periodStart?: string;
   periodEnd?: string;
   showingPermittedOnly?: boolean;
-}) {
+};
+
+const CombinedTimelineChart = memo(function CombinedTimelineChart({
+  violationsBuckets,
+  capturesBuckets,
+  reportsBuckets,
+  days,
+  periodStart,
+  periodEnd,
+  showingPermittedOnly = false,
+}: CombinedTimelineChartProps) {
   const useWeeks = days > 45;
   
   // Use captures instead of violations when showing permitted matches only
@@ -1531,17 +1533,27 @@ function CombinedTimelineChart({
       </ChartContainer>
     </div>
   );
-}
+}, (prev, next) =>
+  prev.violationsBuckets === next.violationsBuckets &&
+  prev.capturesBuckets === next.capturesBuckets &&
+  prev.reportsBuckets === next.reportsBuckets &&
+  prev.days === next.days &&
+  prev.periodStart === next.periodStart &&
+  prev.periodEnd === next.periodEnd &&
+  prev.showingPermittedOnly === next.showingPermittedOnly,
+);
 
-function ViolationMixPieChart({
-  violations,
-}: {
+type ViolationMixPieChartProps = {
   violations: Array<{
     code: string;
     count: number;
     percentage: number;
   }>;
-}) {
+};
+
+const ViolationMixPieChart = memo(function ViolationMixPieChart({
+  violations,
+}: ViolationMixPieChartProps) {
   if (violations.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
@@ -1661,17 +1673,19 @@ function ViolationMixPieChart({
       </div>
     </div>
   );
-}
+}, (prev, next) => prev.violations === next.violations);
 
-function SourceSplitPieChart({
-  sources,
-}: {
+type SourceSplitPieChartProps = {
   sources: Array<{
     source: string;
     count: number;
     percentage: number;
   }>;
-}) {
+};
+
+const SourceSplitPieChart = memo(function SourceSplitPieChart({
+  sources,
+}: SourceSplitPieChartProps) {
   const chartData = sources.map((s) => ({
     name: s.source === "user_upload" ? "User Submitted" : "Bot Submitted",
     value: s.count,
@@ -1731,13 +1745,9 @@ function SourceSplitPieChart({
       </div>
     </div>
   );
-}
+}, (prev, next) => prev.sources === next.sources);
 
-function TopSendersTable({
-  senders,
-  currentPage,
-  onPageChange,
-}: {
+type TopSendersTableProps = {
   senders: Array<{
     sender: string;
     total_captures: number;
@@ -1746,7 +1756,13 @@ function TopSendersTable({
   }>;
   currentPage: number;
   onPageChange: (page: number) => void;
-}) {
+};
+
+const TopSendersTable = memo(function TopSendersTable({
+  senders,
+  currentPage,
+  onPageChange,
+}: TopSendersTableProps) {
   const router = useRouter();
   const itemsPerPage = 10;
   const totalPages = Math.ceil(senders.length / itemsPerPage);
@@ -1908,4 +1924,4 @@ function TopSendersTable({
       )}
     </div>
   );
-}
+});
