@@ -22,6 +22,7 @@ type SubmissionRow = {
   messageType?: string | null;
   forwarderEmail?: string | null;
   imageUrl?: string | null;
+  hasReport?: boolean;
 };
 
 function formatWhen(iso: string): string {
@@ -94,6 +95,7 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], sen
       forwarderEmail?: string | null;
       image_url?: string | null;
       imageUrl?: string | null;
+      hasReport?: boolean;
     }>;
     const withIssues = rows.map((r) => ({
       id: r.id,
@@ -107,6 +109,7 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], sen
       messageType: r.message_type || r.messageType || null,
       forwarderEmail: r.forwarder_email || r.forwarderEmail || null,
       imageUrl: r.image_url || r.imageUrl || null,
+      hasReport: r.hasReport || false,
     }));
     return {
       items: withIssues,
@@ -356,6 +359,11 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                               <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
                                 {isBot ? 'Bot Submitted' : 'User Submitted'}
                               </span>
+                              {it.hasReport && (
+                                <span className="hidden md:inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 border border-green-200">
+                                  Reported to ActBlue
+                                </span>
+                              )}
                             </>
                           );
                         })()}
