@@ -242,13 +242,13 @@ export default function Home() {
             "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
         }}
       >
-      <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-10 relative">
+      <div className="mx-auto max-w-6xl p-4 md:p-10 space-y-6 md:space-y-10 relative">
         {/* Menu Button - Top Right */}
-        <div className="absolute top-6 right-6 md:top-10 md:right-10">
+        <div className="absolute top-4 right-4 md:top-10 md:right-10">
           <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button 
-                  className="inline-flex items-center justify-center rounded-lg p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100/50 focus:outline-none transition-colors"
+                  className="inline-flex items-center justify-center rounded-lg p-3 md:p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100/50 focus:outline-none transition-colors min-w-[48px] min-h-[48px] md:min-w-0 md:min-h-0"
                   aria-label="Open menu"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,12 +261,12 @@ export default function Home() {
         </div>
         
         {/* Header */}
-        <header className="text-center space-y-3 mb-6">
+        <header className="text-center space-y-2 md:space-y-3 mb-4 md:mb-6 pt-2 md:pt-0">
           <div>
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">AB Jail</h1>
+            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-slate-900 leading-tight md:leading-normal">AB Jail</h1>
             <p className="text-xs text-slate-500 mt-1">Not affiliated with ActBlue.</p>
           </div>
-          <p className="text-base font-medium text-slate-700 max-w-2xl mx-auto mt-4 leading-relaxed">Submit evidence of deceptive fundraising practices to a public record. An open-source initiative for political transparency.</p>
+          <p className="text-sm md:text-base font-medium text-slate-700 max-w-2xl mx-auto mt-3 md:mt-4 leading-relaxed">Submit evidence of deceptive fundraising practices to a public record. An open-source initiative for political transparency.</p>
         </header>
 
         {/* Upload card */}
@@ -279,7 +279,7 @@ export default function Home() {
             onDragLeave={mode !== "forward" ? () => setIsDragOver(false) : undefined}
             onDrop={mode !== "forward" ? onDrop : undefined}
             onPaste={mode !== "forward" ? onCardPaste : undefined}
-            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 ${mode === "forward" ? "border-solid" : "border-dashed"} p-8 md:p-10 pb-6 md:pb-8 text-center transition-colors ${
+            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 ${mode === "forward" ? "border-solid" : "border-dashed"} p-6 md:p-10 pb-4 md:pb-8 text-center transition-colors ${
               isDragOver || mode === "forward"
                 ? "border-slate-400 bg-white"
                 : "border-slate-300 bg-white/60 hover:border-slate-400 hover:bg-white"
@@ -290,28 +290,28 @@ export default function Home() {
               <>
                 {/* Segmented control */}
                 <div className="text-sm text-slate-700 mb-2">Choose your submission method</div>
-                <div className="inline-flex items-center rounded-full border border-slate-300 bg-white overflow-hidden text-sm mb-5">
+                <div className="inline-flex items-center rounded-full border border-slate-300 bg-white overflow-hidden text-sm mb-4 md:mb-5">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setMode("image"); }}
-                    className={`px-3 py-1.5 transition-colors ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
+                    className={`px-4 py-2.5 md:px-3 md:py-1.5 min-h-[48px] md:min-h-0 transition-colors ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
                   >
                     Screenshot
                   </button>
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setMode("forward"); }}
-                    className={`px-3 py-1.5 border-l border-slate-300 transition-colors ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
+                    className={`px-4 py-2.5 md:px-3 md:py-1.5 min-h-[48px] md:min-h-0 border-l border-slate-300 transition-colors ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
                   >
                     Forward
                   </button>
                 </div>
 
                 {mode === "image" && (
-                  <div className="min-h-[280px] flex flex-col items-center justify-center">
-                    <div className="mx-auto w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
+                  <div className="min-h-[240px] md:min-h-[280px] flex flex-col items-center justify-center">
+                    <div className="mx-auto w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-3 md:mb-4">
                       <svg
-                        className="w-7 h-7 md:w-8 md:h-8"
+                        className="w-6 h-6 md:w-8 md:h-8"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -325,9 +325,9 @@ export default function Home() {
                         <line x1="12" y1="3" x2="12" y2="15" />
                       </svg>
                     </div>
-                    <div className="text-xl md:text-2xl font-semibold text-slate-900">Drag & drop or click to upload</div>
-                    <div className="text-sm text-slate-700 mt-2">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
-                    <div className="mt-3 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                    <div className="text-lg md:text-2xl font-semibold text-slate-900 px-2">Drag & drop or click to upload</div>
+                    <div className="text-sm text-slate-700 mt-2 px-4">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
+                    <div className="mt-3 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed px-4">
                       By uploading, you confirm you have the right to share this content and accept the <Link
                         href="/about#terms"
                         onClick={(e) => e.stopPropagation()}
@@ -342,15 +342,15 @@ export default function Home() {
                 )}
 
                 {mode === "forward" && (
-                  <div className="min-h-[280px] max-w-lg mx-auto text-center flex flex-col justify-center">
+                  <div className="min-h-[240px] md:min-h-[280px] max-w-lg mx-auto text-center flex flex-col justify-center px-2">
                     <div className="mb-4">
-                      <div className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">Forward emails to</div>
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg border border-slate-300">
-                        <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="text-lg md:text-2xl font-semibold text-slate-900 mb-3">Forward emails to</div>
+                      <div className="inline-flex items-center gap-2 px-3 py-2.5 md:px-4 md:py-2 bg-slate-100 rounded-lg border border-slate-300 flex-wrap justify-center">
+                        <svg className="w-5 h-5 text-slate-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
-                        <code className="text-base font-mono text-slate-900">submit@abjail.org</code>
-                        <div className="relative">
+                        <code className="text-sm md:text-base font-mono text-slate-900 break-all break-words">submit@abjail.org</code>
+                        <div className="relative shrink-0">
                           <button
                             type="button"
                             onClick={async (e) => {
@@ -364,10 +364,10 @@ export default function Home() {
                                 // ignore
                               }
                             }}
-                            className="text-slate-600 hover:text-slate-900"
+                            className="text-slate-600 hover:text-slate-900 p-2 md:p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center"
                             title="Copy to clipboard"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                           </button>
@@ -380,7 +380,7 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    <div className="text-sm text-slate-600 mb-4 max-w-md mx-auto">
+                    <div className="text-sm text-slate-600 mb-4 max-w-md mx-auto px-2">
                       Please redact any personally identifying information you wish before forwarding.
                     </div>
 
@@ -412,7 +412,7 @@ export default function Home() {
                               {case_.status === 'complete' && (
                                 <Link
                                   href={`/cases/${case_.id}`}
-                                  className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                                  className="text-sm px-3 py-2 md:py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800 min-h-[44px] md:min-h-0 flex items-center justify-center"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   Open case
@@ -435,8 +435,8 @@ export default function Home() {
             )}
 
             {isUploading && (
-              <div className="max-w-md mx-auto">
-                <div className="text-xl md:text-2xl font-semibold text-slate-900 mb-6">Working on your upload…</div>
+              <div className="max-w-md mx-auto px-2">
+                <div className="text-lg md:text-2xl font-semibold text-slate-900 mb-4 md:mb-6">Working on your upload…</div>
                 <ol className="flex items-center justify-between gap-2">
                   {['Uploading image', 'Extracting text', 'Finishing up'].map((label, idx) => {
                     const isDone = idx < stepIndex;
@@ -477,7 +477,7 @@ export default function Home() {
         </section>
 
         {/* Lists */}
-        <div className="grid grid-cols-1 gap-10">
+        <div className="grid grid-cols-1 gap-6 md:gap-10">
           <RecentCases />
           <WorstOffenders />
           <RecentReports />
@@ -607,7 +607,7 @@ function RecentCases() {
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-900">Recent cases</h2>
-        <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/cases">View all</Link>
+        <Link className="text-sm px-3 py-2 md:py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 min-h-[44px] md:min-h-0 flex items-center justify-center" href="/cases">View all</Link>
       </div>
       <div className="divide-y">
         {loading && (
@@ -640,7 +640,7 @@ function RecentCases() {
           return (
             <div 
               key={r.id} 
-              className="py-3 -mx-4 md:-mx-6 px-4 md:px-6 flex items-center justify-between gap-3 hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+              className="py-3 -mx-4 md:-mx-6 px-4 md:px-6 flex items-center justify-between gap-2 md:gap-3 hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300 min-h-[60px] md:min-h-0"
               role="button"
               tabIndex={0}
               aria-label={`View case for ${r.sender_name || r.sender_id || "Unknown sender"}`}
@@ -652,8 +652,8 @@ function RecentCases() {
                 }
               }}
             >
-              <div className="min-w-0">
-                <div className="font-medium truncate max-w-[60vw] text-slate-900">{r.sender_name || r.sender_id || "Unknown sender"}</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium truncate max-w-[calc(100vw-8rem)] md:max-w-[60vw] text-slate-900 text-sm md:text-base">{r.sender_name || r.sender_id || "Unknown sender"}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
                   {/* Violation badges */}
                   {r.violations && r.violations.length > 0 ? (
@@ -664,7 +664,7 @@ function RecentCases() {
                         <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
                           <HoverCardTrigger asChild>
                             <span
-                              className={`inline-flex items-center rounded-full pl-3 pr-3.5 py-1 text-[11px] font-medium border whitespace-nowrap overflow-hidden text-ellipsis max-w-[56vw] md:max-w-[40vw] cursor-help ${
+                              className={`inline-flex items-center rounded-full pl-2.5 pr-3 md:pl-3 md:pr-3.5 py-1 text-[10px] md:text-[11px] font-medium border whitespace-nowrap overflow-hidden text-ellipsis max-w-[calc(100vw-10rem)] md:max-w-[40vw] cursor-help ${
                                 isVerified
                                   ? 'bg-sky-50 text-sky-700 border-sky-200'
                                   : 'bg-orange-50 text-orange-800 border-orange-200'
@@ -675,7 +675,7 @@ function RecentCases() {
                             </span>
                           </HoverCardTrigger>
                           {policy && (
-                            <HoverCardContent className="w-96 bg-white border-slate-200" side="top">
+                            <HoverCardContent className="w-[90vw] max-w-[280px] md:w-96 bg-white border-slate-200" side="top">
                               <div className="space-y-2">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
@@ -726,7 +726,7 @@ function RecentCases() {
                         {isBot ? 'Bot Submitted' : 'User Submitted'}
                       </span>
                     </HoverCardTrigger>
-                    <HoverCardContent className="w-80 bg-white border-slate-200" side="top">
+                    <HoverCardContent className="w-[90vw] max-w-[280px] md:w-80 bg-white border-slate-200" side="top">
                       <div className="space-y-2">
                         <div className="font-semibold text-sm text-slate-900">
                           {isBot ? 'Bot Submission' : 'User Submission'}
@@ -748,8 +748,8 @@ function RecentCases() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <div className="w-16 md:w-20 text-right text-xs text-slate-700 tabular-nums">{formatWhen(r.created_at)}</div>
-                <Link className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800" href={`/cases/${r.id}`}>View</Link>
+                <div className="w-14 md:w-20 text-right text-xs text-slate-700 tabular-nums hidden sm:block">{formatWhen(r.created_at)}</div>
+                <Link className="text-sm px-3 py-2 md:py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800 min-h-[44px] md:min-h-0 flex items-center justify-center" href={`/cases/${r.id}`}>View</Link>
               </div>
             </div>
           );
@@ -768,21 +768,128 @@ function WorstOffenders() {
   const router = useRouter();
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
+    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative">
+      <div className="mb-4 md:mb-6">
+        <div className="mb-3 md:mb-0">
           <h2 className="text-lg font-semibold text-slate-900">Repeat Offender Leaderboard</h2>
           <p className="text-xs text-slate-600 mt-1">Senders with the highest volume of suspected deceptive fundraising.</p>
         </div>
-        <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/stats">All Stats</Link>
+        <div className="md:absolute md:top-4 md:right-6">
+          <Link className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors inline-block" href="/stats">All Stats</Link>
+        </div>
       </div>
-      <div className="overflow-x-auto">
+      
+      {/* Mobile: Card Layout */}
+      <div className="md:hidden space-y-4">
+        {loading && (
+          [...Array(3)].map((_, idx) => (
+            <div key={`card-skeleton-${idx}`} className="animate-pulse bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+              <div className="h-5 bg-slate-200 rounded w-3/4 mb-3" />
+              <div className="flex gap-4 pt-2 border-t border-slate-100">
+                <div className="h-4 bg-slate-200 rounded w-20" />
+                <div className="h-4 bg-slate-200 rounded w-24" />
+              </div>
+            </div>
+          ))
+        )}
+        {!loading && offenders.slice(0, 5).map((o, index) => (
+          <HoverCard key={o.sender_name} openDelay={300}>
+            <HoverCardTrigger asChild>
+              <div
+                className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                role="button"
+                tabIndex={0}
+                aria-label={`View cases for ${o.sender_name}`}
+                onClick={() => router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`);
+                  }
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <Image
+                    src="/icons/leaderboard-icon.webp"
+                    alt="Leaderboard rank"
+                    width={24}
+                    height={24}
+                    className="object-contain shrink-0 mt-0.5"
+                  />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="font-semibold text-slate-900 text-base leading-tight">{o.sender_name}</div>
+                    <div className="flex items-center gap-4 pt-2 border-t border-slate-100">
+                      <div className="text-xs text-slate-600">
+                        <span className="font-semibold text-slate-900 text-sm">{o.violation_count}</span> cases
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {formatWhen(o.latest_violation_at)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-[90vw] max-w-[280px] bg-white border-slate-200 shadow-lg" side="top">
+              <div className="space-y-4">
+                {/* Leaderboard Image */}
+                <div className="flex justify-center">
+                  <Image
+                    src="/icons/leaderboard-image.webp"
+                    alt="Leaderboard trophy"
+                    width={80}
+                    height={80}
+                    className="object-contain"
+                  />
+                </div>
+                
+                {/* Organization Info */}
+                <div className="space-y-3 pt-2 border-t border-slate-200">
+                  <div>
+                    <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Organization</div>
+                    <div className="font-semibold text-base text-slate-900 break-words">{o.sender_name}</div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Total Cases</div>
+                      <div className="text-2xl font-bold text-slate-900 tabular-nums">{o.violation_count}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Most Recent</div>
+                      <div className="text-sm font-medium text-slate-900">{formatWhen(o.latest_violation_at)}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* CTA */}
+                <div className="pt-2">
+                  <Link
+                    href={`/cases?senders=${encodeURIComponent(o.sender_name)}`}
+                    className="w-full inline-flex items-center justify-center text-sm px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                    aria-label={`View cases from ${o.sender_name}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View cases
+                  </Link>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        ))}
+        {!loading && offenders.length === 0 && (
+          <div className="py-6 text-center text-sm text-slate-700">No offenders yet.</div>
+        )}
+      </div>
+
+      {/* Desktop: Table Layout */}
+      <div className="hidden md:block overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
         <table className="w-full text-sm">
           <thead className="text-left text-slate-700">
             <tr>
-              <th className="py-2 pr-4">Organization</th>
-              <th className="py-2 pr-4 text-center">Cases</th>
-              <th className="py-2 pr-2 pl-8 text-center">Most recent</th>
+              <th className="py-2 pr-4 text-sm">Organization</th>
+              <th className="py-2 pr-4 text-center text-sm">Cases</th>
+              <th className="py-2 pr-2 pl-8 text-center text-sm">Most recent</th>
             </tr>
           </thead>
           <tbody>
@@ -818,12 +925,12 @@ function WorstOffenders() {
                           alt="Leaderboard rank"
                           width={24}
                           height={24}
-                          className="object-contain"
+                          className="object-contain shrink-0"
                         />
-                        <span>{o.sender_name}</span>
+                        <span className="text-sm">{o.sender_name}</span>
                       </div>
                     </td>
-                    <td className="py-4 pr-4 text-center tabular-nums text-slate-900">{o.violation_count}</td>
+                    <td className="py-4 pr-4 text-center tabular-nums text-slate-900 text-sm">{o.violation_count}</td>
                     <td className="py-4 pr-2 pl-8 text-center text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
                   </tr>
                 </HoverCardTrigger>
@@ -893,19 +1000,19 @@ function RecentReports() {
   if (loading) {
     return (
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+        <div className="mb-4 md:mb-6">
+          <div className="mb-3 md:mb-0">
             <h2 className="text-lg font-semibold text-slate-900">Recent Reports to ActBlue</h2>
             <p className="text-xs text-slate-600 mt-1">Reports sent to ActBlue are always user initiated and never automated.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 md:absolute md:top-4 md:right-6">
             <Popover>
               <PopoverTrigger asChild>
-                <button className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">
+                <button className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors">
                   Our Process
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-[90vw] max-w-lg bg-white border-slate-200" align="end">
+              <PopoverContent className="w-[90vw] max-w-[320px] md:max-w-lg bg-white border-slate-200" align="end">
                 <div className="space-y-3">
                   <h3 className="font-semibold text-slate-900">About Our Reporting Process</h3>
                   <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
@@ -927,7 +1034,7 @@ function RecentReports() {
                 </div>
               </PopoverContent>
             </Popover>
-            <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/reports">View all</Link>
+            <Link className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors" href="/reports">View all</Link>
           </div>
         </div>
         <div className="space-y-3">
@@ -948,20 +1055,20 @@ function RecentReports() {
   }
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
+    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative">
+      <div className="mb-4 md:mb-6">
+        <div className="mb-3 md:mb-0">
           <h2 className="text-lg font-semibold text-slate-900">Recent Reports to ActBlue</h2>
           <p className="text-xs text-slate-600 mt-1">Reports sent to ActBlue are always user initiated and never automated.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:absolute md:top-4 md:right-6">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">
+              <button className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors">
                 Our Process
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[90vw] max-w-lg bg-white border-slate-200" align="end">
+            <PopoverContent className="w-[90vw] max-w-[320px] md:max-w-lg bg-white border-slate-200" align="end">
               <div className="space-y-3">
                 <h3 className="font-semibold text-slate-900">About Our Reporting Process</h3>
                 <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
@@ -978,7 +1085,7 @@ function RecentReports() {
               </div>
             </PopoverContent>
           </Popover>
-          <Link className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50" href="/reports">View all</Link>
+          <Link className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors" href="/reports">View all</Link>
         </div>
       </div>
       <ReportsTable initialData={reports} showHeader={false} />

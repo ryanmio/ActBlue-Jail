@@ -258,6 +258,19 @@ export async function GET(req: NextRequest) {
         });
       } catch {}
     }
+
+    // Include report status for each case
+    if (items.length > 0) {
+      try {
+        const ids = items.map((i) => i.id);
+        const { data: reportRows } = await supabase
+          .from("reports")
+          .select("case_id")
+          .in("case_id", ids);
+        const reportedIds = new Set(reportRows?.map((r) => (r as { case_id: string }).case_id) || []);
+        items = items.map((it) => ({ ...it, hasReport: reportedIds.has(it.id) }));
+      } catch {}
+    }
     if (codes.length > 0 && total === 0) {
       total = offset + items.length;
     }

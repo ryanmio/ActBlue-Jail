@@ -2,8 +2,8 @@
 
 export default function Footer() {
   return (
-    <footer className="mt-10">
-      <div className="mx-auto max-w-6xl p-4 text-xs text-gray-600 text-center space-y-1">
+    <footer className="mt-6 md:mt-10">
+      <div className="mx-auto max-w-6xl p-4 md:p-6 text-xs text-gray-600 text-center space-y-1 leading-relaxed">
         <p>Not affiliated with ActBlue. Classifications indicate potential policy issues and may be incorrect.</p>
         <p>
           This is an open-source project. The full code is available on{" "}
