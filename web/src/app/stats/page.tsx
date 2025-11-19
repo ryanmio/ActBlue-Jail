@@ -321,10 +321,10 @@ export default function StatsPage() {
           "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
       }}
     >
-      <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8 relative">
+      <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6 md:space-y-8 relative">
         <PageHeader />
 
-        <div className="mb-8">
+        <div className="mb-4 md:mb-8">
           <Breadcrumb
             items={[
               { label: "Home", href: "/" },
@@ -337,10 +337,10 @@ export default function StatsPage() {
           {/* Header with range picker */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+              <h1 className="text-xl md:text-3xl font-bold text-slate-900">
                 Statistics
               </h1>
-              <p className="text-sm text-slate-600 mt-1">
+              <p className="text-xs md:text-sm text-slate-600 mt-1">
                 Public statistics on captures, violations, and reports
               </p>
             </div>
@@ -733,7 +733,7 @@ export default function StatsPage() {
           {/* Active Filter Badges */}
           {(selectedViolations.length > 0 || selectedSenders.length > 0 || selectedSource.length > 0 || selectedTypes.length > 0) && (
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs text-slate-600 font-medium">Active filters:</span>
+              <span className="text-xs text-slate-600 font-medium hidden sm:inline">Active filters:</span>
               
               {/* Violation badges */}
               {selectedViolations.map((v, idx) => (
@@ -815,7 +815,7 @@ export default function StatsPage() {
                   setSelectedSource([]);
                   setSelectedTypes([]);
                 }}
-                className="text-xs text-slate-600 hover:text-slate-900 underline ml-2"
+                className="text-xs text-slate-600 hover:text-slate-900 underline ml-0 sm:ml-2 mt-2 sm:mt-0 w-full sm:w-auto text-center sm:text-left"
               >
                 Clear all
               </button>
@@ -1120,27 +1120,27 @@ export default function StatsPage() {
                 ))}
               </div>
               {/* Chart skeleton */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <div className="h-5 w-64 bg-slate-200 rounded mb-4" />
-                <div className="h-48 w-full bg-slate-100 rounded" />
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+                <div className="h-4 md:h-5 w-48 md:w-64 bg-slate-200 rounded mb-3 md:mb-4" />
+                <div className="h-36 md:h-48 w-full bg-slate-100 rounded" />
               </div>
               {/* Pie skeletons */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 {[1,2].map((i) => (
-                  <div key={`sk-pie-${i}`} className="bg-white rounded-2xl border border-slate-200 p-6">
-                    <div className="h-5 w-40 bg-slate-200 rounded mb-4" />
-                    <div className="h-[260px] flex items-center justify-center">
-                      <div className="h-40 w-40 rounded-full bg-slate-100" />
+                  <div key={`sk-pie-${i}`} className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+                    <div className="h-4 md:h-5 w-32 md:w-40 bg-slate-200 rounded mb-3 md:mb-4" />
+                    <div className="h-[200px] md:h-[260px] flex items-center justify-center">
+                      <div className="h-32 w-32 md:h-40 md:w-40 rounded-full bg-slate-100" />
                     </div>
                   </div>
                 ))}
               </div>
               {/* Table skeleton */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <div className="h-5 w-40 bg-slate-200 rounded mb-4" />
-                <div className="space-y-3">
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+                <div className="h-4 md:h-5 w-32 md:w-40 bg-slate-200 rounded mb-3 md:mb-4" />
+                <div className="space-y-2 md:space-y-3">
                   {[1,2,3,4].map((r) => (
-                    <div key={`sk-row-${r}`} className="h-4 w-full bg-slate-100 rounded" />
+                    <div key={`sk-row-${r}`} className="h-12 md:h-4 w-full bg-slate-100 rounded" />
                   ))}
                 </div>
               </div>
@@ -1148,15 +1148,15 @@ export default function StatsPage() {
           )}
 
           {error && (
-            <div className="bg-white rounded-2xl border border-red-200 p-6 text-center">
-              <p className="text-sm text-red-700">Error: {error}</p>
+            <div className="bg-white rounded-2xl border border-red-200 p-4 md:p-6 text-center">
+              <p className="text-xs md:text-sm text-red-700">Error: {error}</p>
             </div>
           )}
 
           {!loading && !error && data && (
             <>
               {/* KPI Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <KpiCard
                   label={selectedViolations.length === 1 && selectedViolations[0].code === "AB008" && selectedViolations[0].isPermitted === true ? "Captures Detected" : "Violations Detected"}
                   value={selectedViolations.length === 1 && selectedViolations[0].code === "AB008" && selectedViolations[0].isPermitted === true ? data.kpis.total_captures : data.kpis.captures_with_violations}
@@ -1191,7 +1191,7 @@ export default function StatsPage() {
               />
 
               {/* Pie Charts Side by Side */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 <ViolationMixPieChart violations={data.violation_mix || []} />
                 <SourceSplitPieChart sources={data.source_split} />
               </div>
@@ -1211,12 +1211,12 @@ export default function StatsPage() {
                     setDataRequestError(null);
                     if (dataRequestBanner) setDataRequestBanner(null);
                   }}
-                  className="w-full p-6 text-left hover:bg-slate-50 transition-colors rounded-2xl"
+                  className="w-full p-4 md:p-6 text-left hover:bg-slate-50 transition-colors rounded-2xl"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900">Request Data Export</h3>
-                      <p className="text-sm text-slate-600 mt-1">
+                      <h3 className="text-base md:text-lg font-semibold text-slate-900">Request Data Export</h3>
+                      <p className="text-xs md:text-sm text-slate-600 mt-1">
                         Researchers can request an export of AB Jail data for analysis.
                       </p>
                     </div>
@@ -1246,7 +1246,7 @@ export default function StatsPage() {
                 )}
 
                 {dataRequestExpanded && (
-                  <form onSubmit={handleDataRequestSubmit} className="px-6 pb-6 space-y-4 border-t border-slate-200 pt-6">
+                  <form onSubmit={handleDataRequestSubmit} className="px-4 md:px-6 pb-4 md:pb-6 space-y-4 border-t border-slate-200 pt-4 md:pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-sm font-medium text-slate-700" htmlFor="data-request-name">
@@ -1365,9 +1365,9 @@ function KpiCard({
   description: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6">
-      <div className="text-sm text-slate-600 mb-1">{label}</div>
-      <div className="text-3xl font-semibold text-slate-900 mb-1">{value}</div>
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+      <div className="text-xs md:text-sm text-slate-600 mb-1">{label}</div>
+      <div className="text-2xl md:text-3xl font-semibold text-slate-900 mb-1">{value}</div>
       <div className="text-xs text-slate-500">{description}</div>
     </div>
   );
@@ -1392,7 +1392,17 @@ const CombinedTimelineChart = memo(function CombinedTimelineChart({
   periodEnd,
   showingPermittedOnly = false,
 }: CombinedTimelineChartProps) {
+  const [isMobile, setIsMobile] = useState(false);
   const useWeeks = days > 45;
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Use captures instead of violations when showing permitted matches only
   const primaryBuckets = showingPermittedOnly ? capturesBuckets : violationsBuckets;
@@ -1462,11 +1472,11 @@ const CombinedTimelineChart = memo(function CombinedTimelineChart({
 
   if (mergedData.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+        <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4">
           {showingPermittedOnly ? "Captures & Reports Over Time" : "Violations & Reports Over Time"}
         </h3>
-        <div className="py-12 text-center text-sm text-slate-500">
+        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-slate-500">
           No data available
         </div>
       </div>
@@ -1485,25 +1495,27 @@ const CombinedTimelineChart = memo(function CombinedTimelineChart({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4">
         {showingPermittedOnly ? "Captures & Reports Over Time" : "Violations & Reports Over Time"}
       </h3>
-      <ChartContainer config={chartConfig} className="h-[300px] w-full aspect-auto">
-        <LineChart data={mergedData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-          <XAxis
-            dataKey="date"
-            tick={{ fill: "#64748b", fontSize: 12 }}
-            tickLine={{ stroke: "#cbd5e1" }}
-            padding={{ left: 10, right: 28 }}
-            tickMargin={10}
-            interval="preserveStartEnd"
-          />
-          <YAxis
-            tick={{ fill: "#64748b", fontSize: 12 }}
-            tickLine={{ stroke: "#cbd5e1" }}
-          />
+      <div className="-ml-2 md:ml-0">
+        <ChartContainer config={chartConfig} className="h-[240px] md:h-[300px] w-full aspect-auto">
+          <LineChart data={mergedData} margin={{ left: -10, right: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis
+              dataKey="date"
+              tick={{ fill: "#64748b", fontSize: 12 }}
+              tickLine={{ stroke: "#cbd5e1" }}
+              padding={{ left: 10, right: 28 }}
+              tickMargin={10}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fill: "#64748b", fontSize: 12 }}
+              tickLine={{ stroke: "#cbd5e1" }}
+              width={isMobile ? 30 : undefined}
+            />
           <ChartTooltip
             content={
               <ChartTooltipContent
@@ -1531,6 +1543,7 @@ const CombinedTimelineChart = memo(function CombinedTimelineChart({
           />
         </LineChart>
       </ChartContainer>
+      </div>
     </div>
   );
 }, (prev, next) =>
@@ -1554,13 +1567,24 @@ type ViolationMixPieChartProps = {
 const ViolationMixPieChart = memo(function ViolationMixPieChart({
   violations,
 }: ViolationMixPieChartProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   if (violations.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-        <h3 className="text-lg font-semibold text-slate-900 mb-3">
+        <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3">
           Violation Mix
         </h3>
-        <div className="py-12 text-center text-sm text-slate-500">
+        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-slate-500">
           No violations yet
         </div>
       </div>
@@ -1576,10 +1600,10 @@ const ViolationMixPieChart = memo(function ViolationMixPieChart({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-      <h3 className="text-lg font-semibold text-slate-900 mb-3">
+      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3">
         Violation Mix
       </h3>
-      <div className="h-[260px]">
+      <div className="h-[220px] md:h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
             <Pie
@@ -1587,7 +1611,7 @@ const ViolationMixPieChart = memo(function ViolationMixPieChart({
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={(entry) => `${entry.name} (${entry.percentage}%)`}
+              label={isMobile ? false : (entry) => `${entry.name} (${entry.percentage}%)`}
               outerRadius={96}
               dataKey="value"
             >
@@ -1686,6 +1710,17 @@ type SourceSplitPieChartProps = {
 const SourceSplitPieChart = memo(function SourceSplitPieChart({
   sources,
 }: SourceSplitPieChartProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const chartData = sources.map((s) => ({
     name: s.source === "user_upload" ? "User Submitted" : "Bot Submitted",
     value: s.count,
@@ -1695,8 +1730,8 @@ const SourceSplitPieChart = memo(function SourceSplitPieChart({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-      <h3 className="text-lg font-semibold text-slate-900 mb-3">Source Split</h3>
-      <div className="h-[260px]">
+      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3">Source Split</h3>
+      <div className="h-[220px] md:h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
             <Pie
@@ -1704,7 +1739,7 @@ const SourceSplitPieChart = memo(function SourceSplitPieChart({
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={(entry) => `${entry.name} (${entry.percentage}%)`}
+              label={isMobile ? false : (entry) => `${entry.name} (${entry.percentage}%)`}
               outerRadius={96}
               dataKey="value"
             >
@@ -1734,7 +1769,7 @@ const SourceSplitPieChart = memo(function SourceSplitPieChart({
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-3 flex justify-center gap-6">
+      <div className="mt-3 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6">
         {chartData.map((s) => (
           <div key={s.name} className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: s.fill }} />
@@ -1802,15 +1837,58 @@ const TopSendersTable = memo(function TopSendersTable({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Most Frequent Senders</h3>
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4">Most Frequent Senders</h3>
       {senders.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-500">
+        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-slate-500">
           No senders yet
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          {/* Mobile: Card Layout */}
+          <div className="md:hidden space-y-3">
+            {displayedSenders.map((s, idx) => (
+              <div
+                key={idx}
+                className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                role="button"
+                tabIndex={0}
+                aria-label={`View cases for ${s.sender}`}
+                onClick={() => router.push(`/cases?senders=${encodeURIComponent(s.sender)}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/cases?senders=${encodeURIComponent(s.sender)}`);
+                  }
+                }}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-slate-900 text-sm leading-tight">{s.sender}</div>
+                    </div>
+                    {s.is_repeat_offender && (
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-0.5"
+                        title="Repeat offender (≥3 violations)"
+                      />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 pt-2 border-t border-slate-100">
+                    <div className="text-xs text-slate-600">
+                      <span className="font-semibold text-slate-900">{s.total_captures}</span> captures
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      <span className="font-semibold text-slate-900">{s.captures_with_violations}</span> w/ violations
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table Layout */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left border-b border-slate-200">
                 <tr>
@@ -1866,8 +1944,8 @@ const TopSendersTable = memo(function TopSendersTable({
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between">
-              <p className="text-sm text-slate-700 whitespace-nowrap">
+            <div className="mt-4 md:mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <p className="text-xs md:text-sm text-slate-700">
                 Showing {startIndex + 1}-{Math.min(endIndex, senders.length)} of {senders.length} senders
               </p>
               <Pagination>
