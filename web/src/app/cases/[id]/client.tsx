@@ -551,13 +551,14 @@ function renderReportBody(body: string) {
     // skip underline line right after title if present
     let start = idx + 1;
     if (lines[start] && /^[-_]{3,}$/.test(lines[start].trim())) start++;
-    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Summary|Violations|Landing page URL|Landing page|Email HTML|Reporter note|Screenshot|Meta)\s*$/i.test(l.trim()));
+    const nextTitleIdx = lines.findIndex((l, i) => i > idx && /^(Campaign\/Org|Original message received on|Submission Date|Summary|Violations|Landing page URL|Landing page|Email HTML|Reporter note|Screenshot|Meta)\s*$/i.test(l.trim()));
     const end = nextTitleIdx === -1 ? lines.length : nextTitleIdx;
     return lines.slice(start, end);
   };
 
   const sec = {
     campaign: findSection("Campaign/Org"),
+    submissionDate: findSection("Original message received on"),
     summary: findSection("Summary"),
     violations: findSection("Violations"),
     landing: findSection("Landing page URL"),
@@ -576,6 +577,12 @@ function renderReportBody(body: string) {
         <div className="text-xs font-semibold text-slate-600 mb-1">Campaign/Org</div>
         <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.campaign.join("\n").trim() || "(unknown)"}</div>
       </div>
+      {sec.submissionDate.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-slate-600 mb-1">Original message received on</div>
+          <div className="text-sm text-slate-800 whitespace-pre-wrap">{sec.submissionDate.join("\n").trim()}</div>
+        </div>
+      )}
       {/* Summary removed */}
       <div>
         <div className="text-xs font-semibold text-slate-600 mb-1">Violations</div>
@@ -1100,8 +1107,18 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
       const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load case");
       const data = await res.json();
-      const item = data.item as { sender_name?: string | null; sender_id?: string | null } | null;
+      const item = data.item as { sender_name?: string | null; sender_id?: string | null; created_at?: string | null } | null;
       const campaign = (item?.sender_name || item?.sender_id || "(unknown sender)") as string;
+      const submissionDate = item?.created_at 
+        ? new Date(item.created_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZoneName: "short",
+          })
+        : null;
       // summary intentionally omitted from preview
       const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
       let vioText: string;
@@ -1153,6 +1170,8 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
   <div>
     <p style=\"margin:0 0 8px 0\"><strong>Campaign/Org</strong></p>
     <p style=\"margin:0 0 16px 0\">${esc(campaign)}</p>
+
+    ${submissionDate ? `<p style=\"margin:0 0 8px 0\"><strong>Original message received on</strong></p><p style=\"margin:0 0 16px 0\">${esc(submissionDate)}</p>` : ""}
 
     <p style=\"margin:0 0 8px 0\"><strong>Violations</strong></p>
     <div style=\"margin:0 0 16px 0\">${vioHtml}</div>

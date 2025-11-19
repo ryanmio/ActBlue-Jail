@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
   // Fetch case
   const { data: rows, error: err } = await supabase
     .from("submissions")
-    .select("id, sender_name, sender_id, raw_text, email_subject, email_body, ai_summary, image_url, landing_url, landing_screenshot_url, message_type")
+    .select("id, sender_name, sender_id, raw_text, email_subject, email_body, ai_summary, image_url, landing_url, landing_screenshot_url, message_type, created_at")
     .eq("id", caseId)
     .limit(1);
   if (err) return NextResponse.json({ error: "case_load_failed" }, { status: 500 });
   const sub = rows?.[0] as
-    | { id: string; sender_name?: string | null; sender_id?: string | null; raw_text?: string | null; email_body?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null; image_url?: string | null; message_type?: string | null }
+    | { id: string; sender_name?: string | null; sender_id?: string | null; raw_text?: string | null; email_body?: string | null; landing_url?: string | null; landing_screenshot_url?: string | null; image_url?: string | null; message_type?: string | null; created_at?: string | null }
     | undefined;
   if (!sub) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
@@ -86,9 +86,22 @@ export async function POST(req: NextRequest) {
 
   // No summary in email/report body per product decision
 
+  // Format submission date
+  const submissionDate = sub.created_at 
+    ? new Date(sub.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+      })
+    : null;
+
   // Nicely formatted plaintext body
   const sections: string[] = [];
   sections.push(`Campaign/Org\n-----------\n${campaign}`);
+  if (submissionDate) sections.push(`Original message received on\n-----------------------------\n${submissionDate}`);
   // Build violations section (override → list aware)
   let vioText: string;
   if (violationsOverride) {
@@ -158,6 +171,14 @@ export async function POST(req: NextRequest) {
         <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Campaign/Organization</h2>
         <p style="margin:0;font-size:16px;font-weight:500;color:#0f172a">${esc(campaign)}</p>
       </div>
+
+      ${submissionDate ? `
+      <!-- Original message received on -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Original message received on</h2>
+        <p style="margin:0;font-size:14px;color:#475569">${esc(submissionDate)}</p>
+      </div>
+      ` : ""}
 
       <!-- Violations -->
       <div style="margin-bottom:20px">
