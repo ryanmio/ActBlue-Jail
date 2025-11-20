@@ -24,10 +24,10 @@ export async function detectPII(
   }
 
   const model = "gpt-5-mini-2025-08-07";
-  
+
   const system = `You are identifying PERSONAL INFORMATION that should be redacted from a political fundraising message.
 
-Your task: Find ALL variations of the recipient's personal information (name variants, email addresses) that appear in the message.
+Your task: Find ALL variations of the recipient's personal information (name variants, email addresses) that appear in the message. Do NOT redact the sender's or signer's name.
 
 Return EVERY string that should be replaced with asterisks. Include:
 - Full name: "Ryan Mioduski"
@@ -42,6 +42,7 @@ DO NOT include:
 - Political candidate names being discussed
 - PAC/committee names
 - Organization email addresses (like @dccc.org, @actblue.com)
+-- Names of senders, sign-offs, or signers of the email (for example, the candidate or public figure whose name appears after "Thanks," in the signature)
 - Common words that happen to match a first name in non-personalized context
 
 Return STRICT JSON only (no markdown):
@@ -55,6 +56,7 @@ Examples:
 - Input: "NAME: Ryan Mioduski\nContact: ryan@mioduski.us" → {"strings_to_redact": ["Ryan Mioduski", "ryan@mioduski.us"], "confidence": 0.95}
 - Input: "From: R. Mioduski <ryan@gmail.com>" → {"strings_to_redact": ["R. Mioduski", "ryan@gmail.com"], "confidence": 0.9}
 - Input: "Dear Friend, donate now!" → {"strings_to_redact": [], "confidence": 0.95}
+- Input: "Can I count on you?\n\nThanks,\nNancy Pelosi" → {"strings_to_redact": [], "confidence": 0.95}
 
 IMPORTANT: Return the exact strings as they appear in the text. If "Ryan," appears with a comma, include it. Be thorough - find ALL variations.
 
