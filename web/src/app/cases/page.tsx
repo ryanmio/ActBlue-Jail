@@ -226,7 +226,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                             defaultChecked={selectedSources.includes("bot_submitted")} 
                             className="accent-slate-900"
                           />
-                          <span className="truncate">Bot Submitted</span>
+                          <span className="truncate">Bot Captured</span>
                         </label>
                       </div>
                       <div className="flex gap-2 justify-end">
@@ -357,7 +357,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                                 </span>
                               )}
                               <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                                {isBot ? 'Bot Submitted' : 'User Submitted'}
+                                {isBot ? 'Bot Captured' : 'User Submitted'}
                               </span>
                               {it.hasReport && (
                                 <span className="hidden md:inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 border border-green-200">

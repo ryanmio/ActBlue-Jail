@@ -601,7 +601,7 @@ export default function StatsPage() {
                   <PopoverContent className="z-50 w-[min(92vw,280px)] max-w-[92vw] p-2 bg-white border border-slate-200 shadow-xl rounded-xl" align="start">
                     {["user_upload", "honeytrap"].map((source) => {
                       const isSelected = selectedSource.includes(source);
-                      const label = source === "user_upload" ? "User Submitted" : "Bot Submitted";
+                      const label = source === "user_upload" ? "User Submitted" : "Bot Captured";
                       return (
                         <button
                           key={source}
@@ -783,7 +783,7 @@ export default function StatsPage() {
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
                   title="Click to remove filter"
                 >
-                  <span>{source === "user_upload" ? "User Submitted" : "Bot Submitted"}</span>
+                  <span>{source === "user_upload" ? "User Submitted" : "Bot Captured"}</span>
                   <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1005,7 +1005,7 @@ export default function StatsPage() {
                     <div className="space-y-1 pb-3">
                       {["user_upload", "honeytrap"].map((source) => {
                         const isSelected = selectedSource.includes(source);
-                        const label = source === "user_upload" ? "User Submitted" : "Bot Submitted";
+                        const label = source === "user_upload" ? "User Submitted" : "Bot Captured";
                         return (
                           <button
                             key={`mobile-source-${source}`}
@@ -1175,7 +1175,7 @@ export default function StatsPage() {
                 <KpiCard
                   label="Source Split"
                   value={`${data.kpis.user_uploads} / ${data.kpis.honeytraps}`}
-                  description="User Submitted / Bot Submitted"
+                  description="User Submitted / Bot Captured"
                 />
               </div>
 
@@ -1722,7 +1722,7 @@ const SourceSplitPieChart = memo(function SourceSplitPieChart({
   }, []);
 
   const chartData = sources.map((s) => ({
-    name: s.source === "user_upload" ? "User Submitted" : "Bot Submitted",
+    name: s.source === "user_upload" ? "User Submitted" : "Bot Captured",
     value: s.count,
     percentage: s.percentage,
     fill: s.source === "user_upload" ? CHART_COLORS.userUpload : CHART_COLORS.honeytrap,

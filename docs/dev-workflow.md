@@ -1,8 +1,8 @@
-# ActBlue-Jail Development Workflow
+# AB Jail Development Workflow
 
-**Project**: https://vercel.com/ryanmios-projects/act-blue-jail
-**Production**: https://act-blue-jail.vercel.app (main branch)
-**Development**: https://act-blue-jail-git-dev-ryanmios-projects.vercel.app (dev branch)
+**Project**: https://vercel.com/ryanmios-projects (see the AB Jail project)
+**Production**: https://abjail.org (main branch)
+**Development**: http://localhost:3000 (run Next.js locally on the `dev` branch)
 
 ## Workflow Commands
 
@@ -14,7 +14,7 @@ git checkout -b feature/feature-name
 git add . && git commit -m "Description"
 git push origin feature/feature-name
 ```
-**Preview URL**: https://feature-feature-name-act-blue-jail.vercel.app
+**Preview URL**: Vercel automatically creates a unique preview URL for each branch / pull request (visible in the PR checks and Vercel dashboard).
 
 ### Merge to Dev
 ```bash
@@ -22,7 +22,7 @@ git checkout dev
 git merge feature/feature-name
 git push origin dev
 ```
-**Dev URL**: https://act-blue-jail-git-dev-ryanmios-projects.vercel.app
+**Dev URL**: Typically `http://localhost:3000` while running `npm run dev` on the `dev` branch. You can also use the Vercel preview URL for the `dev` branch if configured.
 
 ### Deploy to Production
 ```bash
@@ -30,4 +30,4 @@ git checkout main
 git merge dev
 git push origin main
 ```
-**Production URL**: https://act-blue-jail.vercel.app
+**Production URL**: https://abjail.org

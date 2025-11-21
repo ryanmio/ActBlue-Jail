@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
         const hasUserSubmitted = sources.includes("user_submitted");
         
         if (hasBotSubmitted && !hasUserSubmitted) {
-          // Bot submitted only: (sms with sender_id) OR (email without forwarder)
+          // Bot captured only: (sms with sender_id) OR (email without forwarder)
           next = next.or(`and(message_type.eq.sms,sender_id.not.is.null),and(message_type.eq.email,forwarder_email.is.null)`);
         } else if (hasUserSubmitted && !hasBotSubmitted) {
           // User submitted only: manual uploads OR (email with forwarder) OR SMS without sender_id OR other types

@@ -10,13 +10,13 @@ export interface SubmissionBadgeInfo {
 }
 
 /**
- * Determines if a submission was bot-submitted or user-submitted.
+ * Determines if a submission was bot-captured or user-submitted.
  * 
- * Bot submitted: Direct ingestion from Twilio (SMS with sender_id) or email bot (email without forwarder)
+ * Bot captured: Direct ingestion from Twilio (SMS with sender_id) or email bot (email without forwarder)
  * User submitted: Manual screenshot upload, forwarded emails, or unknown types
  * 
  * @param submission - Submission data with messageType, imageUrl, senderId, forwarderEmail
- * @returns true if bot-submitted, false if user-submitted
+ * @returns true if bot-captured, false if user-submitted
  */
 export function isBotSubmitted(submission: SubmissionBadgeInfo): boolean {
   const messageType = submission.messageType?.toLowerCase();
