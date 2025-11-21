@@ -723,18 +723,18 @@ function RecentCases() {
                   <HoverCard openDelay={200}>
                     <HoverCardTrigger asChild>
                       <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 cursor-help">
-                        {isBot ? 'Bot Submitted' : 'User Submitted'}
+                        {isBot ? 'Bot Captured' : 'User Submitted'}
                       </span>
                     </HoverCardTrigger>
                     <HoverCardContent className="w-[90vw] max-w-[280px] md:w-80 bg-white border-slate-200" side="top">
                       <div className="space-y-2">
                         <div className="font-semibold text-sm text-slate-900">
-                          {isBot ? 'Bot Submission' : 'User Submission'}
+                          {isBot ? 'Bot Captured' : 'User Submission'}
                         </div>
                         <p className="text-xs text-slate-700 leading-relaxed">
                           {isBot ? (
                             <>
-                              One of our monitoring email addresses or phone numbers received this fundraising message and automatically added it to our public database for transparency. <strong>This is not a report to ActBlue</strong>—it&apos;s for public visibility only.
+                              One of our monitoring email addresses or phone numbers captured this fundraising message and automatically added it to our public database for transparency. <strong>This is not a report to ActBlue</strong>—it&apos;s for public visibility only.
                             </>
                           ) : (
                             <>

@@ -270,7 +270,7 @@ export default async function CaseDetailPage({
                     imageUrl: item?.image_url,
                     senderId: item?.sender_id,
                     forwarderEmail: item?.forwarder_email,
-                  }) ? 'Bot Submitted' : 'User Submitted'}
+                  }) ? 'Bot Captured' : 'User Submitted'}
                 </span>
                 {hasReport && (
                   <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 border border-green-200">
