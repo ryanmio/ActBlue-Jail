@@ -559,7 +559,7 @@ queued → ocr → classified → done
 
 3. **Violation Report** (to REPORT_EMAIL_TO)
    - Subject: "Reporting Possible Violation - Case #{shortId}"
-   - Contains: campaign, violations, landing URL, screenshot, reporter note
+   - Contains: campaign, violations, landing URL, screenshot, reporter note, timestamp when the message was received
    - Sent when user submits report (via UI or email button)
 
 ---
@@ -598,14 +598,15 @@ simhash64 text          -- 64-bit simhash as string (for PostgreSQL int8 safety)
 - **AB008**: Unverified Matching Program
 
 ### OpenAI Integration
-- Model: gpt-4o-mini (vision capable)
+- Model: gpt-5 and gpt-5-mini
 - Input: raw_text + screenshot image + landing page screenshot + comments
 - Output: JSON with violations array, summary, overall_confidence
 - Each violation: code, title, rationale, evidence_span_indices, severity (1-5), confidence (0-1)
+- All costs covered by OpenAI under a data sharing agreement
 
 ### Re-classification
 - Can be triggered manually from UI
-- Can be triggered after landing page screenshot
+- Triggered after landing page screenshot
 - includeExistingComments=true includes reviewer notes and landing page context
 - replaceExisting=true deletes old violations before inserting new ones
 
@@ -679,31 +680,6 @@ These are NOT displayed in the UI but are included when re-classifying with `inc
 
 ---
 
-## Error Handling
-
-### Email Send Failures
-- Logged to console
-- preview_email_status = 'failed'
-- Does NOT retry automatically
-- Does NOT block case creation
-
-### Classification Failures
-- processing_status = 'error'
-- Prevents stuck "classified" state
-- Can be retried manually
-
-### Screenshot Failures
-- landing_render_status = 'failed'
-- Does NOT block classification
-- Can be retried manually
-
-### Token Validation Failures
-- Returns user-friendly HTML error page
-- Links back to case page
-- Token remains unused (can't complete submission)
-
----
-
 ## Data Flow Summary
 
 ```
@@ -733,16 +709,6 @@ SCREENSHOT UPLOAD:
 /api/send-case-preview checks forwarder_email = NULL → SKIPS (no email sent)
 
 
-TEXT PASTE:
-Text submission → ingestTextSubmission() with forwarder_email = NULL
-  ↓
-triggerPipelines() → /api/classify + /api/redact-pii
-  ↓
-/api/classify completes → /api/send-case-preview
-  ↓
-/api/send-case-preview checks forwarder_email = NULL → SKIPS (no email sent)
-
-
 NON-FUNDRAISING EMAIL FORWARD:
 Mailgun → /api/inbound-email → ingestTextSubmission() → DB insert with forwarder_email
   ↓
@@ -752,36 +718,6 @@ Heuristic detects non-fundraising → /api/send-non-fundraising-notice (fire-and
   ↓
 User receives email explaining only fundraising emails are supported
 ```
-
----
-
-## Key Decision Points
-
-### When to send preview email?
-- ONLY if forwarder_email != NULL (email forwards only)
-- ONLY if preview_email_sent_at = NULL (not already sent)
-- After classification completes successfully
-
-### When to skip preview email?
-- forwarder_email = NULL (screenshot/paste submissions)
-- preview_email_sent_at != NULL (already sent, prevents duplicates on re-classification)
-- Classification failed (processing_status = 'error')
-
-### When to trigger classification?
-- After OCR completes (screenshot uploads)
-- After text ingestion (email forwards, text paste)
-- After landing page screenshot captured
-- Manual trigger from UI
-
-### When to trigger sender extraction?
-- In parallel with classification
-- Only for fundraising submissions
-
-### When to capture landing page screenshot?
-- If landing URL detected in email/text
-- After initial classification
-- NOT for screenshot uploads (usually already have image)
-
 ---
 
 ## File Locations
@@ -821,46 +757,6 @@ User receives email explaining only fundraising emails are supported
 - /web/src/app/cases/[id]/client.tsx
 - /web/src/app/page.tsx
 
----
-
-## Debugging Tips
-
-### Email not received?
-- Check submission has forwarder_email != NULL
-- Check preview_email_sent_at timestamp
-- Check preview_email_status = 'sent'
-- Check Resend dashboard for delivery status
-- Check spam folder
-- Verify RESEND_API_KEY is set
-- Verify notifications@abjail.org is verified sender
-
-### Token invalid?
-- Check submission_token exists in DB
-- Check token_used_at = NULL (not already used)
-- Check token matches exactly (case-sensitive, base64url encoding)
-- Check landing_url exists on submission
-
-### Classification stuck?
-- Check processing_status
-- If 'classified', check for OpenAI errors in logs
-- If 'error', classification failed - can retry
-- Check OPENAI_API_KEY is set
-- Check image URLs are accessible (signed URLs not expired)
-
-### Duplicate not detected?
-- Check DEDUP_SIMHASH_DISTANCE threshold
-- Check normalized_text and simhash64 fields populated
-- Simhash is fuzzy - very similar but not identical text may not match
-- Check logs for dedupe_failed warnings
-
-### Screenshot failed?
-- Check Chrome/Chromium executable available
-- Check landing URL is valid ActBlue domain
-- Check 15s timeout not exceeded
-- Check Supabase Storage bucket exists
-- Check network allows outbound HTTPS to actblue.com
-
----
 
 END OF DOCUMENTATION
 
