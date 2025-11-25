@@ -194,6 +194,16 @@ export async function POST(req: NextRequest) {
       }).catch(() => undefined);
     } catch {}
 
+    // Fire-and-forget sender re-extraction with landing page screenshot
+    try {
+      const base = env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      void fetch(`${base}/api/sender`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId: caseId }),
+      }).catch(() => undefined);
+    } catch {}
+
     return NextResponse.json({ ok: true, screenshotUrl: publicUrl });
   } catch {
     await supabase

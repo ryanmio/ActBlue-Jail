@@ -9,13 +9,13 @@ export async function runSenderExtraction(submissionId: string) {
 
   const { data: items, error } = await supabase
     .from("submissions")
-    .select("id, image_url, raw_text")
+    .select("id, image_url, raw_text, landing_screenshot_url")
     .eq("id", submissionId)
     .limit(1);
   if (error || !items?.[0]) {
     return { ok: false as const, status: 404, error: "not_found" as const };
   }
-  const sub = items[0] as { id: string; image_url: string | null; raw_text: string | null };
+  const sub = items[0] as { id: string; image_url: string | null; raw_text: string | null; landing_screenshot_url: string | null };
 
   function parseSupabaseUrl(u?: string | null) {
     if (!u || !u.startsWith("supabase://")) return null as null | { bucket: string; path: string };
@@ -32,6 +32,17 @@ export async function runSenderExtraction(submissionId: string) {
       signedUrl = signed?.signedUrl || null;
     } catch {
       // ignore signing error; proceed with text-only
+    }
+  }
+
+  let landingSignedUrl: string | null = null;
+  const parsedLanding = parseSupabaseUrl(sub.landing_screenshot_url);
+  if (parsedLanding) {
+    try {
+      const { data: signed } = await supabase.storage.from(parsedLanding.bucket).createSignedUrl(parsedLanding.path, 3600);
+      landingSignedUrl = signed?.signedUrl || null;
+    } catch {
+      // ignore signing error; proceed without landing screenshot
     }
   }
 
@@ -57,6 +68,7 @@ export async function runSenderExtraction(submissionId: string) {
 
   const userContent: ContentPart[] = [ { type: "text", text: String(sub.raw_text || "").trim() || "(none)" } ];
   if (signedUrl) userContent.push({ type: "image_url", image_url: { url: signedUrl } });
+  if (landingSignedUrl) userContent.push({ type: "image_url", image_url: { url: landingSignedUrl } });
   const messages: Message[] = [
     { role: "system", content: system },
     { role: "user", content: userContent },
