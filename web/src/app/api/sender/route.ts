@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
+  console.log("[/api/sender] start");
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: "service_key_missing" }, { status: 400 });
   }
@@ -11,17 +12,18 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseServer();
   const body = await req.json().catch(() => null);
   const submissionId: string | undefined = body?.submissionId;
+  console.log("[/api/sender] submissionId:", submissionId);
   if (!submissionId) return NextResponse.json({ error: "missing_args" }, { status: 400 });
 
   const { data: items, error } = await supabase
     .from("submissions")
-    .select("id, image_url, raw_text")
+    .select("id, image_url, raw_text, landing_screenshot_url")
     .eq("id", submissionId)
     .limit(1);
   if (error || !items?.[0]) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
-  const sub = items[0] as { id: string; image_url: string | null; raw_text: string | null };
+  const sub = items[0] as { id: string; image_url: string | null; raw_text: string | null; landing_screenshot_url: string | null };
 
   function parseSupabaseUrl(u?: string | null) {
     if (!u || !u.startsWith("supabase://")) return null as null | { bucket: string; path: string };
@@ -47,6 +49,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Also get signed URL for landing page screenshot if available
+  let landingSignedUrl: string | null = null;
+  const parsedLanding = parseSupabaseUrl(sub.landing_screenshot_url);
+  if (parsedLanding) {
+    try {
+      const { data: signed } = await supabase.storage.from(parsedLanding.bucket).createSignedUrl(parsedLanding.path, 3600);
+      landingSignedUrl = signed?.signedUrl || null;
+    } catch {
+      landingSignedUrl = null;
+    }
+  }
+  console.log("[/api/sender] images", { hasOriginal: !!signedUrl, hasLanding: !!landingSignedUrl });
+
   const model = process.env.OPENAI_MODEL_VISION || "gpt-4o-mini";
   type SenderType = "org" | "pac" | "candidate" | "unknown";
   interface SenderResult {
@@ -64,6 +79,7 @@ export async function POST(req: NextRequest) {
     const system = `You are reviewing a political fundraising appeal to extract the sending entity.\n\nGoals:\n- Identify the organization, PAC, or candidate that sent the message or is responsible for the messaging.\n- Prefer explicit disclosures, headers/footers, sender lines, or signature blocks.\n- If the message ends with a PAC or organization name, use that.\n- Use the screenshot image (logos/branding) to corroborate when available.\n- If none is provided, return sender_name = null and sender_type = "unknown".\n\nOutput JSON only (no markdown), with keys:\n{\n  "sender_name": string | null,\n  "sender_type": "org" | "pac" | "candidate" | "unknown",\n  "confidence": number (0..1),\n  "notes": string\n}`;
     const userContent: ContentPart[] = [ { type: "text", text: String(sub.raw_text || "").trim() || "(none)" } ];
     if (signedUrl) userContent.push({ type: "image_url", image_url: { url: signedUrl } });
+    if (landingSignedUrl) userContent.push({ type: "image_url", image_url: { url: landingSignedUrl } });
     const messages: Message[] = [
       { role: "system", content: system },
       { role: "user", content: userContent },
@@ -110,6 +126,7 @@ export async function POST(req: NextRequest) {
       .eq("id", submissionId);
   } catch {}
 
+  console.log("[/api/sender] done", { submissionId, sender_name: senderName });
   return NextResponse.json({ ok: true, sender_name: senderName, model });
 }
 
