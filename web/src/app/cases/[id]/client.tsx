@@ -288,6 +288,20 @@ export function LiveSender({ id, initialSenderName, initialSenderId }: LiveSende
   const [senderId, setSenderId] = useState<string | null>(initialSenderId);
   const [isDone, setIsDone] = useState<boolean>(false);
 
+  // Listen for reclassify-started event (fired when landing page screenshot captured)
+  // Reset state to trigger re-polling for updated sender name
+  useEffect(() => {
+    const onReclassify = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.id === id) {
+        setSenderName(null); // clear to trigger re-polling
+        setIsDone(false);    // show spinner
+      }
+    };
+    window.addEventListener("reclassify-started", onReclassify as EventListener);
+    return () => window.removeEventListener("reclassify-started", onReclassify as EventListener);
+  }, [id]);
+
   useEffect(() => {
     if (senderName) return; // nothing to poll if we already have it
     let cancelled = false;
