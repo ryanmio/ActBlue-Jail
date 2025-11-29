@@ -1102,13 +1102,21 @@ function HomepageFooter() {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between gap-12">
           <div className="space-y-4 max-w-sm">
-            <Image
-              src="/logo.webp"
-              alt="AB Jail logo"
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-md"
-            />
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.webp"
+                alt="AB Jail logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-md"
+              />
+              <div className="flex items-center gap-2">
+                <span className="font-semibold tracking-tight text-foreground">AB Jail</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground">
+                  Beta
+                </span>
+              </div>
+            </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               An open-source initiative for political transparency. Not affiliated with ActBlue, official campaigns,
               or any PACs.
