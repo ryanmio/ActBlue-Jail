@@ -59,7 +59,7 @@ export function Header({ onScrollToSubmission, isHomepage = false }: HeaderProps
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/cases?violations=true"
+                          href="/cases?codes=ANY_VIOLATION"
                           className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <div className="text-sm font-medium">Detected Violations</div>
@@ -187,7 +187,7 @@ export function Header({ onScrollToSubmission, isHomepage = false }: HeaderProps
                         </Link>
                       </li>
                       <li>
-                        <Link href="/cases?violations=true" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <Link href="/cases?codes=ANY_VIOLATION" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                           Detected Violations
                         </Link>
                       </li>
