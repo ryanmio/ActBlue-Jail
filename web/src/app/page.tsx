@@ -518,7 +518,7 @@ export default function Home() {
                             onClick={(e) => { e.stopPropagation(); onBrowseClick(); }}
                             className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-3 rounded-full font-medium text-sm shadow-sm transition-colors flex items-center gap-2 min-w-[160px] justify-center"
                           >
-                            Select Files
+                            Select File
                           </button>
                         </div>
 
