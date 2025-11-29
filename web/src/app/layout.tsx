@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { env } from "@/lib/env";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import "./homepage-theme.css";
 import "photoswipe/style.css";
 
 const geistSans = Geist({
@@ -13,6 +14,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -51,7 +58,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
         <div className="flex-1">{children}</div>
         <Analytics />
       </body>
