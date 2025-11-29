@@ -6,28 +6,20 @@ import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { assertSupabaseBrowser } from "@/lib/supabase";
 import { cachedJsonFetch } from "@/lib/client-cache";
-import Footer from "@/components/Footer";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { NavigationMenu } from "@/components/PageHeader";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
-import { isBotSubmitted } from "@/lib/badge-helpers";
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useOnboardingState } from "@/components/onboarding/useOnboardingState";
 import { OnboardingToast } from "@/components/onboarding/OnboardingToast";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
-import ReportsTable from "@/app/reports/ReportsTable";
+import { isBotSubmitted } from "@/lib/badge-helpers";
+import { Upload, Mail, Copy, Menu, ArrowRight, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
 
 function OnboardingHandler({ onOpen }: { onOpen: () => void }) {
   const searchParams = useSearchParams();
@@ -45,11 +37,12 @@ export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [stepIndex, setStepIndex] = useState<number>(0);
-  const [mode, setMode] = useState<"image" | "forward">("image");
+  const [mode, setMode] = useState<"screenshot" | "forward">("screenshot");
   const [forwardedCases, setForwardedCases] = useState<Array<{ id: string; status: 'processing' | 'complete'; senderName?: string | null }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const copiedTimeoutRef = useRef<number | null>(null);
+  const submissionRef = useRef<HTMLDivElement>(null);
 
   // Onboarding state
   const { shouldShowToast, markDismissed, markClicked } = useOnboardingState();
@@ -60,6 +53,10 @@ export default function Home() {
   }, []);
 
   const onBrowseClick = useCallback(() => inputRef.current?.click(), []);
+
+  const scrollToSubmission = useCallback(() => {
+    submissionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file || isUploading) return;
@@ -92,10 +89,9 @@ export default function Home() {
         body: JSON.stringify({ submissionId, dataUrl }),
       });
 
-      // Advance steps as each phase completes (keeps operations concurrent)
       const { error } = await uploadPromise;
       if (error) throw error;
-      setStepIndex(1); // Uploading image -> Extracting text
+      setStepIndex(1);
 
       const ocrResp = await ocrPromise;
       if (ocrResp.status === 409) {
@@ -113,15 +109,13 @@ export default function Home() {
         throw new Error(`/api/ocr failed ${ocrResp.status}: ${body}`);
       }
       
-      // Check for page limit warning
       const ocrData = (await ocrResp.json().catch(() => ({}))) as { 
         warning?: string; 
         totalPageCount?: number 
       };
       
-      setStepIndex(2); // Extracting text -> Finishing up
+      setStepIndex(2);
       
-      // Show warning if PDF has more than 3 pages - pass as query param to case page
       if (ocrData.warning === "page_limit" && ocrData.totalPageCount) {
         window.location.href = `/cases/${submissionId}?warning=page_limit&pages=${ocrData.totalPageCount}`;
       } else {
@@ -167,7 +161,6 @@ export default function Home() {
     let cancelled = false;
     const pollInterval = setInterval(async () => {
       try {
-        // Poll for submissions created in the last 5 minutes via email
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const supabase = assertSupabaseBrowser();
         const { data, error } = await supabase
@@ -192,7 +185,7 @@ export default function Home() {
       } catch (err) {
         console.error('Failed to poll for forwarded cases:', err);
       }
-    }, 2000); // Poll every 2 seconds
+    }, 2000);
 
     return () => {
       cancelled = true;
@@ -233,130 +226,332 @@ export default function Home() {
         onOpenChange={setIsOnboardingOpen}
       />
 
-      <main
-        className="min-h-[calc(100vh+160px)] bg-white"
-        style={{
-          background:
-            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-        }}
-      >
-      <div className="mx-auto max-w-6xl p-4 md:p-10 space-y-6 md:space-y-10 relative">
-        {/* Menu Button - Top Right */}
-        <div className="absolute top-4 right-4 md:top-10 md:right-10">
-          <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button 
-                  className="inline-flex items-center justify-center rounded-lg p-3 md:p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100/50 focus:outline-none transition-colors min-w-[48px] min-h-[48px] md:min-w-0 md:min-h-0"
-                  aria-label="Open menu"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-              </DropdownMenuTrigger>
-              <NavigationMenu />
-            </DropdownMenu>
-        </div>
-        
+      <div data-theme="v2" className="min-h-screen flex flex-col font-sans bg-background selection:bg-primary/20 selection:text-primary">
         {/* Header */}
-        <header className="text-center space-y-2 md:space-y-3 mb-4 md:mb-6 pt-2 md:pt-0">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-slate-900 leading-tight md:leading-normal">AB Jail</h1>
-            <p className="text-xs text-slate-500 mt-1">Not affiliated with ActBlue.</p>
+        <header className="border-b border-border/50 sticky top-0 header-frosted z-50">
+          <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.webp"
+                alt="AB Jail logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-md"
+              />
+              <span className="font-semibold tracking-tight text-lg text-foreground">AB Jail</span>
+              <span className="hidden md:inline-flex px-2 py-0.5 rounded-full bg-secondary text-[10px] uppercase tracking-wider font-medium text-secondary-foreground ml-0">
+                Beta
+              </span>
+            </div>
+
+            <NavigationMenu className="hidden md:flex" viewport={false}>
+              <NavigationMenuList className="gap-1">
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="bg-transparent text-muted-foreground hover:text-foreground hover:bg-transparent data-[state=open]:bg-transparent">
+                    Cases
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-48 gap-1 p-2">
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/cases"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium">All Messages</div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/cases?violations=true"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium">Detected Violations</div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/reports"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium">Reports to ActBlue</div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <Link
+                      href="/stats"
+                      className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Leaderboard
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="bg-transparent text-muted-foreground hover:text-foreground hover:bg-transparent data-[state=open]:bg-transparent">
+                    About
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-48 gap-1 p-2">
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/welcome"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium">How it Works</div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/stats"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium">Stats and Data</div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/evaluation"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium">AI Training</div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/about"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium">Contact</div>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={scrollToSubmission}
+                className="hidden md:inline-flex border border-primary text-primary bg-background/50 px-4 py-2 text-sm font-medium rounded-sm hover:bg-primary/5 transition-colors backdrop-blur-sm"
+              >
+                Submit Evidence
+              </button>
+
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors">
+                    <Menu className="w-5 h-5" />
+                    <span className="sr-only">Open menu</span>
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80 bg-background">
+                  <SheetHeader>
+                    <SheetTitle className="text-left text-foreground">Menu</SheetTitle>
+                  </SheetHeader>
+                  <nav className="flex flex-col gap-6 mt-6 px-2">
+                    <button 
+                      onClick={() => {
+                        scrollToSubmission();
+                      }}
+                      className="w-full border border-primary text-primary bg-background/50 px-4 py-3 text-sm font-medium rounded-sm hover:bg-primary/5 transition-colors"
+                    >
+                      Submit Evidence
+                    </button>
+
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-sm text-foreground">Cases</h3>
+                      <ul className="space-y-2 pl-3">
+                        <li>
+                          <Link href="/cases" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            All Messages
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/cases?violations=true" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            Detected Violations
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/reports" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            Reports to ActBlue
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <Link href="/stats" className="font-medium text-sm text-foreground hover:text-primary transition-colors">
+                        Leaderboard
+                      </Link>
+                    </div>
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-sm text-foreground">About</h3>
+                      <ul className="space-y-2 pl-3">
+                        <li>
+                          <Link href="/welcome" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            How it Works
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/stats" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            Stats and Data
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/evaluation" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            AI Training
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            Contact
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
-          <p className="text-sm md:text-base font-medium text-slate-700 max-w-2xl mx-auto mt-3 md:mt-4 leading-relaxed">Submit evidence of deceptive fundraising practices to a public record. An open-source initiative for political transparency.</p>
         </header>
 
-        {/* Upload card */}
-        <section className="mx-auto max-w-xl">
-          <div
-            role="button"
-            aria-label="Upload screenshot"
-            onClick={mode !== "forward" ? onBrowseClick : undefined}
-            onDragOver={mode !== "forward" ? (e) => { e.preventDefault(); setIsDragOver(true); } : undefined}
-            onDragLeave={mode !== "forward" ? () => setIsDragOver(false) : undefined}
-            onDrop={mode !== "forward" ? onDrop : undefined}
-            onPaste={mode !== "forward" ? onCardPaste : undefined}
-            className={`relative ${mode !== "forward" ? "cursor-pointer" : ""} rounded-3xl border-2 ${mode === "forward" ? "border-solid" : "border-dashed"} p-6 md:p-10 pb-4 md:pb-8 text-center transition-colors ${
-              isDragOver || mode === "forward"
-                ? "border-slate-400 bg-white"
-                : "border-slate-300 bg-white/60 hover:border-slate-400 hover:bg-white"
-            }`}
-            aria-busy={isUploading || undefined}
-          >
-            {!isUploading && (
-              <>
-                {/* Segmented control */}
-                <div className="text-sm text-slate-700 mb-2">Choose your submission method</div>
-                <div className="inline-flex items-center rounded-full border border-slate-300 bg-white overflow-hidden text-sm mb-4 md:mb-5">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setMode("image"); }}
-                    className={`px-4 py-2.5 md:px-3 md:py-1.5 min-h-[48px] md:min-h-0 transition-colors ${mode === "image" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
-                  >
-                    Screenshot
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setMode("forward"); }}
-                    className={`px-4 py-2.5 md:px-3 md:py-1.5 min-h-[48px] md:min-h-0 border-l border-slate-300 transition-colors ${mode === "forward" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"}`}
-                  >
-                    Forward
-                  </button>
+        <main className="flex-1">
+          {/* Hero Section */}
+          <section className="pt-20 pb-16 border-b border-border/40 bg-secondary/20 md:pt-28 md:pb-24">
+            <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+              <div className="text-center md:text-left leading-7 space-y-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border backdrop-blur-sm text-xs font-medium text-muted-foreground shadow-sm bg-background">
+                  <Shield className="w-3 h-3 text-primary" />
+                  <span>Open source. Independent. Pro-Donor.</span>
                 </div>
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-medium tracking-tight text-foreground leading-[1.1]" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>
+                  Deceptive fundraising <br className="hidden md:block" />
+                  <span className="text-muted-foreground">belongs in the public record.</span>
+                </h1>
+                <p className="text-base md:text-lg text-muted-foreground max-w-2xl leading-relaxed font-light">
+                  AB Jail is an open source initiative dedicated to tracking and exposing deceptive political fundraising practices. We are not affiliated with ActBlue.
+                </p>
 
-                {mode === "image" && (
-                  <div className="min-h-[240px] md:min-h-[280px] flex flex-col items-center justify-center">
-                    <div className="mx-auto w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-3 md:mb-4">
-                      <svg
-                        className="w-6 h-6 md:w-8 md:h-8"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
+                {/* Submission Section */}
+                <div className="pt-8 md:pt-12" ref={submissionRef}>
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-medium text-foreground mb-4">Choose your submission method</h3>
+                    <div className="inline-flex rounded-full border border-border backdrop-blur-sm p-1 shadow-sm relative bg-background">
+                      {/* Sliding indicator */}
+                      <div
+                        className={`absolute top-1 bottom-1 w-[calc(50%-2px)] bg-primary rounded-full transition-all duration-300 ease-out ${
+                          mode === "forward" ? "left-[calc(50%+2px)]" : "left-1"
+                        }`}
+                      />
+                      <button
+                        onClick={() => setMode("screenshot")}
+                        className={`px-6 py-2 rounded-full text-sm font-medium transition-colors duration-300 relative z-10 ${
+                          mode === "screenshot"
+                            ? "text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
                       >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
-                    </div>
-                    <div className="text-lg md:text-2xl font-semibold text-slate-900 px-2">Drag & drop or click to upload</div>
-                    <div className="text-sm text-slate-700 mt-2 px-4">PNG, JPG, HEIC, single-page PDF · Max 10MB</div>
-                    <div className="mt-3 text-xs md:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed px-4">
-                      By uploading, you confirm you have the right to share this content and accept the <Link
-                        href="/about#terms"
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        className="underline underline-offset-2 hover:text-slate-900"
+                        Screenshot
+                      </button>
+                      <button
+                        onClick={() => setMode("forward")}
+                        className={`px-6 py-2 rounded-full text-sm font-medium transition-colors duration-300 relative z-10 ${
+                          mode === "forward"
+                            ? "text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
                       >
-                        Terms
-                      </Link>.
+                        Forward
+                      </button>
                     </div>
                   </div>
-                )}
 
-                {mode === "forward" && (
-                  <div className="min-h-[240px] md:min-h-[280px] max-w-lg mx-auto text-center flex flex-col justify-center px-2">
-                    <div className="mb-4">
-                      <div className="text-lg md:text-2xl font-semibold text-slate-900 mb-3">Forward emails to</div>
-                      <div className="inline-flex items-center gap-2 px-3 py-2.5 md:px-4 md:py-2 bg-slate-100 rounded-lg border border-slate-300 flex-wrap justify-center">
-                        <svg className="w-5 h-5 text-slate-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <code className="text-sm md:text-base font-mono text-slate-900 break-all break-words">submit@abjail.org</code>
-                        <div className="relative shrink-0">
-                          <button
+                  <div className="max-w-2xl mx-auto">
+                    {!isUploading && mode === "screenshot" && (
+                      <div 
+                        className="bg-background/50 backdrop-blur-sm border border-border p-2 rounded-2xl shadow-lg relative overflow-hidden group cursor-pointer"
+                        onClick={onBrowseClick}
+                        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={onDrop}
+                        onPaste={onCardPaste}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Upload screenshot"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                        <div className={`flex flex-col sm:flex-row items-center gap-6 p-8 sm:p-10 border-2 border-dashed rounded-xl bg-background/80 transition-all relative z-10 min-h-[140px] ${
+                          isDragOver ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
+                        }`}>
+                          <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform border border-border/50 shrink-0">
+                            <Upload className="w-7 h-7 text-primary" />
+                          </div>
+                          <div className="text-center sm:text-left flex-1 space-y-2">
+                            <h3 className="font-medium text-lg text-foreground">Upload Evidence</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Drag & drop screenshots, emails, or PDFs here.
+                            </p>
+                          </div>
+                          <button 
                             type="button"
-                            onClick={async (e) => {
-                              e.stopPropagation();
+                            onClick={(e) => { e.stopPropagation(); onBrowseClick(); }}
+                            className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-3 rounded-full font-medium text-sm shadow-sm transition-colors flex items-center gap-2 min-w-[160px] justify-center"
+                          >
+                            Select File
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 py-4 px-6 text-xs font-medium text-muted-foreground border-t border-border/50 mt-1 bg-secondary/30 rounded-b-xl">
+                          <span className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            Secure Upload
+                          </span>
+                          <span className="hidden sm:block w-px h-3 bg-border" />
+                          <span>PNG, JPG, PDF up to 10MB</span>
+                          <span className="hidden sm:block w-px h-3 bg-border" />
+                          <span>Anonymous Submission</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isUploading && mode === "forward" && (
+                      <div className="bg-background/50 backdrop-blur-sm border border-border p-2 rounded-2xl shadow-lg relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+
+                        <div className="flex flex-col sm:flex-row items-center gap-6 p-8 sm:p-10 border-2 border-border rounded-xl bg-background/80 transition-all relative z-10 min-h-[140px]">
+                          <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center shadow-sm border border-border/50 shrink-0">
+                            <Mail className="w-7 h-7 text-primary" />
+                          </div>
+                          <div className="text-center sm:text-left flex-1 space-y-2">
+                            <h3 className="font-medium text-lg text-foreground">Forward Emails To</h3>
+                            <p className="text-sm text-muted-foreground">Redact personal info before forwarding.</p>
+                          </div>
+                          <button
+                            className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-3 rounded-full font-medium shadow-sm transition-all flex items-center gap-2 min-w-[160px] justify-center relative"
+                            onClick={async () => {
                               try {
-                                await navigator.clipboard.writeText('submit@abjail.org');
+                                await navigator.clipboard.writeText("submit@abjail.org");
                                 setCopied(true);
                                 if (copiedTimeoutRef.current) window.clearTimeout(copiedTimeoutRef.current);
                                 copiedTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500);
@@ -364,128 +559,131 @@ export default function Home() {
                                 // ignore
                               }
                             }}
-                            className="text-slate-600 hover:text-slate-900 p-2 md:p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center"
-                            title="Copy to clipboard"
                           >
-                            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
+                            <code className="font-mono text-xs">submit@abjail.org</code>
+                            <Copy className="w-4 h-4" />
+                            {copied && (
+                              <div role="status" aria-live="polite" className="absolute -top-10 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs rounded px-2 py-1 shadow whitespace-nowrap">
+                                Copied!
+                              </div>
+                            )}
                           </button>
-                          {copied && (
-                            <div role="status" aria-live="polite" className="absolute -top-8 right-0 bg-slate-900 text-white text-xs rounded px-2 py-1 shadow">
-                              Copied
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-sm text-slate-600 mb-4 max-w-md mx-auto px-2">
-                      Please redact any personally identifying information you wish before forwarding.
-                    </div>
 
-                    {forwardedCases.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        {forwardedCases.map((case_) => (
-                          <div key={case_.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium text-slate-900 truncate max-w-[55vw]">
-                                {case_.senderName || "Unknown sender"}
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 py-4 px-6 text-xs font-medium text-muted-foreground border-t border-border/50 mt-1 bg-secondary/30 rounded-b-xl">
+                          <span className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            Secure Forwarding
+                          </span>
+                          <span className="hidden sm:block w-px h-3 bg-border" />
+                          <span>Recently forwarded emails will appear below</span>
+                        </div>
+
+                        {/* Forwarded cases list */}
+                        {forwardedCases.length > 0 && (
+                          <div className="mt-2 space-y-2 p-4">
+                            {forwardedCases.map((case_) => (
+                              <div key={case_.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                                    {case_.senderName || "Unknown sender"}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    {case_.status === 'processing' ? (
+                                      <>
+                                        <span className="inline-block h-4 w-4 rounded-full border-2 border-border border-t-primary animate-spin" />
+                                        <span>Processing</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                        <span>Complete</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  {case_.status === 'complete' && (
+                                    <Link
+                                      href={`/cases/${case_.id}`}
+                                      className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                                    >
+                                      Open case
+                                    </Link>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-3 shrink-0">
-                              <div className="flex items-center gap-2 text-sm text-slate-700">
-                                {case_.status === 'processing' ? (
-                                  <>
-                                    <span className="inline-block h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
-                                    <span>Processing</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <span>Complete</span>
-                                  </>
-                                )}
-                              </div>
-                              {case_.status === 'complete' && (
-                                <Link
-                                  href={`/cases/${case_.id}`}
-                                  className="text-sm px-3 py-2 md:py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800 min-h-[44px] md:min-h-0 flex items-center justify-center"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  Open case
-                                </Link>
-                              )}
-                            </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
 
-                    {forwardedCases.length === 0 && (
-                      <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
-                        Recently forwarded emails will appear here
+                    {/* Upload progress */}
+                    {isUploading && (
+                      <div className="bg-background/50 backdrop-blur-sm border border-border p-8 rounded-2xl shadow-lg">
+                        <div className="text-center mb-6">
+                          <h3 className="font-medium text-lg text-foreground mb-2">Working on your upload…</h3>
+                          <p className="text-sm text-muted-foreground">This usually takes a few seconds.</p>
+                        </div>
+                        <ol className="flex items-center justify-between gap-2 max-w-md mx-auto">
+                          {['Uploading', 'Extracting', 'Finishing'].map((label, idx) => {
+                            const isDone = idx < stepIndex;
+                            const isCurrent = idx === stepIndex;
+                            return (
+                              <li key={label} className="flex-1 min-w-0">
+                                <div className="flex items-center">
+                                  <div className={`flex items-center justify-center h-8 w-8 rounded-full border text-xs font-semibold shrink-0 ${
+                                    isDone ? 'bg-primary text-primary-foreground border-primary' : isCurrent ? 'bg-background text-foreground border-primary' : 'bg-background text-muted-foreground border-border'
+                                  }`} aria-current={isCurrent ? 'step' : undefined}>
+                                    {isDone ? '✓' : idx + 1}
+                                  </div>
+                                  {idx < 2 && (
+                                    <div className={`mx-2 h-[2px] flex-1 rounded ${isDone ? 'bg-primary' : 'bg-border'}`} />
+                                  )}
+                                </div>
+                                <div className={`mt-2 text-center text-xs ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                  {label}
+                                  {isCurrent && (
+                                    <span className="ml-2 align-middle">
+                                      <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-border border-t-primary animate-spin" />
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      </div>
+                    )}
+
+                    {/* Status message */}
+                    {!isUploading && status && (
+                      <div className="mt-4 text-sm text-center text-foreground bg-background/80 border border-border rounded-lg p-3">
+                        {status}
                       </div>
                     )}
                   </div>
-                )}
-              </>
-            )}
-
-            {isUploading && (
-              <div className="max-w-md mx-auto px-2">
-                <div className="text-lg md:text-2xl font-semibold text-slate-900 mb-4 md:mb-6">Working on your upload…</div>
-                <ol className="flex items-center justify-between gap-2">
-                  {['Uploading image', 'Extracting text', 'Finishing up'].map((label, idx) => {
-                    const isDone = idx < stepIndex;
-                    const isCurrent = idx === stepIndex;
-                    return (
-                      <li key={label} className="flex-1 min-w-0">
-                        <div className="flex items-center">
-                          <div className={`flex items-center justify-center h-8 w-8 rounded-full border text-xs font-semibold shrink-0 ${
-                            isDone ? 'bg-slate-900 text-white border-slate-900' : isCurrent ? 'bg-white text-slate-900 border-slate-900' : 'bg-white text-slate-500 border-slate-300'
-                          }`} aria-current={isCurrent ? 'step' : undefined}>
-                            {isDone ? '✓' : idx + 1}
-                          </div>
-                          {idx < 2 && (
-                            <div className={`mx-2 h-[2px] flex-1 rounded ${isDone ? 'bg-slate-900' : 'bg-slate-200'}`} />
-                          )}
-                        </div>
-                        <div className={`mt-2 text-center text-xs ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`} aria-live={isCurrent ? 'polite' : undefined}>
-                          {label}
-                          {isCurrent && (
-                            <span className="ml-2 align-middle">
-                              <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" aria-label="Loading" />
-                            </span>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
-                <div className="mt-6 text-xs text-slate-600">This usually takes a few seconds.</div>
+                </div>
               </div>
-            )}
+            </div>
+          </section>
 
-            <input ref={inputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={onInputChange} />
-            {!isUploading && status && (
-              <div className="mt-4 text-sm text-slate-800">{status}</div>
-            )}
-          </div>
-        </section>
+          <input ref={inputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={onInputChange} />
 
-        {/* Lists */}
-        <div className="grid grid-cols-1 gap-6 md:gap-10">
-          <RecentCases />
-          <WorstOffenders />
-          <RecentReports />
-        </div>
+          {/* Recent Cases & Leaderboard */}
+          <RecentActivitySection />
 
-        <Footer />
+          {/* Reports to ActBlue */}
+          <ReportsSection />
+
+          {/* How it works */}
+          <HowItWorksSection />
+        </main>
+
+        {/* Footer */}
+        <HomepageFooter scrollToSubmission={scrollToSubmission} />
       </div>
-    </main>
     </>
   );
 }
@@ -504,11 +702,11 @@ function formatWhen(iso: string): string {
   const now = Date.now();
   const diff = Math.max(0, now - d.getTime());
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+  if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+  if (days < 7) return `${days}d ago`;
   return d.toLocaleDateString();
 }
 
@@ -567,14 +765,20 @@ type ReportData = {
   }>;
 };
 
+type PlatformStatus = {
+  actblue_reporting_status: 'active' | 'offline';
+  bot_network_sender_count: number;
+};
+
 type HomepageStats = {
   recent_cases: RecentCase[];
   worst_offenders: WorstOffender[];
   recent_reports: ReportData[];
+  platform_status: PlatformStatus | null;
 };
 
 function useHomepageStats() {
-  const [stats, setStats] = useState<HomepageStats>({ recent_cases: [], worst_offenders: [], recent_reports: [] });
+  const [stats, setStats] = useState<HomepageStats>({ recent_cases: [], worst_offenders: [], recent_reports: [], platform_status: null });
   const [loading, setLoading] = useState<boolean>(true);
   
   useEffect(() => {
@@ -582,10 +786,9 @@ function useHomepageStats() {
     setLoading(true);
     (async () => {
       try {
-        // Single API call gets both recent cases and worst offenders
         const url = `/api/homepage-stats?recent=5&offenders=10&days=90&reports=5`;
-        const json = await cachedJsonFetch<HomepageStats>(url, 300_000); // 5 min cache
-        if (!cancelled) setStats(json || { recent_cases: [], worst_offenders: [], recent_reports: [] });
+        const json = await cachedJsonFetch<HomepageStats>(url, 300_000);
+        if (!cancelled) setStats(json || { recent_cases: [], worst_offenders: [], recent_reports: [], platform_status: null });
       } catch {
         // ignore
       } finally {
@@ -598,497 +801,395 @@ function useHomepageStats() {
   return { stats, loading };
 }
 
-function RecentCases() {
+function RecentActivitySection() {
   const { stats, loading } = useHomepageStats();
   const cases = stats.recent_cases || [];
-  const router = useRouter();
-  
-  return (
-    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Recent cases</h2>
-        <Link className="text-sm px-3 py-2 md:py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 min-h-[44px] md:min-h-0 flex items-center justify-center" href="/cases">View all</Link>
-      </div>
-      <div className="divide-y">
-        {loading && (
-          <div className="space-y-3 py-2">
-            {[...Array(3)].map((_, idx) => (
-              <div key={`card-skeleton-${idx}`} className="animate-pulse py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0 w-full">
-                  <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
-                  <div className="flex gap-2">
-                    <div className="h-4 bg-slate-200 rounded w-14" />
-                    <div className="h-4 bg-slate-200 rounded w-16" />
-                    <div className="h-4 bg-slate-200 rounded w-10" />
-                  </div>
-                </div>
-                <div className="h-6 bg-slate-200 rounded w-16 shrink-0" />
-              </div>
-            ))}
-          </div>
-        )}
-        {!loading && cases.map((r) => {
-          const messageType = r.message_type?.toLowerCase();
-          const isBot = isBotSubmitted({
-            messageType: r.message_type,
-            imageUrl: r.image_url,
-            senderId: r.sender_id,
-            forwarderEmail: r.forwarder_email,
-          });
-          const showTypeBadge = messageType && messageType !== 'unknown';
-          
-          return (
-            <div 
-              key={r.id} 
-              className="py-3 -mx-4 md:-mx-6 px-4 md:px-6 flex items-center justify-between gap-2 md:gap-3 hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300 min-h-[60px] md:min-h-0"
-              role="button"
-              tabIndex={0}
-              aria-label={`View case for ${r.sender_name || r.sender_id || "Unknown sender"}`}
-              onClick={() => router.push(`/cases/${r.id}`)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  router.push(`/cases/${r.id}`);
-                }
-              }}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="font-medium truncate max-w-[calc(100vw-8rem)] md:max-w-[60vw] text-slate-900 text-sm md:text-base">{r.sender_name || r.sender_id || "Unknown sender"}</div>
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 flex-wrap">
-                  {/* Violation badges */}
-                  {r.violations && r.violations.length > 0 ? (
-                    r.violations.slice(0, 3).map((v, idx) => {
-                      const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
-                      const isVerified = v.actblue_verified === true;
-                      return (
-                        <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
-                          <HoverCardTrigger asChild>
-                            <span
-                              className={`inline-flex items-center rounded-full pl-2.5 pr-3 md:pl-3 md:pr-3.5 py-1 text-[10px] md:text-[11px] font-medium border whitespace-nowrap overflow-hidden text-ellipsis max-w-[calc(100vw-10rem)] md:max-w-[40vw] cursor-help ${
-                                isVerified
-                                  ? 'bg-sky-50 text-sky-700 border-sky-200'
-                                  : 'bg-orange-50 text-orange-800 border-orange-200'
-                              }`}
-                              title={v.title}
-                            >
-                              {isVerified ? 'ActBlue Permitted Matching Program' : v.title}
-                            </span>
-                          </HoverCardTrigger>
-                          {policy && (
-                            <HoverCardContent className="w-[90vw] max-w-[280px] md:w-96 bg-white border-slate-200" side="top">
-                              <div className="space-y-2">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <div className="font-mono text-xs text-slate-500">{policy.code}</div>
-                                    <div className="font-semibold text-sm text-slate-900">
-                                      {isVerified && policy.code === "AB008" ? "Permitted Matching Program" : policy.title}
-                                    </div>
-                                  </div>
-                                </div>
-                                <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
-                                {isVerified && (
-                                  <div className="text-xs text-sky-700 bg-sky-50 p-2 rounded border border-sky-200">
-                                    ActBlue has determined this matching program meets their standards. However, political committees almost never run genuine donor matching programs and donors should remain skeptical of such claims even when permitted by ActBlue.
-                                  </div>
-                                )}
-                                <a
-                                  href={AUP_HELP_URL}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
-                                >
-                                  View full policy
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                </a>
-                              </div>
-                            </HoverCardContent>
-                          )}
-                        </HoverCard>
-                      );
-                    })
-                  ) : (
-                    <span className="text-slate-500">No issues</span>
-                  )}
-                  {/* Type badge - desktop only, neutral styling, without parentheses */}
-                  {showTypeBadge && (
-                    <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300">
-                      {messageType === 'email' && 'Email'}
-                      {messageType === 'sms' && 'SMS'}
-                      {messageType === 'mms' && 'MMS'}
-                    </span>
-                  )}
-                  {/* Source badge - desktop only, neutral styling, without parentheses */}
-                  <HoverCard openDelay={200}>
-                    <HoverCardTrigger asChild>
-                      <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 pl-3 pr-3.5 py-1 text-[11px] font-medium text-slate-800 border border-slate-300 cursor-help">
-                        {isBot ? 'Bot Captured' : 'User Submitted'}
-                      </span>
-                    </HoverCardTrigger>
-                    <HoverCardContent className="w-[90vw] max-w-[280px] md:w-80 bg-white border-slate-200" side="top">
-                      <div className="space-y-2">
-                        <div className="font-semibold text-sm text-slate-900">
-                          {isBot ? 'Bot Captured' : 'User Submission'}
-                        </div>
-                        <p className="text-xs text-slate-700 leading-relaxed">
-                          {isBot ? (
-                            <>
-                              One of our monitoring email addresses or phone numbers captured this fundraising message and automatically added it to our public database for transparency. <strong>This is not a report to ActBlue</strong>—it&apos;s for public visibility only.
-                            </>
-                          ) : (
-                            <>
-                              A user forwarded or uploaded this fundraising message to our public database for transparency. <strong>This is not a report to ActBlue</strong> unless the user separately chose to file an official AUP report.
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </HoverCardContent>
-                  </HoverCard>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-14 md:w-20 text-right text-xs text-slate-700 tabular-nums hidden sm:block">{formatWhen(r.created_at)}</div>
-                <Link className="text-sm px-3 py-2 md:py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800 min-h-[44px] md:min-h-0 flex items-center justify-center" href={`/cases/${r.id}`}>View</Link>
-              </div>
-            </div>
-          );
-        })}
-        {!loading && cases.length === 0 && (
-          <div className="py-8 text-center text-sm text-slate-700">No cases yet.</div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function WorstOffenders() {
-  const { stats, loading } = useHomepageStats();
   const offenders = stats.worst_offenders || [];
+  const platformStatus = stats.platform_status;
   const router = useRouter();
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative">
-      <div className="mb-4 md:mb-6">
-        <div className="mb-3 md:mb-0">
-          <h2 className="text-lg font-semibold text-slate-900">Repeat Offender Leaderboard</h2>
-          <p className="text-xs text-slate-600 mt-1">Senders with the highest volume of suspected deceptive fundraising.</p>
-        </div>
-        <div className="md:absolute md:top-4 md:right-6">
-          <Link className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors inline-block" href="/stats">All Stats</Link>
-        </div>
-      </div>
-      
-      {/* Mobile: Card Layout */}
-      <div className="md:hidden space-y-4">
-        {loading && (
-          [...Array(3)].map((_, idx) => (
-            <div key={`card-skeleton-${idx}`} className="animate-pulse bg-white border border-slate-200 rounded-xl shadow-sm p-5">
-              <div className="h-5 bg-slate-200 rounded w-3/4 mb-3" />
-              <div className="flex gap-4 pt-2 border-t border-slate-100">
-                <div className="h-4 bg-slate-200 rounded w-20" />
-                <div className="h-4 bg-slate-200 rounded w-24" />
+    <section className="py-16 md:py-24">
+      <div className="container mx-auto px-6">
+        <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
+          {/* Main Feed */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="flex items-end justify-between border-b border-border pb-4">
+              <div>
+                <h2 className="text-2xl font-medium mb-1" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Recent Activity</h2>
+                <p className="text-sm text-muted-foreground">Latest verified reports from the community.</p>
               </div>
+              <Link href="/cases" className="text-sm font-medium hover:text-primary flex items-center gap-1 transition-colors">
+                View full archive <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
-          ))
-        )}
-        {!loading && offenders.slice(0, 5).map((o, index) => (
-          <HoverCard key={o.sender_name} openDelay={300}>
-            <HoverCardTrigger asChild>
-              <div
-                className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
-                role="button"
-                tabIndex={0}
-                aria-label={`View cases for ${o.sender_name}`}
-                onClick={() => router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`);
-                  }
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <Image
-                    src="/icons/leaderboard-icon.webp"
-                    alt="Leaderboard rank"
-                    width={24}
-                    height={24}
-                    className="object-contain shrink-0 mt-0.5"
-                  />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="font-semibold text-slate-900 text-base leading-tight">{o.sender_name}</div>
-                    <div className="flex items-center gap-4 pt-2 border-t border-slate-100">
-                      <div className="text-xs text-slate-600">
-                        <span className="font-semibold text-slate-900 text-sm">{o.violation_count}</span> cases
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {formatWhen(o.latest_violation_at)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-[90vw] max-w-[280px] bg-white border-slate-200 shadow-lg" side="top">
-              <div className="space-y-4">
-                {/* Leaderboard Image */}
-                <div className="flex justify-center">
-                  <Image
-                    src="/icons/leaderboard-image.webp"
-                    alt="Leaderboard trophy"
-                    width={80}
-                    height={80}
-                    className="object-contain"
-                  />
-                </div>
-                
-                {/* Organization Info */}
-                <div className="space-y-3 pt-2 border-t border-slate-200">
-                  <div>
-                    <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Organization</div>
-                    <div className="font-semibold text-base text-slate-900 break-words">{o.sender_name}</div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Total Cases</div>
-                      <div className="text-2xl font-bold text-slate-900 tabular-nums">{o.violation_count}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Most Recent</div>
-                      <div className="text-sm font-medium text-slate-900">{formatWhen(o.latest_violation_at)}</div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* CTA */}
-                <div className="pt-2">
-                  <Link
-                    href={`/cases?senders=${encodeURIComponent(o.sender_name)}`}
-                    className="w-full inline-flex items-center justify-center text-sm px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800"
-                    aria-label={`View cases from ${o.sender_name}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    View cases
-                  </Link>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        ))}
-        {!loading && offenders.length === 0 && (
-          <div className="py-6 text-center text-sm text-slate-700">No offenders yet.</div>
-        )}
-      </div>
 
-      {/* Desktop: Table Layout */}
-      <div className="hidden md:block overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-        <table className="w-full text-sm">
-          <thead className="text-left text-slate-700">
-            <tr>
-              <th className="py-2 pr-4 text-sm">Organization</th>
-              <th className="py-2 pr-4 text-center text-sm">Cases</th>
-              <th className="py-2 pr-2 pl-8 text-center text-sm">Most recent</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              [...Array(3)].map((_, idx) => (
-                <tr key={`table-skeleton-${idx}`} className="border-t animate-pulse">
-                  <td className="py-4 pr-4"><div className="h-4 bg-slate-200 rounded w-48" /></td>
-                  <td className="py-4 pr-4 text-center"><div className="h-4 bg-slate-200 rounded w-10 mx-auto" /></td>
-                  <td className="py-4 pr-2 pl-8 text-center"><div className="h-4 bg-slate-200 rounded w-24 mx-auto" /></td>
-                </tr>
-              ))
-            )}
-            {!loading && offenders.slice(0, 5).map((o, index) => (
-              <HoverCard key={o.sender_name} openDelay={300}>
-                <HoverCardTrigger asChild>
-                  <tr 
-                    className="border-t hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+            <div className="space-y-2">
+              {loading && (
+                [...Array(5)].map((_, idx) => (
+                  <div key={`skeleton-${idx}`} className="animate-pulse p-4 rounded-lg">
+                    <div className="h-5 bg-secondary rounded w-1/3 mb-2" />
+                    <div className="h-4 bg-secondary rounded w-2/3" />
+                  </div>
+                ))
+              )}
+              {!loading && cases.map((item) => {
+                const messageType = item.message_type?.toLowerCase();
+                const isBot = isBotSubmitted({
+                  messageType: item.message_type,
+                  imageUrl: item.image_url,
+                  senderId: item.sender_id,
+                  forwarderEmail: item.forwarder_email,
+                });
+                const violationType = item.violations?.[0]?.actblue_verified 
+                  ? "ActBlue Permitted Matching Program" 
+                  : item.violations?.[0]?.title || "No violations detected";
+                
+                return (
+                  <div
+                    key={item.id}
+                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-transparent hover:border-border hover:bg-secondary/20 transition-all cursor-pointer"
+                    onClick={() => router.push(`/cases/${item.id}`)}
                     role="button"
                     tabIndex={0}
-                    aria-label={`View cases for ${o.sender_name}`}
-                    onClick={() => router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        router.push(`/cases?senders=${encodeURIComponent(o.sender_name)}`);
+                        router.push(`/cases/${item.id}`);
                       }
                     }}
                   >
-                    <td className="py-4 pr-4 text-slate-900">
+                    <div className="space-y-1 mb-3 sm:mb-0">
                       <div className="flex items-center gap-2">
-                        <Image
-                          src="/icons/leaderboard-icon.webp"
-                          alt="Leaderboard rank"
-                          width={24}
-                          height={24}
-                          className="object-contain shrink-0"
-                        />
-                        <span className="text-sm">{o.sender_name}</span>
+                        <h3 className="font-medium text-foreground">{item.sender_name || item.sender_id || "Unknown sender"}</h3>
                       </div>
-                    </td>
-                    <td className="py-4 pr-4 text-center tabular-nums text-slate-900 text-sm">{o.violation_count}</td>
-                    <td className="py-4 pr-2 pl-8 text-center text-sm text-slate-800">{formatWhen(o.latest_violation_at)}</td>
-                  </tr>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-[280px] bg-white border-slate-200 shadow-lg" side="top">
-                  <div className="space-y-4">
-                    {/* Leaderboard Image */}
-                    <div className="flex justify-center">
-                      <Image
-                        src="/icons/leaderboard-image.webp"
-                        alt="Leaderboard trophy"
-                        width={80}
-                        height={80}
-                        className="object-contain"
-                      />
-                    </div>
-                    
-                    {/* Organization Info */}
-                    <div className="space-y-3 pt-2 border-t border-slate-200">
-                      <div>
-                        <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Organization</div>
-                        <div className="font-semibold text-base text-slate-900 break-words">{o.sender_name}</div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Total Cases</div>
-                          <div className="text-2xl font-bold text-slate-900 tabular-nums">{o.violation_count}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Most Recent</div>
-                          <div className="text-sm font-medium text-slate-900">{formatWhen(o.latest_violation_at)}</div>
-                        </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          {violationType}
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-border hidden sm:block" />
+                        <span>{messageType === 'email' ? 'Email' : messageType === 'sms' ? 'SMS' : messageType === 'mms' ? 'MMS' : 'Unknown'}</span>
                       </div>
                     </div>
-                    
-                    {/* CTA */}
-                    <div className="pt-2">
-                      <Link
-                        href={`/cases?senders=${encodeURIComponent(o.sender_name)}`}
-                        className="w-full inline-flex items-center justify-center text-sm px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800"
-                        aria-label={`View cases from ${o.sender_name}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        View cases
-                      </Link>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 min-w-[140px]">
+                      <div className="text-right">
+                        <div className="text-xs font-medium text-foreground">{isBot ? 'Bot Captured' : 'User Submitted'}</div>
+                        <div className="text-xs text-muted-foreground">{formatWhen(item.created_at)}</div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </div>
-                </HoverCardContent>
-              </HoverCard>
-            ))}
-            {!loading && offenders.length === 0 && (
-              <tr>
-                <td className="py-6 text-center text-slate-700" colSpan={3}>No offenders yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                );
+              })}
+              {!loading && cases.length === 0 && (
+                <div className="py-8 text-center text-sm text-muted-foreground">No cases yet.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar / Leaderboard */}
+          <div className="space-y-12">
+            <div className="bg-card/50 rounded-xl p-5 border border-border/50">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-medium text-lg" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Repeat Offenders</h3>
+                <span className="text-xs text-muted-foreground">Last 90 days</span>
+              </div>
+
+              <div className="space-y-3">
+                {loading && (
+                  [...Array(5)].map((_, idx) => (
+                    <div key={`offender-skeleton-${idx}`} className="animate-pulse flex items-center justify-between gap-3 py-2">
+                      <div className="h-4 bg-secondary rounded w-1/2" />
+                      <div className="h-4 bg-secondary rounded w-16" />
+                    </div>
+                  ))
+                )}
+                {!loading && offenders.slice(0, 5).map((org) => (
+                  <div
+                    key={org.sender_name}
+                    className="flex items-center justify-between gap-3 group hover:bg-muted/30 -mx-2 px-2 py-2.5 rounded-lg transition-colors cursor-pointer"
+                    onClick={() => router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`);
+                      }
+                    }}
+                  >
+                    <span className="text-sm font-medium text-foreground truncate">{org.sender_name}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm font-semibold text-foreground tabular-nums">{org.violation_count}</span>
+                      <span className="text-xs text-muted-foreground w-12 text-right">{formatWhen(org.latest_violation_at)}</span>
+                    </div>
+                  </div>
+                ))}
+                {!loading && offenders.length === 0 && (
+                  <div className="py-4 text-center text-sm text-muted-foreground">No offenders yet.</div>
+                )}
+              </div>
+
+              <Link href="/stats" className="w-full mt-5 pt-4 border-t border-border/50 text-sm font-medium text-muted-foreground hover:text-primary flex items-center justify-center gap-1.5 transition-colors">
+                View full leaderboard <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium text-lg" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Platform Status</h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 text-sm">
+                  <CheckCircle2 className={`w-4 h-4 mt-0.5 ${platformStatus?.actblue_reporting_status === 'active' ? 'text-green-600' : 'text-muted-foreground'}`} />
+                  <div>
+                    <div className="font-medium text-foreground">ActBlue Reporting {platformStatus?.actblue_reporting_status === 'active' ? 'Active' : 'Offline'}</div>
+                    <p className="text-muted-foreground text-xs mt-0.5">Direct reporting channel is {platformStatus?.actblue_reporting_status === 'active' ? 'operational' : 'currently offline'}.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-foreground">Bot Network Online</div>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      Currently monitoring {platformStatus?.bot_network_sender_count || 0} active senders.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function RecentReports() {
+function ReportsSection() {
   const { stats, loading } = useHomepageStats();
   const reports = stats.recent_reports || [];
-
-  if (loading) {
-    return (
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
-        <div className="mb-4 md:mb-6">
-          <div className="mb-3 md:mb-0">
-            <h2 className="text-lg font-semibold text-slate-900">Recent Reports to ActBlue</h2>
-            <p className="text-xs text-slate-600 mt-1">Reports sent to ActBlue are always user initiated and never automated.</p>
-          </div>
-          <div className="flex items-center gap-2 md:absolute md:top-4 md:right-6">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors">
-                  Our Process
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[90vw] max-w-[320px] md:max-w-lg bg-white border-slate-200" align="end">
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-slate-900">About Our Reporting Process</h3>
-                  <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
-                    <p>
-                      All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
-                      When a user receives a fundraising message they believe violates ActBlue&apos;s policies, they can submit it to our platform. 
-                      We prepare the case and send them a preview for review. The user can then edit or submit it to ActBlue—always their choice.
-                    </p>
-                    <p>
-                      Each report includes comprehensive evidence: the original message content, screenshots when available, and the live 
-                      landing page URL for ActBlue to verify. Reports reference specific sections of ActBlue&apos;s Acceptable Use Policy (AUP) 
-                      and explain why the message may violate those terms.
-                    </p>
-                    <p>
-                      This streamlines the reporting process while adding public transparency. Our goal is accountability for all parties: 
-                      organizations sending messages, ActBlue enforcing their policies, and the public understanding outcomes.
-                    </p>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Link className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors" href="/reports">View all</Link>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {[...Array(3)].map((_, idx) => (
-            <div key={`report-skeleton-${idx}`} className="animate-pulse py-4 border-t first:border-t-0">
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
-                  <div className="h-3 bg-slate-200 rounded w-1/4" />
-                </div>
-                <div className="h-6 bg-slate-200 rounded w-24" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
+  const router = useRouter();
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative">
-      <div className="mb-4 md:mb-6">
-        <div className="mb-3 md:mb-0">
-          <h2 className="text-lg font-semibold text-slate-900">Recent Reports to ActBlue</h2>
-          <p className="text-xs text-slate-600 mt-1">Reports sent to ActBlue are always user initiated and never automated.</p>
+    <section className="py-16 bg-secondary/30">
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl font-medium mb-1" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Reports to ActBlue</h2>
+            <p className="text-sm text-muted-foreground">User-initiated reports submitted to ActBlue for review.</p>
+          </div>
+          <Link href="/reports" className="text-sm font-medium hover:text-primary flex items-center gap-1 transition-colors self-start sm:self-auto">
+            View all reports <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
-        <div className="flex items-center gap-2 md:absolute md:top-4 md:right-6">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors">
-                Our Process
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[90vw] max-w-[320px] md:max-w-lg bg-white border-slate-200" align="end">
-              <div className="space-y-3">
-                <h3 className="font-semibold text-slate-900">About Our Reporting Process</h3>
-                <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
-                  <p>
-                    All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or bot-generated. 
-                    When a user receives a fundraising message they believe violates ActBlue&apos;s policies, they can submit it to ActBlue for review through our platform. 
-                    We prepare the case and a preview submission for the user&apos;s review. The user can then edit or submit it to ActBlue.
-                  </p>
-                  <p>
-                    This streamlines the reporting process while adding public transparency. Our goal is accountability for all parties: 
-                    organizations sending messages, ActBlue enforcing their policies, and the public understanding outcomes.
-                  </p>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {loading && (
+            [...Array(4)].map((_, idx) => (
+              <div key={`report-skeleton-${idx}`} className="animate-pulse bg-background rounded-lg border border-border/50 p-5 h-48">
+                <div className="h-3 bg-secondary rounded w-16 mb-3" />
+                <div className="h-5 bg-secondary rounded w-3/4 mb-4" />
+                <div className="h-4 bg-secondary rounded w-full mb-2" />
+                <div className="h-4 bg-secondary rounded w-2/3" />
+              </div>
+            ))
+          )}
+          {!loading && reports.slice(0, 4).map((reportData) => {
+            const date = new Date(reportData.report.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const verdict = reportData.verdict?.verdict || 'pending';
+            
+            return (
+              <div
+                key={reportData.report.id}
+                className="group bg-background rounded-lg border border-border/50 p-5 hover:border-border hover:shadow-sm transition-all cursor-pointer flex flex-col h-full"
+                onClick={() => router.push(`/cases/${reportData.case.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/cases/${reportData.case.id}`);
+                  }
+                }}
+              >
+                <span className="text-[11px] text-muted-foreground/70 uppercase tracking-wider mb-2">
+                  {date}
+                </span>
+                <h3 className="font-medium text-base leading-snug mb-4 text-foreground">{reportData.case.sender_name || reportData.case.sender_id || 'Unknown'}</h3>
+                <div className="space-y-2 flex-1 mb-4">
+                  {reportData.violations.slice(0, 2).map((v, j) => (
+                    <p key={j} className="text-xs text-muted-foreground flex items-start gap-2">
+                      <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span>{v.title}</span>
+                    </p>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                  <span className={`text-xs font-medium ${
+                    verdict === 'pending' || verdict === 'under_review' 
+                      ? 'text-muted-foreground' 
+                      : verdict === 'no_violation' || verdict === 'resolved'
+                        ? 'text-primary' 
+                        : 'text-destructive'
+                  }`}>
+                    {verdict === 'pending' ? 'Awaiting Response' 
+                      : verdict === 'under_review' ? 'Under Review'
+                      : verdict === 'no_violation' ? 'No Violation Found' 
+                      : verdict === 'resolved' ? 'Resolved'
+                      : verdict === 'violation_confirmed' ? 'Violation Confirmed'
+                      : 'Awaiting Response'}
+                  </span>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground/50 group-hover:text-foreground transition-colors" />
                 </div>
               </div>
-            </PopoverContent>
-          </Popover>
-          <Link className="text-xs md:text-sm px-3 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors" href="/reports">View all</Link>
+            );
+          })}
+          {!loading && reports.length === 0 && (
+            <div className="col-span-4 py-8 text-center text-sm text-muted-foreground">No reports yet.</div>
+          )}
         </div>
       </div>
-      <ReportsTable initialData={reports} showHeader={false} />
     </section>
+  );
+}
+
+function HowItWorksSection() {
+  return (
+    <section className="py-24 section-inverted">
+      <div className="container mx-auto px-6">
+        <div className="max-w-2xl mb-16">
+          <h2 className="text-3xl md:text-4xl font-medium mb-6" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>
+            How we hold deceptive political fundraisers accountable
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            We combine user submissions and automated monitoring to collect fundraising messages, analyze them for
+            potential violations and reporting to ActBlue with a full public record.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 border-t border-white/10 pt-12">
+          <div className="space-y-4">
+            <div className="text-4xl text-white/20" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>01</div>
+            <h3 className="text-xl font-medium">Capture at Scale</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Forwarded emails, screenshot uploads, and automated bot accounts collect fundraising messages.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="text-4xl text-white/20" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>02</div>
+            <h3 className="text-xl font-medium">Analyze &amp; Archive</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              AI extracts text, screenshots the ActBlue page, and flags potential violations. We create a public
+              case for every message.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="text-4xl text-white/20" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>03</div>
+            <h3 className="text-xl font-medium">Report to ActBlue</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Users may report potential violations with one click, and responses from ActBlue are tracked on the
+              case page.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HomepageFooter({ scrollToSubmission }: { scrollToSubmission: () => void }) {
+  return (
+    <footer className="border-t border-border py-12 md:py-16 bg-background">
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col md:flex-row justify-between gap-12">
+          <div className="space-y-4 max-w-sm">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.webp"
+                alt="AB Jail logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-md"
+              />
+              <div className="flex items-center gap-2">
+                <span className="font-semibold tracking-tight text-foreground">AB Jail</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground">
+                  Beta
+                </span>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              An open-source initiative for political transparency. Not affiliated with ActBlue, official campaigns,
+              or any PACs.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 md:gap-14">
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm text-foreground">Platform</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <button onClick={scrollToSubmission} className="hover:text-foreground transition-colors text-left">
+                    Submit Evidence
+                  </button>
+                </li>
+                <li>
+                  <Link href="/cases" className="hover:text-foreground transition-colors">
+                    Browse Cases
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/stats" className="hover:text-foreground transition-colors">
+                    Leaderboard
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm text-foreground">Resources</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <Link href="/welcome" className="hover:text-foreground transition-colors">
+                    How it Works
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about#terms" className="hover:text-foreground transition-colors">
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="hover:text-foreground transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm text-foreground">Connect</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="https://github.com/ryanmio/ActBlue-Jail" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <Link href="/api-access" className="hover:text-foreground transition-colors">
+                    API Access
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="hover:text-foreground transition-colors">
+                    Contact Us
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
+          <p>&copy; 2025 AB Jail Initiative. Open Source (MIT).</p>
+          <p>Built for transparency.</p>
+        </div>
+      </div>
+    </footer>
   );
 }

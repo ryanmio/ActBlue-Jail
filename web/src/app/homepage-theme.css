@@ -1,0 +1,300 @@
+/* 
+ * Homepage v2 Theme
+ * New design system with scoped CSS variables
+ * Apply via data-theme="v2" on the container element
+ */
+
+/* Override CSS variables for v2 theme */
+[data-theme="v2"] {
+  /* Background: Ice White with subtle cool tint */
+  --background: oklch(0.985 0.01 240);
+  
+  /* Foreground: Deep Midnight Blue */
+  --foreground: oklch(0.25 0.08 260);
+  
+  /* Card: Pure white for contrast */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.25 0.08 260);
+  
+  /* Popover */
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.08 260);
+  
+  /* Primary: International Blue */
+  --primary: oklch(0.45 0.14 260);
+  --primary-foreground: oklch(0.98 0.01 240);
+  
+  /* Secondary: Misty blue */
+  --secondary: oklch(0.94 0.03 250);
+  --secondary-foreground: oklch(0.35 0.1 260);
+  
+  /* Muted */
+  --muted: oklch(0.94 0.03 250);
+  --muted-foreground: oklch(0.55 0.08 250);
+  
+  /* Accent */
+  --accent: oklch(0.94 0.03 250);
+  --accent-foreground: oklch(0.35 0.1 260);
+  
+  /* Destructive */
+  --destructive: oklch(0.55 0.2 20);
+  --destructive-foreground: oklch(0.98 0 0);
+  
+  /* Border & Input */
+  --border: oklch(0.88 0.02 250);
+  --input: oklch(0.88 0.02 250);
+  --ring: oklch(0.45 0.14 260);
+  
+  /* Sharp radius for serious aesthetic */
+  --radius: 0rem;
+  
+  /* Apply background and foreground */
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Selection styling */
+[data-theme="v2"] ::selection {
+  background-color: oklch(0.45 0.14 260 / 0.2);
+  color: oklch(0.45 0.14 260);
+}
+
+/* Frosted glass header */
+[data-theme="v2"] .header-frosted {
+  background-color: oklch(0.985 0.01 240 / 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+@supports not (backdrop-filter: blur(16px)) {
+  [data-theme="v2"] .header-frosted {
+    background-color: oklch(0.985 0.01 240 / 0.95);
+  }
+}
+
+/* Inverted section (dark backgrounds like "How it works") */
+[data-theme="v2"] .section-inverted {
+  --background: oklch(0.25 0.08 260);
+  --foreground: oklch(0.985 0.01 240);
+  --muted-foreground: oklch(0.7 0.04 250);
+  --border: oklch(1 0 0 / 0.1);
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Green status indicator */
+[data-theme="v2"] .text-green-600 {
+  color: oklch(0.55 0.15 145);
+}
+
+[data-theme="v2"] .text-green-500 {
+  color: oklch(0.6 0.15 145);
+}
+
+[data-theme="v2"] .bg-green-500 {
+  background-color: oklch(0.6 0.15 145);
+}
+
+/* Hover state enhancements */
+[data-theme="v2"] .hover\:bg-primary\/5:hover {
+  background-color: oklch(0.45 0.14 260 / 0.05);
+}
+
+[data-theme="v2"] .hover\:bg-primary\/90:hover {
+  background-color: oklch(0.40 0.14 260);
+}
+
+[data-theme="v2"] .hover\:bg-accent:hover {
+  background-color: oklch(0.92 0.03 250);
+}
+
+[data-theme="v2"] .hover\:bg-secondary\/20:hover {
+  background-color: oklch(0.94 0.03 250 / 0.2);
+}
+
+[data-theme="v2"] .hover\:bg-muted\/30:hover {
+  background-color: oklch(0.94 0.03 250 / 0.3);
+}
+
+[data-theme="v2"] .hover\:border-border:hover {
+  border-color: oklch(0.88 0.02 250);
+}
+
+[data-theme="v2"] .hover\:border-primary\/30:hover {
+  border-color: oklch(0.45 0.14 260 / 0.3);
+}
+
+[data-theme="v2"] .hover\:text-foreground:hover {
+  color: oklch(0.25 0.08 260);
+}
+
+[data-theme="v2"] .hover\:text-primary:hover {
+  color: oklch(0.45 0.14 260);
+}
+
+[data-theme="v2"] .hover\:text-accent-foreground:hover {
+  color: oklch(0.35 0.1 260);
+}
+
+/* Focus states */
+[data-theme="v2"] .focus\:bg-accent:focus {
+  background-color: oklch(0.92 0.03 250);
+}
+
+[data-theme="v2"] .focus\:text-accent-foreground:focus {
+  color: oklch(0.35 0.1 260);
+}
+
+/* Data state styles for navigation menu */
+[data-theme="v2"] [data-state="open"] .data-\[state\=open\]\:bg-accent\/50 {
+  background-color: oklch(0.94 0.03 250 / 0.5);
+}
+
+[data-theme="v2"] .data-\[state\=open\]\:bg-transparent[data-state="open"] {
+  background-color: transparent;
+}
+
+/* Opacity variants */
+[data-theme="v2"] .bg-primary\/5 {
+  background-color: oklch(0.45 0.14 260 / 0.05);
+}
+
+[data-theme="v2"] .bg-secondary\/20 {
+  background-color: oklch(0.94 0.03 250 / 0.2);
+}
+
+[data-theme="v2"] .bg-secondary\/30 {
+  background-color: oklch(0.94 0.03 250 / 0.3);
+}
+
+[data-theme="v2"] .bg-card\/50 {
+  background-color: oklch(1 0 0 / 0.5);
+}
+
+[data-theme="v2"] .bg-background\/50 {
+  background-color: oklch(0.985 0.01 240 / 0.5);
+}
+
+[data-theme="v2"] .bg-background\/80 {
+  background-color: oklch(0.985 0.01 240 / 0.8);
+}
+
+[data-theme="v2"] .border-border\/40 {
+  border-color: oklch(0.88 0.02 250 / 0.4);
+}
+
+[data-theme="v2"] .border-border\/50 {
+  border-color: oklch(0.88 0.02 250 / 0.5);
+}
+
+[data-theme="v2"] .border-primary\/50 {
+  border-color: oklch(0.45 0.14 260 / 0.5);
+}
+
+[data-theme="v2"] .text-muted-foreground\/70 {
+  color: oklch(0.55 0.08 250 / 0.7);
+}
+
+[data-theme="v2"] .text-muted-foreground\/50 {
+  color: oklch(0.55 0.08 250 / 0.5);
+}
+
+[data-theme="v2"] .text-white\/10 {
+  color: oklch(1 0 0 / 0.1);
+}
+
+[data-theme="v2"] .text-white\/20 {
+  color: oklch(1 0 0 / 0.2);
+}
+
+[data-theme="v2"] .border-white\/10 {
+  border-color: oklch(1 0 0 / 0.1);
+}
+
+/* Gradient for upload card hover */
+[data-theme="v2"] .from-primary\/5 {
+  --tw-gradient-from: oklch(0.45 0.14 260 / 0.05);
+}
+
+/* Transition improvements */
+[data-theme="v2"] .transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+[data-theme="v2"] .transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Animation for the sliding indicator */
+[data-theme="v2"] .transition-all.duration-300 {
+  transition-duration: 300ms;
+}
+
+[data-theme="v2"] .ease-out {
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Backdrop blur support */
+[data-theme="v2"] .backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Shadow enhancements */
+[data-theme="v2"] .shadow-sm {
+  box-shadow: 0 1px 2px 0 oklch(0.25 0.08 260 / 0.05);
+}
+
+[data-theme="v2"] .shadow-lg {
+  box-shadow: 0 10px 15px -3px oklch(0.25 0.08 260 / 0.1), 0 4px 6px -4px oklch(0.25 0.08 260 / 0.1);
+}
+
+[data-theme="v2"] .hover\:shadow-sm:hover {
+  box-shadow: 0 1px 2px 0 oklch(0.25 0.08 260 / 0.05);
+}
+
+/* Spinner animation colors */
+[data-theme="v2"] .border-t-primary {
+  border-top-color: oklch(0.45 0.14 260);
+}
+
+/* Container max-width */
+[data-theme="v2"] .container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 640px) {
+  [data-theme="v2"] .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  [data-theme="v2"] .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-theme="v2"] .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-theme="v2"] .container {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  [data-theme="v2"] .container {
+    max-width: 1536px;
+  }
+}
