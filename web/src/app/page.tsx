@@ -682,7 +682,7 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <HomepageFooter />
+        <HomepageFooter scrollToSubmission={scrollToSubmission} />
       </div>
     </>
   );
@@ -1096,7 +1096,7 @@ function HowItWorksSection() {
   );
 }
 
-function HomepageFooter() {
+function HomepageFooter({ scrollToSubmission }: { scrollToSubmission: () => void }) {
   return (
     <footer className="border-t border-border py-12 md:py-16 bg-background">
       <div className="container mx-auto px-6">
@@ -1126,6 +1126,11 @@ function HomepageFooter() {
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-foreground">Platform</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <button onClick={scrollToSubmission} className="hover:text-foreground transition-colors text-left">
+                    Submit Evidence
+                  </button>
+                </li>
                 <li>
                   <Link href="/cases" className="hover:text-foreground transition-colors">
                     Browse Cases
@@ -1165,6 +1170,11 @@ function HomepageFooter() {
                   <a href="https://github.com/ryanmio/ActBlue-Jail" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
                     GitHub
                   </a>
+                </li>
+                <li>
+                  <Link href="/api-access" className="hover:text-foreground transition-colors">
+                    API Access
+                  </Link>
                 </li>
                 <li>
                   <Link href="/about" className="hover:text-foreground transition-colors">
