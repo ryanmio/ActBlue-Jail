@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { assertSupabaseBrowser } from "@/lib/supabase";
@@ -18,7 +19,7 @@ import { useOnboardingState } from "@/components/onboarding/useOnboardingState";
 import { OnboardingToast } from "@/components/onboarding/OnboardingToast";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import { isBotSubmitted } from "@/lib/badge-helpers";
-import { Upload, Shield, ShieldAlert, Mail, Copy, Menu, ArrowRight, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Upload, Mail, Copy, Menu, ArrowRight, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
 
 function OnboardingHandler({ onOpen }: { onOpen: () => void }) {
   const searchParams = useSearchParams();
@@ -230,9 +231,13 @@ export default function Home() {
         <header className="border-b border-border/50 sticky top-0 header-frosted z-50">
           <div className="container mx-auto px-6 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary text-primary-foreground flex items-center justify-center rounded-md">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
+              <Image
+                src="/logo.webp"
+                alt="AB Jail logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-md"
+              />
               <span className="font-semibold tracking-tight text-lg text-foreground">AB Jail</span>
               <span className="hidden md:inline-flex px-2 py-0.5 rounded-full bg-secondary text-[10px] uppercase tracking-wider font-medium text-secondary-foreground ml-0">
                 Beta
@@ -1097,9 +1102,13 @@ function HomepageFooter() {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between gap-12">
           <div className="space-y-4 max-w-sm">
-            <div className="w-8 h-8 bg-foreground text-background flex items-center justify-center font-bold text-lg rounded-sm" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>
-              AB
-            </div>
+            <Image
+              src="/logo.webp"
+              alt="AB Jail logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-md"
+            />
             <p className="text-sm text-muted-foreground leading-relaxed">
               An open-source initiative for political transparency. Not affiliated with ActBlue, official campaigns,
               or any PACs.
