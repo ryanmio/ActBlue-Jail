@@ -30,13 +30,13 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, s
       ))}
       <div className="grid grid-cols-1 gap-2">
         {/* Special violation status filters */}
-        <label className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
+        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
           <input 
             type="checkbox" 
             name="codes" 
             value="ANY_VIOLATION" 
             defaultChecked={selectedCodes.includes("ANY_VIOLATION")} 
-            className="accent-slate-900"
+            className="accent-primary"
             onChange={(e) => {
               const noViolationCheckbox = e.currentTarget.form?.querySelector('input[value="NO_VIOLATION"]') as HTMLInputElement;
               const individualCheckboxes = e.currentTarget.form?.querySelectorAll('input[name="codes"]:not([value="ANY_VIOLATION"]):not([value="NO_VIOLATION"])') as NodeListOf<HTMLInputElement>;
@@ -50,13 +50,13 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, s
           />
           <span className="truncate font-medium">Any violation</span>
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
+        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
           <input 
             type="checkbox" 
             name="codes" 
             value="NO_VIOLATION" 
             defaultChecked={selectedCodes.includes("NO_VIOLATION")} 
-            className="accent-slate-900"
+            className="accent-primary"
             onChange={(e) => {
               const anyViolationCheckbox = e.currentTarget.form?.querySelector('input[value="ANY_VIOLATION"]') as HTMLInputElement;
               const individualCheckboxes = e.currentTarget.form?.querySelectorAll('input[name="codes"]:not([value="ANY_VIOLATION"]):not([value="NO_VIOLATION"])') as NodeListOf<HTMLInputElement>;
@@ -72,19 +72,19 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, s
         </label>
         
         {/* Separator */}
-        <div className="border-t border-slate-200 my-1"></div>
+        <div className="border-t border-border my-1"></div>
         
         {/* Individual violation codes */}
         {VIOLATION_OPTIONS.map((opt: { code: string; title: string }) => {
-          const checked = selectedCodes.includes(opt.code);
+          // Check if ANY_VIOLATION is selected or if this specific code is selected
+          const checked = selectedCodes.includes("ANY_VIOLATION") || selectedCodes.includes(opt.code);
           return (
-            <label key={opt.code} className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
+            <label key={opt.code} className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
               <input 
                 type="checkbox" 
                 name="codes" 
                 value={opt.code} 
-                defaultChecked={checked} 
-                className="accent-slate-900"
+                checked={checked}
                 onChange={(e) => {
                   if (e.currentTarget.checked) {
                     const anyViolationCheckbox = e.currentTarget.form?.querySelector('input[value="ANY_VIOLATION"]') as HTMLInputElement;
@@ -93,15 +93,16 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, s
                     if (noViolationCheckbox) noViolationCheckbox.checked = false;
                   }
                 }}
+                className="accent-primary"
               />
-              <span className="truncate"><span className="text-xs text-slate-500 mr-1">{opt.code}</span>{opt.title}</span>
+              <span className="truncate"><span className="text-xs text-muted-foreground mr-1">{opt.code}</span>{opt.title}</span>
             </label>
           );
         })}
       </div>
       <div className="flex gap-2 justify-end">
-        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedSources.length > 0 ? `&sources=${selectedSources.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
-        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800">Apply</button>
+        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedSources.length > 0 ? `&sources=${selectedSources.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">Clear</a>
+        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Apply</button>
       </div>
     </form>
   );

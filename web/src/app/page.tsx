@@ -43,6 +43,7 @@ export default function Home() {
   const [copied, setCopied] = useState<boolean>(false);
   const copiedTimeoutRef = useRef<number | null>(null);
   const submissionRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
 
   // Onboarding state
   const { shouldShowToast, markDismissed, markClicked } = useOnboardingState();
@@ -57,6 +58,16 @@ export default function Home() {
   const scrollToSubmission = useCallback(() => {
     submissionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, []);
+
+  // Handle scroll parameter from footer navigation
+  useEffect(() => {
+    if (searchParams?.get("scroll") === "submission") {
+      // Use setTimeout to ensure ref is available
+      setTimeout(() => {
+        scrollToSubmission();
+      }, 100);
+    }
+  }, [searchParams, scrollToSubmission]);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file || isUploading) return;
