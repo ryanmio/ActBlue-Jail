@@ -130,26 +130,17 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes, sources
     <div className="flex items-center gap-2 w-full md:w-auto">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="text-sm px-4 py-2.5 rounded-md border border-border bg-background text-foreground hover:bg-secondary/50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap transition-colors justify-between"
-          >
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate text-foreground text-sm">
-                {selected.size > 0 
-                  ? `${selected.size} sender${selected.size === 1 ? '' : 's'}`
-                  : "Search senders"}
-              </span>
-            </div>
+          <button className="text-sm px-4 py-2.5 rounded-md border border-border bg-background text-foreground hover:bg-secondary/50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap transition-colors">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground hidden" />
+            <span className="truncate text-foreground text-sm">
+              Search senders
+            </span>
             {selected.size > 0 && (
-              <Badge variant="secondary" className="ml-2 rounded-full bg-primary text-primary-foreground text-xs px-2 py-0.5">
+              <span className="rounded-full bg-primary text-primary-foreground text-xs px-2 py-0.5">
                 {selected.size}
-              </Badge>
+              </span>
             )}
-          </Button>
+          </button>
         </PopoverTrigger>
         <PopoverContent className="w-[300px] md:w-[400px] p-0 bg-card border border-border shadow-lg" align="start">
           <Command shouldFilter={false} onKeyDown={handleKeyDown} className="bg-card">
