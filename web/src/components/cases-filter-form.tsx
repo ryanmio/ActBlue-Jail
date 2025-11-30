@@ -76,19 +76,19 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, s
         
         {/* Individual violation codes */}
         {VIOLATION_OPTIONS.map((opt: { code: string; title: string }) => {
-          // Check if ANY_VIOLATION is selected or if this specific code is selected
-          const checked = selectedCodes.includes("ANY_VIOLATION") || selectedCodes.includes(opt.code);
+          // Show checked by default when ANY_VIOLATION is active, or when this specific code is in the selection
+          const checkedByDefault = selectedCodes.includes("ANY_VIOLATION") || selectedCodes.includes(opt.code);
           return (
             <label key={opt.code} className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
               <input 
                 type="checkbox" 
                 name="codes" 
                 value={opt.code} 
-                checked={checked}
+                defaultChecked={checkedByDefault}
                 onChange={(e) => {
                   if (e.currentTarget.checked) {
-                    const anyViolationCheckbox = e.currentTarget.form?.querySelector('input[value="ANY_VIOLATION"]') as HTMLInputElement;
-                    const noViolationCheckbox = e.currentTarget.form?.querySelector('input[value="NO_VIOLATION"]') as HTMLInputElement;
+                    const anyViolationCheckbox = e.currentTarget.form?.querySelector('input[value=\"ANY_VIOLATION\"]') as HTMLInputElement;
+                    const noViolationCheckbox = e.currentTarget.form?.querySelector('input[value=\"NO_VIOLATION\"]') as HTMLInputElement;
                     if (anyViolationCheckbox) anyViolationCheckbox.checked = false;
                     if (noViolationCheckbox) noViolationCheckbox.checked = false;
                   }
