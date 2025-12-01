@@ -953,10 +953,16 @@ function RecentActivitySection() {
           {/* Sidebar / Leaderboard */}
           <div className="space-y-12">
             <div className="bg-card/50 rounded-xl p-5 border border-border/50">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-medium text-lg" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Repeat Offenders</h3>
-                <span className="text-xs text-muted-foreground">Last 90 days</span>
+              <div className="flex items-center justify-between mb-1">
+                <h3
+                  className="font-medium text-lg"
+                  style={{ fontFamily: "var(--font-playfair), ui-serif, Georgia, serif" }}
+                >
+                  Repeat Offenders
+                </h3>
+                <span className="hidden sm:inline text-xs text-muted-foreground">Last 90 days</span>
               </div>
+              <span className="block sm:hidden text-xs text-muted-foreground mb-4">Last 90 days</span>
 
               <div className="space-y-3">
                 {loading && (
@@ -967,27 +973,50 @@ function RecentActivitySection() {
                     </div>
                   ))
                 )}
-                {!loading && offenders.slice(0, 5).map((org) => (
-                  <div
-                    key={org.sender_name}
-                    className="flex items-center justify-between gap-3 group hover:bg-muted/30 -mx-2 px-2 py-2.5 rounded-lg transition-colors cursor-pointer"
-                    onClick={() => router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`);
-                      }
-                    }}
-                  >
-                    <span className="text-sm font-medium text-foreground truncate">{org.sender_name}</span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm font-semibold text-foreground tabular-nums">{org.violation_count}</span>
-                      <span className="text-xs text-muted-foreground w-12 text-right">{formatWhen(org.latest_violation_at)}</span>
+                {!loading &&
+                  offenders.slice(0, 5).map((org) => (
+                    <div
+                      key={org.sender_name}
+                      className="group -mx-2 px-2 py-2.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`);
+                        }
+                      }}
+                    >
+                      {/* Desktop / tablet layout: original row style */}
+                      <div className="hidden sm:flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium text-foreground truncate">{org.sender_name}</span>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-sm font-semibold text-foreground tabular-nums">
+                            {org.violation_count}
+                          </span>
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            {formatWhen(org.latest_violation_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Mobile layout: stacked with clear labels */}
+                      <div className="sm:hidden space-y-1">
+                        <span className="text-sm font-medium text-foreground break-words">
+                          {org.sender_name}
+                        </span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground tabular-nums">
+                            {org.violation_count}
+                          </span>
+                          <span>violations</span>
+                          <span className="w-1 h-1 rounded-full bg-border" />
+                          <span>latest: {formatWhen(org.latest_violation_at)}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 {!loading && offenders.length === 0 && (
                   <div className="py-4 text-center text-sm text-muted-foreground">No offenders yet.</div>
                 )}
