@@ -721,6 +721,14 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  const day = String(d.getDate());
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 type RecentCase = {
   id: string;
   created_at: string;
@@ -965,6 +973,13 @@ function RecentActivitySection() {
               <span className="block sm:hidden text-xs text-muted-foreground mb-4">Last 90 days</span>
 
               <div className="space-y-3">
+                {/* Desktop column headers */}
+                <div className="hidden sm:grid grid-cols-[1fr_auto_auto] gap-3 pb-2 border-b border-border/50">
+                  <span className="text-xs font-medium text-muted-foreground">Organization</span>
+                  <span className="text-xs font-medium text-muted-foreground text-right">Violations</span>
+                  <span className="text-xs font-medium text-muted-foreground text-right w-20">Latest</span>
+                </div>
+
                 {loading && (
                   [...Array(5)].map((_, idx) => (
                     <div key={`offender-skeleton-${idx}`} className="animate-pulse flex items-center justify-between gap-3 py-2">
@@ -988,17 +1003,15 @@ function RecentActivitySection() {
                         }
                       }}
                     >
-                      {/* Desktop / tablet layout: original row style */}
-                      <div className="hidden sm:flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-foreground truncate">{org.sender_name}</span>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
-                            {org.violation_count}
-                          </span>
-                          <span className="text-xs text-muted-foreground w-12 text-right">
-                            {formatWhen(org.latest_violation_at)}
-                          </span>
-                        </div>
+                      {/* Desktop / tablet layout: table-style with headers */}
+                      <div className="hidden sm:grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                        <span className="text-sm font-medium text-foreground truncate min-w-0">{org.sender_name}</span>
+                        <span className="text-sm font-semibold text-foreground tabular-nums text-right">
+                          {org.violation_count}
+                        </span>
+                        <span className="text-xs text-muted-foreground text-right w-20 shrink-0">
+                          {formatShortDate(org.latest_violation_at)}
+                        </span>
                       </div>
 
                       {/* Mobile layout: stacked with clear labels */}
