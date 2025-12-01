@@ -9,6 +9,8 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
+import { Header } from "@/components/homepage/Header";
+import { Footer } from "@/components/homepage/Footer";
 
 const REQUIRED_EVALUATIONS = 20;
 
@@ -208,87 +210,59 @@ export default function EvaluationPage() {
     }
   };
 
-  const handleNavigateHome = () => {
-    // If user has made progress, confirm before leaving
-    if (evaluatedIds.length > 0 && evaluatedIds.length < REQUIRED_EVALUATIONS) {
-      const confirmed = confirm(
-        `You've completed ${evaluatedIds.length} of ${REQUIRED_EVALUATIONS} evaluations. Are you sure you want to leave? Your progress will be saved.`
-      );
-      if (confirmed) {
-        router.push("/");
-      }
-      // If not confirmed, do nothing (stay on page)
-    } else {
-      // No progress yet or completed, navigate immediately
-      router.push("/");
-    }
-  };
-
   const handleViewResults = () => {
     router.push(`/evaluation/results?sessionId=${sessionId}`);
   };
 
   if (loading) {
     return (
-      <div 
-        className="min-h-screen bg-white flex items-center justify-center p-4"
-        style={{
-          background:
-            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-        }}
-      >
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading evaluation samples...</p>
-        </div>
+      <div className="flex flex-col min-h-screen" data-theme="v2">
+        <Header isHomepage={false} />
+        <main className="flex-1 flex items-center justify-center p-4 bg-background">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading evaluation samples...</p>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
   if (error && samples.length === 0) {
     return (
-      <div 
-        className="min-h-screen bg-white flex items-center justify-center p-4"
-        style={{
-          background:
-            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-        }}
-      >
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md">
-          <h2 className="text-xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-700 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Reload Page
-          </button>
-        </div>
+      <div className="flex flex-col min-h-screen" data-theme="v2">
+        <Header isHomepage={false} />
+        <main className="flex-1 flex items-center justify-center p-4 bg-background">
+          <div className="bg-card p-8 rounded-sm shadow-lg max-w-md border border-border">
+            <h2 className="text-xl font-bold text-destructive mb-4">Error</h2>
+            <p className="text-foreground mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-sm hover:bg-primary/90 transition-colors"
+            >
+              Reload Page
+            </button>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
   if (!currentSample && samples.length === 0) {
     return (
-      <div 
-        className="min-h-screen bg-white flex items-center justify-center p-4"
-        style={{
-          background:
-            "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-            "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-            "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-        }}
-      >
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md">
-          <h2 className="text-xl font-bold mb-4">No Samples Available</h2>
-          <p className="text-gray-700">
-            There are no evaluation samples available at this time. Please check back later.
-          </p>
-        </div>
+      <div className="flex flex-col min-h-screen" data-theme="v2">
+        <Header isHomepage={false} />
+        <main className="flex-1 flex items-center justify-center p-4 bg-background">
+          <div className="bg-card p-8 rounded-sm shadow-lg max-w-md border border-border">
+            <h2 className="text-xl font-bold mb-4 text-foreground">No Samples Available</h2>
+            <p className="text-muted-foreground">
+              There are no evaluation samples available at this time. Please check back later.
+            </p>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -298,29 +272,26 @@ export default function EvaluationPage() {
   const hasLanding = currentSample?.landingScreenshotUrl !== null && currentSample?.landingScreenshotUrl !== undefined;
 
   return (
-    <div 
-      className="min-h-screen bg-white py-6"
-      style={{
-        background:
-          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-      }}
-    >
+    <div className="flex flex-col min-h-screen" data-theme="v2">
+      <Header isHomepage={false} />
+
       {/* Completion Modal */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-foreground/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-sm shadow-2xl max-w-lg w-full p-8 animate-in fade-in zoom-in duration-200 border border-border">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 
+                className="text-2xl font-bold text-foreground mb-2"
+                style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}
+              >
                 Great work! 🎉
               </h2>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 You&apos;ve completed the minimum {REQUIRED_EVALUATIONS} evaluations.
               </p>
             </div>
@@ -331,7 +302,7 @@ export default function EvaluationPage() {
                   setShowCompletionModal(false);
                   router.push(`/evaluation/results?sessionId=${sessionId}`);
                 }}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-indigo-700 font-semibold transition-all shadow-lg hover:shadow-xl"
+                className="w-full bg-primary text-primary-foreground py-4 px-6 rounded-sm hover:bg-primary/90 font-semibold transition-all shadow-lg hover:shadow-xl"
               >
                 View My Results
               </button>
@@ -342,520 +313,520 @@ export default function EvaluationPage() {
                     setCurrentIndex(currentIndex + 1);
                   }
                 }}
-                className="w-full bg-white border-2 border-gray-300 text-gray-700 py-4 px-6 rounded-xl hover:bg-gray-50 hover:border-gray-400 font-semibold transition-all"
+                className="w-full bg-card border-2 border-border text-foreground py-4 px-6 rounded-sm hover:bg-secondary/20 font-semibold transition-all"
               >
                 Continue Evaluating (up to {maxEvaluations})
               </button>
             </div>
 
-            <p className="text-xs text-center text-gray-500">
+            <p className="text-xs text-center text-muted-foreground">
               More evaluations help improve the AI&apos;s accuracy!
             </p>
           </div>
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Breadcrumb - Custom navigation with confirmation */}
-        <nav aria-label="Breadcrumb" className="mb-4">
-          <ol className="flex items-center gap-2">
-            <li className="flex items-center gap-2">
-              <button
-                onClick={handleNavigateHome}
-                className="text-base font-medium text-slate-800 transition-all hover:text-slate-950 hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
-              >
-                Home
-              </button>
-              <svg className="h-4 w-4 text-slate-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </li>
-            <li>
-              <span className="text-base font-medium px-1 -mx-1 text-slate-950" aria-current="page">
-                AI Training
-              </span>
-            </li>
-          </ol>
-        </nav>
+      {/* Main Content */}
+      <main className="flex-1 bg-background">
+        {/* Hero Section */}
+        <section className="py-8 md:py-12 border-b border-border/40 bg-secondary/20">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            <h1 
+              className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-[1.1] mb-2"
+              style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}
+            >
+              AI Training
+            </h1>
+            <p className="text-muted-foreground">
+              Review each case and select violations you believe should be flagged.
+            </p>
+          </div>
+        </section>
 
-        {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            AI Training
-          </h1>
-          <p className="text-sm text-gray-600">
-            Review each case and select violations you believe should be flagged.
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-4 bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
-              Progress: {progress} / {REQUIRED_EVALUATIONS}
-            </span>
-            <div className="text-xs text-gray-500">
-              {sessionId && (
-                <HoverCard openDelay={200}>
-                  <HoverCardTrigger asChild>
-                    <button className="font-mono bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors cursor-help">
-                      Session: {sessionId.slice(0, 8)}...
-                    </button>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="w-80 bg-white border-gray-200">
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs font-semibold text-gray-700 mb-1">
-                          Your Session ID:
-                        </p>
-                        <code className="text-xs text-gray-900 bg-gray-100 px-2 py-1 rounded block break-all">
-                          {sessionId}
-                        </code>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Your progress is anonymously saved with this session ID.
-                        </p>
-                      </div>
-                      <div className="border-t border-gray-200 pt-2">
-                        <button
-                          onClick={() => {
-                            if (confirm("Start a new evaluation session? Your current progress will be saved, but you'll begin evaluating new cases.")) {
-                              localStorage.removeItem("eval_session_id");
-                              localStorage.removeItem("eval_evaluated_ids");
-                              window.location.reload();
-                            }
-                          }}
-                          className="w-full text-xs bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                        >
-                          Start New Session
+        {/* Progress & Main Content */}
+        <section className="py-6">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            {/* Progress Bar */}
+            <div className="mb-6 bg-card rounded-sm shadow-sm p-4 border border-border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-foreground">
+                  Progress: {progress} / {REQUIRED_EVALUATIONS}
+                </span>
+                <div className="text-xs text-muted-foreground">
+                  {sessionId && (
+                    <HoverCard openDelay={200}>
+                      <HoverCardTrigger asChild>
+                        <button className="font-mono bg-secondary px-2 py-1 rounded-sm hover:bg-secondary/80 transition-colors cursor-help text-secondary-foreground">
+                          Session: {sessionId.slice(0, 8)}...
                         </button>
-                      </div>
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-80 bg-card border-border">
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs font-semibold text-foreground mb-1">
+                              Your Session ID:
+                            </p>
+                            <code className="text-xs text-foreground bg-secondary px-2 py-1 rounded-sm block break-all">
+                              {sessionId}
+                            </code>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Your progress is anonymously saved with this session ID.
+                            </p>
+                          </div>
+                          <div className="border-t border-border pt-2">
+                            <button
+                              onClick={() => {
+                                if (confirm("Start a new evaluation session? Your current progress will be saved, but you'll begin evaluating new cases.")) {
+                                  localStorage.removeItem("eval_session_id");
+                                  localStorage.removeItem("eval_evaluated_ids");
+                                  window.location.reload();
+                                }
+                              }}
+                              className="w-full text-xs bg-primary text-primary-foreground py-2 px-3 rounded-sm hover:bg-primary/90 font-medium transition-colors"
+                            >
+                              Start New Session
+                            </button>
+                          </div>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  )}
+                </div>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2.5">
+                <div
+                  className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+              {canSubmit && (
+                <button
+                  onClick={handleViewResults}
+                  className="mt-3 w-full bg-green-500 text-white py-2 px-4 rounded-sm hover:bg-green-600 font-medium transition-all shadow-sm"
+                >
+                  ✓ View Results & Complete Evaluation
+                </button>
               )}
             </div>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            ></div>
-          </div>
-          {canSubmit && (
-            <button
-              onClick={handleViewResults}
-              className="mt-3 w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-4 rounded-lg hover:from-green-600 hover:to-green-700 font-medium transition-all shadow-sm"
-            >
-              ✓ View Results & Complete Evaluation
-            </button>
-          )}
-        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-sm text-sm">
+                {error}
+              </div>
+            )}
 
-        {/* Main Content Grid */}
-        {currentSample && (
-          <div className="grid lg:grid-cols-2 gap-4">
-            {/* Left: Case Content with Tabs */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              {/* AI Violations - At Top */}
-              <div className="border-b border-gray-200 bg-gray-50/50 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
-                  }`}></div>
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    AI-Detected Violations
-                  </h3>
-                  <span className="text-xs text-gray-500 font-medium">
-                    {currentSample.aiViolations.length} found
-                  </span>
+            {/* Main Content Grid */}
+            {currentSample && (
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* Left: Case Content with Tabs */}
+                <div className="bg-card rounded-sm shadow-md overflow-hidden border border-border">
+                  {/* AI Violations - At Top */}
+                  <div className="border-b border-border bg-secondary/30 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        currentSample.aiViolations.length > 0 ? 'bg-destructive' : 'bg-green-500'
+                      }`}></div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        AI-Detected Violations
+                      </h3>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {currentSample.aiViolations.length} found
+                      </span>
+                    </div>
+                    {currentSample.aiViolations.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {currentSample.aiViolations.map((violation) => (
+                          <HoverCard key={violation.code} openDelay={200}>
+                            <HoverCardTrigger asChild>
+                              <button className="inline-flex items-center bg-card border border-destructive/30 rounded-sm px-3 py-1.5 text-xs font-medium text-destructive cursor-help hover:bg-destructive/5 hover:border-destructive/50 transition-all duration-200 shadow-sm">
+                                <span className="font-semibold">{violation.code}</span>
+                                <span className="ml-2 font-normal opacity-80">
+                                  {Math.round((violation.confidence || 0) * 100)}%
+                                </span>
+                              </button>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80 bg-foreground text-background border-foreground">
+                              <div className="space-y-2">
+                                <h4 className="font-bold text-sm">
+                                  {violation.code}: {violation.title}
+                                </h4>
+                                <p className="text-xs opacity-80 leading-relaxed">
+                                  {violation.description || "No description provided"}
+                                </p>
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No violations detected</p>
+                    )}
+                  </div>
+
+                  {/* Tab Bar */}
+                  <div className="flex border-b border-border bg-secondary/20">
+                    {/* Show HTML tab for emails, Image tab for others */}
+                    {hasHtml ? (
+                      <button
+                        onClick={() => setActiveTab("html")}
+                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
+                          activeTab === "html"
+                            ? "bg-card border-b-2 border-primary text-primary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
+                        }`}
+                      >
+                        📧 HTML
+                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                          currentSample.aiViolations.length > 0 ? 'bg-destructive' : 'bg-green-500'
+                        }`}></span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => hasImage && setActiveTab("image")}
+                        disabled={!hasImage}
+                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
+                          activeTab === "image"
+                            ? "bg-card border-b-2 border-primary text-primary"
+                            : hasImage
+                            ? "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
+                            : "text-muted-foreground/50 cursor-not-allowed"
+                        }`}
+                      >
+                        📸 Image
+                        {hasImage && (
+                          <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                            currentSample.aiViolations.length > 0 ? 'bg-destructive' : 'bg-green-500'
+                          }`}></span>
+                        )}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setActiveTab("text")}
+                      className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
+                        activeTab === "text"
+                          ? "bg-card border-b-2 border-primary text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
+                      }`}
+                    >
+                      📄 Text
+                      <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                        currentSample.aiViolations.length > 0 ? 'bg-destructive' : 'bg-green-500'
+                      }`}></span>
+                    </button>
+                    <button
+                      onClick={() => hasLanding && setActiveTab("landing")}
+                      disabled={!hasLanding}
+                      className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
+                        activeTab === "landing"
+                          ? "bg-card border-b-2 border-primary text-primary"
+                          : hasLanding
+                          ? "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
+                          : "text-muted-foreground/50 cursor-not-allowed"
+                      }`}
+                    >
+                      🌐 Landing
+                      {hasLanding && (
+                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
+                          currentSample.aiViolations.length > 0 ? 'bg-destructive' : 'bg-green-500'
+                        }`}></span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Tab Content */}
+                  <div className="p-4 max-h-[600px] overflow-y-auto">
+                    {activeTab === "html" && (
+                      <div>
+                        {hasHtml && currentSample.emailBody ? (
+                          <div>
+                            {(currentSample.emailFrom || currentSample.emailSubject) && (
+                              <div className="mb-3">
+                                {currentSample.emailFrom && (
+                                  <div className="text-sm text-foreground">
+                                    <span className="font-semibold">From:</span>{" "}
+                                    <span className="break-all">{currentSample.emailFrom}</span>
+                                  </div>
+                                )}
+                                {currentSample.emailSubject && (
+                                  <div className="text-sm text-foreground mt-1">
+                                    <span className="font-semibold">Subject:</span>{" "}
+                                    <span className="break-words">{currentSample.emailSubject}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <div className="w-full bg-card rounded-sm border border-border overflow-hidden">
+                            <div className="max-h-128 overflow-auto flex justify-center">
+                              <div className="scale-[0.6] origin-top" style={{ width: "calc(100% / 0.6)" }}>
+                                <div 
+                                  className="prose prose-sm max-w-none text-foreground text-xs prose-headings:text-sm"
+                                  dangerouslySetInnerHTML={{ __html: currentSample.emailBody }}
+                                />
+                              </div>
+                            </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center bg-secondary/30 rounded-sm p-12">
+                            <div className="text-center text-muted-foreground">
+                              <svg
+                                className="w-16 h-16 mx-auto mb-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <p className="font-medium">No HTML available</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "image" && (
+                      <div>
+                        {hasImage ? (
+                          <Image
+                            src={currentSample.imageUrl}
+                            alt="Message screenshot"
+                            width={800}
+                            height={1000}
+                            className="w-full h-auto rounded-sm"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center bg-secondary/30 rounded-sm p-12">
+                            <div className="text-center text-muted-foreground">
+                              <svg
+                                className="w-16 h-16 mx-auto mb-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <p className="font-medium">No image available</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "text" && (
+                      <div className="bg-secondary/30 rounded-sm p-4">
+                        <pre className="whitespace-pre-wrap text-sm text-foreground font-sans">
+                          {currentSample.rawText || "(No text extracted)"}
+                        </pre>
+                      </div>
+                    )}
+
+                    {activeTab === "landing" && (
+                      <div>
+                        {hasLanding && currentSample.landingScreenshotUrl ? (
+                          <div>
+                            <Image
+                              src={currentSample.landingScreenshotUrl}
+                              alt="Landing page screenshot"
+                              width={800}
+                              height={1000}
+                              className="w-full h-auto rounded-sm"
+                            />
+                            {currentSample.landingUrl && (
+                              <a
+                                href={currentSample.landingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 inline-flex items-center text-sm text-primary hover:text-primary/80 transition-colors"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                View live page
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center bg-secondary/30 rounded-sm p-12">
+                            <div className="text-center text-muted-foreground">
+                              <svg
+                                className="w-16 h-16 mx-auto mb-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                                />
+                              </svg>
+                              <p className="font-medium">No landing page provided</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {currentSample.aiViolations.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {currentSample.aiViolations.map((violation) => (
-                      <HoverCard key={violation.code} openDelay={200}>
+
+                {/* Right: Evaluation Form */}
+                <div className="bg-card rounded-sm shadow-md p-4 border border-border">
+                  <h2 
+                    className="text-lg font-bold mb-3 text-foreground"
+                    style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}
+                  >
+                    Your Evaluation
+                  </h2>
+                  
+                  {/* Violation Grid - More Compact */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {VIOLATION_POLICIES.map((policy) => (
+                      <HoverCard key={policy.code} openDelay={300}>
                         <HoverCardTrigger asChild>
-                          <button className="inline-flex items-center bg-white border border-red-200 rounded-lg px-3 py-1.5 text-xs font-medium text-red-800 cursor-help hover:bg-red-50 hover:border-red-300 transition-all duration-200 shadow-sm">
-                            <span className="font-semibold">{violation.code}</span>
-                            <span className="ml-2 text-red-600 font-normal">
-                              {Math.round((violation.confidence || 0) * 100)}%
-                            </span>
+                          <button
+                            onClick={() => handleToggleViolation(policy.code)}
+                            className={`p-2 rounded-sm border text-left transition-all text-xs ${
+                              selectedViolations.includes(policy.code)
+                                ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                                : "border-border bg-card hover:border-border hover:bg-secondary/20"
+                            }`}
+                          >
+                            <div className="font-bold text-foreground">{policy.code}</div>
+                            <div className="text-muted-foreground leading-tight">{policy.title}</div>
                           </button>
                         </HoverCardTrigger>
-                        <HoverCardContent className="w-80 bg-gray-900 text-white border-gray-800">
-                          <div className="space-y-2">
-                            <h4 className="font-bold text-sm">
-                              {violation.code}: {violation.title}
-                            </h4>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                              {violation.description || "No description provided"}
-                            </p>
+                        <HoverCardContent 
+                          className="w-96 bg-card border-border" 
+                          side="right"
+                          style={{ color: '#1a1a2e' }}
+                        >
+                          <div className="space-y-3">
+                            <div>
+                              <h4 className="font-bold text-sm mb-1" style={{ color: '#1a1a2e', fontWeight: 700 }}>
+                                {policy.code}: {policy.title}
+                              </h4>
+                            </div>
+                            <div className="border-t border-border pt-2">
+                              <p className="text-xs font-semibold mb-1" style={{ color: '#1a1a2e', fontWeight: 600 }}>
+                                ActBlue Policy:
+                              </p>
+                              <p className="text-xs leading-relaxed" style={{ color: '#4a5568' }}>
+                                {policy.policy}
+                              </p>
+                            </div>
+                            <div className="border-t border-border pt-2">
+                              <a
+                                href={AUP_HELP_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-xs text-primary hover:text-primary/80 font-medium"
+                              >
+                                View full ActBlue AUP
+                                <svg
+                                  className="w-3 h-3 ml-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                  />
+                                </svg>
+                              </a>
+                            </div>
                           </div>
                         </HoverCardContent>
                       </HoverCard>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-xs text-gray-600 italic">No violations detected</p>
-                )}
-              </div>
 
-              {/* Tab Bar */}
-              <div className="flex border-b bg-gray-50">
-                {/* Show HTML tab for emails, Image tab for others */}
-                {hasHtml ? (
-                  <button
-                    onClick={() => setActiveTab("html")}
-                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
-                      activeTab === "html"
-                        ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    📧 HTML
-                    <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
-                      currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
-                    }`}></span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => hasImage && setActiveTab("image")}
-                    disabled={!hasImage}
-                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
-                      activeTab === "image"
-                        ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                        : hasImage
-                        ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                        : "text-gray-400 cursor-not-allowed"
-                    }`}
-                  >
-                    📸 Image
-                    {hasImage && (
-                      <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
-                        currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
-                      }`}></span>
-                    )}
-                  </button>
-                )}
-                <button
-                  onClick={() => setActiveTab("text")}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
-                    activeTab === "text"
-                      ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  📄 Text
-                  <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
-                    currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
-                  }`}></span>
-                </button>
-                <button
-                  onClick={() => hasLanding && setActiveTab("landing")}
-                  disabled={!hasLanding}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
-                    activeTab === "landing"
-                      ? "bg-white border-b-2 border-blue-600 text-blue-600"
-                      : hasLanding
-                      ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                      : "text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  🌐 Landing
-                  {hasLanding && (
-                    <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${
-                      currentSample.aiViolations.length > 0 ? 'bg-red-500' : 'bg-green-500'
-                    }`}></span>
-                  )}
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="p-4 max-h-[600px] overflow-y-auto">
-                {activeTab === "html" && (
-                  <div>
-                    {hasHtml && currentSample.emailBody ? (
-                      <div>
-                        {(currentSample.emailFrom || currentSample.emailSubject) && (
-                          <div className="mb-3">
-                            {currentSample.emailFrom && (
-                              <div className="text-sm text-gray-900">
-                                <span className="font-semibold">From:</span>{" "}
-                                <span className="break-all">{currentSample.emailFrom}</span>
-                              </div>
-                            )}
-                            {currentSample.emailSubject && (
-                              <div className="text-sm text-gray-900 mt-1">
-                                <span className="font-semibold">Subject:</span>{" "}
-                                <span className="break-words">{currentSample.emailSubject}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="w-full bg-white rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="max-h-128 overflow-auto flex justify-center">
-                          <div className="scale-[0.6] origin-top" style={{ width: "calc(100% / 0.6)" }}>
-                            <div 
-                              className="prose prose-sm max-w-none text-gray-900 text-xs prose-headings:text-sm"
-                              dangerouslySetInnerHTML={{ __html: currentSample.emailBody }}
-                            />
-                          </div>
-                        </div>
-                        </div>
+                  {/* Selected Summary */}
+                  <div className="mb-4 p-3 bg-secondary/30 rounded-sm border border-border">
+                    <div className="text-xs font-semibold text-foreground mb-1">
+                      Selected ({selectedViolations.length})
+                    </div>
+                    {selectedViolations.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedViolations.map((code) => (
+                          <span
+                            key={code}
+                            className="inline-block bg-primary text-primary-foreground rounded-sm px-2 py-0.5 text-xs font-medium"
+                          >
+                            {code}
+                          </span>
+                        ))}
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center bg-gray-100 rounded-lg p-12">
-                        <div className="text-center text-gray-400">
-                          <svg
-                            className="w-16 h-16 mx-auto mb-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                            />
-                          </svg>
-                          <p className="font-medium">No HTML available</p>
-                        </div>
-                      </div>
+                      <p className="text-xs text-muted-foreground italic">No Violations</p>
                     )}
                   </div>
-                )}
 
-                {activeTab === "image" && (
-                  <div>
-                    {hasImage ? (
-                      <Image
-                        src={currentSample.imageUrl}
-                        alt="Message screenshot"
-                        width={800}
-                        height={1000}
-                        className="w-full h-auto rounded-lg"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center bg-gray-100 rounded-lg p-12">
-                        <div className="text-center text-gray-400">
-                          <svg
-                            className="w-16 h-16 mx-auto mb-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                          <p className="font-medium">No image available</p>
-                        </div>
-                      </div>
-                    )}
+                  {/* Notes */}
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Notes (optional)
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 240) {
+                          setNotes(e.target.value);
+                        }
+                      }}
+                      placeholder="Any additional observations..."
+                      className="w-full border border-border rounded-sm p-2 text-sm resize-none focus:ring-2 focus:ring-primary focus:border-primary placeholder:text-muted-foreground bg-background text-foreground"
+                      rows={3}
+                    />
+                    <div className="text-right text-xs text-muted-foreground mt-1">
+                      {notes.length} / 240
+                    </div>
                   </div>
-                )}
 
-                {activeTab === "text" && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">
-                      {currentSample.rawText || "(No text extracted)"}
-                    </pre>
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveEvaluation}
+                      disabled={submitting}
+                      className="flex-1 bg-primary text-primary-foreground py-3 px-4 rounded-sm hover:bg-primary/90 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+                    >
+                      {submitting ? "Saving..." : "✓ Save & Next"}
+                    </button>
+                    <button
+                      onClick={handleSkipToNext}
+                      disabled={submitting || currentIndex >= samples.length - 1}
+                      className="bg-secondary text-secondary-foreground py-3 px-4 rounded-sm hover:bg-secondary/80 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Skip
+                    </button>
                   </div>
-                )}
 
-                {activeTab === "landing" && (
-                  <div>
-                    {hasLanding && currentSample.landingScreenshotUrl ? (
-                      <div>
-                        <Image
-                          src={currentSample.landingScreenshotUrl}
-                          alt="Landing page screenshot"
-                          width={800}
-                          height={1000}
-                          className="w-full h-auto rounded-lg"
-                        />
-                        {currentSample.landingUrl && (
-                          <a
-                            href={currentSample.landingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-3 inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
-                          >
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                            View live page
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center bg-gray-100 rounded-lg p-12">
-                        <div className="text-center text-gray-400">
-                          <svg
-                            className="w-16 h-16 mx-auto mb-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                            />
-                          </svg>
-                          <p className="font-medium">No landing page provided</p>
-                        </div>
-                      </div>
-                    )}
+                  {/* Progress indicator */}
+                  <div className="mt-3 text-center text-xs text-muted-foreground">
+                    Case {currentIndex + 1} of {samples.length} loaded
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Evaluation Form */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <h2 className="text-lg font-bold mb-3 text-gray-900">Your Evaluation</h2>
-              
-              {/* Violation Grid - More Compact */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {VIOLATION_POLICIES.map((policy) => (
-                  <HoverCard key={policy.code} openDelay={300}>
-                    <HoverCardTrigger asChild>
-                      <button
-                        onClick={() => handleToggleViolation(policy.code)}
-                        className={`p-2 rounded-lg border text-left transition-all text-xs ${
-                          selectedViolations.includes(policy.code)
-                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
-                            : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        <div className="font-bold text-gray-800">{policy.code}</div>
-                        <div className="text-gray-600 leading-tight">{policy.title}</div>
-                      </button>
-                    </HoverCardTrigger>
-                    <HoverCardContent className="w-96 bg-white border-gray-200" side="right">
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="font-bold text-sm text-gray-900 mb-1">
-                            {policy.code}: {policy.title}
-                          </h4>
-                        </div>
-                        <div className="border-t border-gray-200 pt-2">
-                          <p className="text-xs font-semibold text-gray-700 mb-1">
-                            ActBlue Policy:
-                          </p>
-                          <p className="text-xs text-gray-600 leading-relaxed">
-                            {policy.policy}
-                          </p>
-                        </div>
-                        <div className="border-t border-gray-200 pt-2">
-                          <a
-                            href={AUP_HELP_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700 font-medium"
-                          >
-                            View full ActBlue AUP
-                            <svg
-                              className="w-3 h-3 ml-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                              />
-                            </svg>
-                          </a>
-                        </div>
-                      </div>
-                    </HoverCardContent>
-                  </HoverCard>
-                ))}
-              </div>
-
-              {/* Selected Summary */}
-              <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                <div className="text-xs font-semibold text-gray-700 mb-1">
-                  Selected ({selectedViolations.length})
-                </div>
-                {selectedViolations.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {selectedViolations.map((code) => (
-                      <span
-                        key={code}
-                        className="inline-block bg-blue-600 text-white rounded px-2 py-0.5 text-xs font-medium"
-                      >
-                        {code}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-500 italic">No Violations</p>
-                )}
-              </div>
-
-              {/* Notes */}
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-gray-800 mb-1">
-                  Notes (optional)
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 240) {
-                      setNotes(e.target.value);
-                    }
-                  }}
-                  placeholder="Any additional observations..."
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
-                  rows={3}
-                />
-                <div className="text-right text-xs text-gray-500 mt-1">
-                  {notes.length} / 240
                 </div>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveEvaluation}
-                  disabled={submitting}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
-                >
-                  {submitting ? "Saving..." : "✓ Save & Next"}
-                </button>
-                <button
-                  onClick={handleSkipToNext}
-                  disabled={submitting || currentIndex >= samples.length - 1}
-                  className="bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Skip
-                </button>
-              </div>
-
-              {/* Progress indicator */}
-              <div className="mt-3 text-center text-xs text-gray-500">
-                Case {currentIndex + 1} of {samples.length} loaded
-              </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
+        </section>
+      </main>
+
+      <Footer />
     </div>
   );
 }
