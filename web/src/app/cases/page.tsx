@@ -157,6 +157,11 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const pageSize = Number(limitParam) || 20;
   const q = (qParam || "").toString();
   const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders, selectedSources, base);
+  const activeFilterCount =
+    (q ? 1 : 0) +
+    selectedSenders.length +
+    selectedSources.length +
+    selectedCodes.length;
 
   return (
     <div className="flex flex-col min-h-screen bg-background" data-theme="v2">
@@ -188,8 +193,104 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
               </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Mobile filters – collapsible panel */}
+            <div className="sm:hidden mb-4">
+              <details className="[&_summary::-webkit-details-marker]:hidden border border-border rounded-md bg-background">
+                <summary className="list-none px-4 py-2.5 text-sm flex items-center justify-between cursor-pointer select-none">
+                  <span>Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="ml-2 rounded-full bg-primary text-primary-foreground text-[11px] px-2 py-0.5">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </summary>
+                <div className="border-t border-border p-4 space-y-6 max-h-[70vh] overflow-y-auto bg-card">
+                  {/* Senders */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Senders
+                    </h3>
+                    <SenderSearchCombobox
+                      selectedSenders={selectedSenders}
+                      pageSize={pageSize}
+                      codes={selectedCodes}
+                      sources={selectedSources}
+                    />
+                  </div>
+
+                  {/* Source */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Source
+                    </h3>
+                    <form action="/cases" method="get" className="space-y-3">
+                      <input type="hidden" name="page" value="1" />
+                      <input type="hidden" name="limit" value={String(pageSize)} />
+                      {q && <input type="hidden" name="q" value={q} />}
+                      {selectedSenders.map((sender) => (
+                        <input key={`m-sender-${sender}`} type="hidden" name="senders" value={sender} />
+                      ))}
+                      {selectedCodes.map((code) => (
+                        <input key={`m-code-${code}`} type="hidden" name="codes" value={code} />
+                      ))}
+                      <div className="grid grid-cols-1 gap-2">
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="sources"
+                            value="user_submitted"
+                            defaultChecked={selectedSources.includes("user_submitted")}
+                            className="accent-primary"
+                          />
+                          <span className="truncate">User Submitted</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="sources"
+                            value="bot_submitted"
+                            defaultChecked={selectedSources.includes("bot_submitted")}
+                            className="accent-primary"
+                          />
+                          <span className="truncate">Bot Captured</span>
+                        </label>
+                      </div>
+                      <div className="flex gap-2 justify-end pt-2">
+                        <a
+                          href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}`}
+                          className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                        >
+                          Clear
+                        </a>
+                        <button
+                          type="submit"
+                          className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Violations */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Violations
+                    </h3>
+                    <CasesFilterForm
+                      pageSize={pageSize}
+                      q={q}
+                      selectedSenders={selectedSenders}
+                      selectedCodes={selectedCodes}
+                      selectedSources={selectedSources}
+                    />
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            {/* Desktop / tablet filters – original layout, hidden on mobile */}
+            <div className="hidden sm:flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <SenderSearchCombobox selectedSenders={selectedSenders} pageSize={pageSize} codes={selectedCodes} sources={selectedSources} />
               
               {/* Source dropdown */}
