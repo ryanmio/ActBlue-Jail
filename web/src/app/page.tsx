@@ -820,18 +820,40 @@ function RecentActivitySection() {
   const router = useRouter();
 
   return (
-    <section className="py-16 md:py-24">
+    <section className="py-16 md:py-24 overflow-hidden">
       <div className="container mx-auto px-6">
         <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
           {/* Main Feed */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="flex items-end justify-between border-b border-border pb-4">
-              <div>
-                <h2 className="text-2xl font-medium mb-1" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Recent Activity</h2>
-                <p className="text-sm text-muted-foreground">Latest verified reports from the community.</p>
+          <div className="lg:col-span-2 space-y-8 overflow-hidden">
+            <div className="border-b border-border pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2
+                    className="text-2xl font-medium"
+                    style={{ fontFamily: "var(--font-playfair), ui-serif, Georgia, serif" }}
+                  >
+                    Recent Activity
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Latest reports from the community.
+                  </p>
+                </div>
+                {/* Desktop / tablet link (right-aligned) */}
+                <Link
+                  href="/cases"
+                  className="hidden sm:inline-flex text-sm font-medium text-foreground hover:text-primary items-center gap-1 transition-colors shrink-0"
+                >
+                  View full archive
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
-              <Link href="/cases" className="text-sm font-medium hover:text-primary flex items-center gap-1 transition-colors">
-                View full archive <ArrowRight className="w-3 h-3" />
+              {/* Mobile link, full-width row */}
+              <Link
+                href="/cases"
+                className="mt-2 inline-flex sm:hidden text-sm font-medium text-foreground hover:text-primary items-center gap-1 transition-colors"
+              >
+                View all
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -859,7 +881,7 @@ function RecentActivitySection() {
                 return (
                   <div
                     key={item.id}
-                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-transparent hover:border-border hover:bg-secondary/20 transition-all cursor-pointer"
+                    className="group p-4 rounded-lg border border-transparent hover:border-border hover:bg-secondary/20 transition-all cursor-pointer overflow-hidden"
                     onClick={() => router.push(`/cases/${item.id}`)}
                     role="button"
                     tabIndex={0}
@@ -870,25 +892,54 @@ function RecentActivitySection() {
                       }
                     }}
                   >
-                    <div className="space-y-1 mb-3 sm:mb-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-foreground">{item.sender_name || item.sender_id || "Unknown sender"}</h3>
+                    {/* Desktop layout */}
+                    <div className="hidden sm:flex sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <h3 className="font-medium text-foreground truncate">{item.sender_name || item.sender_id || "Unknown sender"}</h3>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{violationType}</span>
+                          </span>
+                          <span className="w-1 h-1 rounded-full bg-border shrink-0" />
+                          <span className="shrink-0">{messageType === 'email' ? 'Email' : messageType === 'sms' ? 'SMS' : messageType === 'mms' ? 'MMS' : 'Unknown'}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          {violationType}
-                        </span>
-                        <span className="w-1 h-1 rounded-full bg-border hidden sm:block" />
-                        <span>{messageType === 'email' ? 'Email' : messageType === 'sms' ? 'SMS' : messageType === 'mms' ? 'MMS' : 'Unknown'}</span>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="text-right">
+                          <div className="text-xs font-medium text-foreground">{isBot ? 'Bot Captured' : 'User Submitted'}</div>
+                          <div className="text-xs text-muted-foreground">{formatWhen(item.created_at)}</div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-4 min-w-[140px]">
-                      <div className="text-right">
-                        <div className="text-xs font-medium text-foreground">{isBot ? 'Bot Captured' : 'User Submitted'}</div>
-                        <div className="text-xs text-muted-foreground">{formatWhen(item.created_at)}</div>
+
+                    {/* Mobile layout - single-column, no horizontal pressure */}
+                    <div className="sm:hidden space-y-2">
+                      <h3 className="font-medium text-foreground leading-tight break-words">
+                        {item.sender_name || item.sender_id || "Unknown sender"}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{violationType}</span>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                          {messageType === "email"
+                            ? "Email"
+                            : messageType === "sms"
+                            ? "SMS"
+                            : messageType === "mms"
+                            ? "MMS"
+                            : "Unknown"}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                          {isBot ? "Bot Captured" : "User Submitted"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatWhen(item.created_at)}
+                      </div>
                     </div>
                   </div>
                 );
