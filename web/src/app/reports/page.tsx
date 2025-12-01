@@ -1,8 +1,7 @@
 import { Metadata } from "next";
-import Footer from "@/components/Footer";
-import { PageHeader } from "@/components/PageHeader";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { headers } from "next/headers";
+import { Header } from "@/components/homepage/Header";
+import { Footer } from "@/components/homepage/Footer";
 import ReportsTable from "./ReportsTable";
 import AboutReportingCard from "./AboutReportingCard";
 
@@ -26,44 +25,46 @@ export default async function ReportsPage() {
   const data = res.ok ? await res.json() : { reports: [] };
 
   return (
-    <main
-      className="min-h-screen bg-white"
-      style={{
-        background:
-          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-      }}
-    >
-      <div className="mx-auto max-w-6xl p-6 md:p-10 space-y-8 md:space-y-10 relative">
-        <PageHeader />
-        
-        <Breadcrumb
-          items={[
-            { label: "Home", href: "/" },
-            { label: "Reports to ActBlue" },
-          ]}
-          className="mb-2"
-        />
+    <div className="flex flex-col min-h-screen" data-theme="v2">
+      <Header isHomepage={false} />
 
-        <header className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
-            Reports to ActBlue
-          </h1>
-          <p className="text-sm text-slate-700 max-w-2xl mx-auto">
-            Record of all reports submitted to ActBlue through our platform, including evidence and outcomes.
-          </p>
-        </header>
-
-        <AboutReportingCard />
-
-        <section className="mx-auto max-w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
-          <ReportsTable initialData={data.reports || []} />
+      {/* Main Content */}
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="py-16 md:py-24 border-b border-border/40 bg-secondary/20">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            <div className="text-center space-y-4">
+              <h1 
+                className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1]" 
+                style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}
+              >
+                Reports to ActBlue
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Record of all reports submitted to ActBlue through our platform, including evidence and outcomes.
+              </p>
+            </div>
+          </div>
         </section>
 
-        <Footer />
-      </div>
-    </main>
+        {/* About Section */}
+        <section className="py-12 md:py-16 border-b border-border/40">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            <AboutReportingCard />
+          </div>
+        </section>
+
+        {/* Reports Table Section */}
+        <section className="py-12 md:py-16">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            <div className="bg-card border border-border rounded-lg p-6 md:p-8 shadow-sm">
+              <ReportsTable initialData={data.reports || []} />
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
   );
 }
-

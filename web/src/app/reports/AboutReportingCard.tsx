@@ -6,14 +6,14 @@ export default function AboutReportingCard() {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <section className="mx-auto max-w-3xl bg-blue-50 border border-blue-200 rounded-xl p-6 md:p-8">
-      <h2 className="text-lg font-semibold text-slate-900 mb-3">
+    <div className="bg-secondary/30 border border-border rounded-lg p-6 md:p-8 max-w-3xl mx-auto">
+      <h2 className="text-lg font-semibold text-foreground mb-3">
         About Our Reporting Process
       </h2>
 
-      <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
+      <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
         <p>
-          All reports to ActBlue are <strong>user-initiated and manually reviewed</strong>—never automated or
+          All reports to ActBlue are <strong className="text-foreground">user-initiated and manually reviewed</strong>—never automated or
           bot-generated. When a user receives a fundraising message they believe violates ActBlue&apos;s policies,
           they can choose to generate and send a formal report to ActBlue.
         </p>
@@ -37,7 +37,7 @@ export default function AboutReportingCard() {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-800"
+        className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
         aria-expanded={expanded}
         aria-controls="about-reporting-content"
       >
@@ -55,8 +55,6 @@ export default function AboutReportingCard() {
           />
         </svg>
       </button>
-    </section>
+    </div>
   );
 }
-
-
