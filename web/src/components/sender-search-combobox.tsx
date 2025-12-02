@@ -130,80 +130,71 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes, sources
     <div className="flex items-center gap-2 w-full md:w-auto">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full md:w-[180px] justify-between text-left font-normal bg-white hover:bg-slate-50 border-slate-300"
-          >
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
-              <span className="truncate text-slate-900">
-                {selected.size > 0 
-                  ? `${selected.size} sender${selected.size === 1 ? '' : 's'} selected`
-                  : "Search senders"}
-              </span>
-            </div>
+          <button className="text-sm px-4 py-2.5 rounded-md border border-border bg-background text-foreground hover:bg-secondary/50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap transition-colors">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground hidden" />
+            <span className="truncate text-foreground text-sm">
+              Search senders
+            </span>
             {selected.size > 0 && (
-              <Badge variant="secondary" className="ml-2 rounded-full bg-slate-900 text-white">
+              <span className="rounded-full bg-primary text-primary-foreground text-xs px-2 py-0.5">
                 {selected.size}
-              </Badge>
+              </span>
             )}
-          </Button>
+          </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] md:w-[400px] p-0 bg-white border border-slate-200 shadow-lg" align="start">
-          <Command shouldFilter={false} onKeyDown={handleKeyDown} className="bg-white">
-            <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 bg-white">
-              <Search className="h-4 w-4 shrink-0 text-slate-600" />
+        <PopoverContent className="w-[300px] md:w-[400px] p-0 bg-card border border-border shadow-lg" align="start">
+          <Command shouldFilter={false} onKeyDown={handleKeyDown} className="bg-card">
+            <div className="flex items-center gap-2 border-b border-border px-3 py-2 bg-card">
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Type to search senders..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 h-8 bg-transparent text-sm outline-none placeholder:text-slate-500 text-slate-900"
+                className="flex-1 h-8 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
               />
             </div>
-            <CommandList className="bg-white">
+            <CommandList className="bg-card">
               {loading ? (
-                <div className="py-6 text-center text-sm bg-white">
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-slate-600" />
-                  <span className="text-slate-600">Searching...</span>
+                <div className="py-6 text-center text-sm bg-card">
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-muted-foreground" />
+                  <span className="text-muted-foreground">Searching...</span>
                 </div>
               ) : searchQuery.trim() === "" ? (
-                <div className="py-6 text-center text-sm text-slate-600 bg-white">
+                <div className="py-6 text-center text-sm text-muted-foreground bg-card">
                   Type to search for senders
                 </div>
               ) : senders.length === 0 ? (
-                <CommandEmpty className="bg-white">
-                  <Empty className="py-4 bg-white">
+                <CommandEmpty className="bg-card">
+                  <Empty className="py-4 bg-card">
                     <EmptyHeader>
                       <EmptyMedia variant="icon">
-                        <UserSearch className="h-8 w-8 text-slate-400" />
+                        <UserSearch className="h-8 w-8 text-muted-foreground" />
                       </EmptyMedia>
-                      <EmptyTitle className="text-base text-slate-900">No senders found</EmptyTitle>
-                      <EmptyDescription className="text-xs text-slate-600">
+                      <EmptyTitle className="text-base text-foreground">No senders found</EmptyTitle>
+                      <EmptyDescription className="text-xs text-muted-foreground">
                         Try a different search term
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
                 </CommandEmpty>
               ) : (
-                <CommandGroup className="bg-white">
+                <CommandGroup className="bg-card">
                   {senders.map((sender) => (
                     <CommandItem
                       key={sender}
                       value={sender}
                       onSelect={() => toggleSender(sender)}
-                      className="cursor-pointer hover:bg-slate-100 aria-selected:bg-slate-100"
+                      className="cursor-pointer hover:bg-secondary/50 aria-selected:bg-secondary/50 text-foreground"
                     >
                       <div className="flex items-center gap-2 w-full">
                         <input
                           type="checkbox"
                           checked={selected.has(sender)}
                           onChange={() => {}}
-                          className="accent-slate-900 cursor-pointer"
+                          className="accent-primary cursor-pointer"
                         />
-                        <span className="flex-1 truncate text-slate-900">{sender}</span>
+                        <span className="flex-1 truncate text-foreground">{sender}</span>
                       </div>
                     </CommandItem>
                   ))}
@@ -211,13 +202,13 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes, sources
               )}
             </CommandList>
             {(selected.size > 0 || senders.length > 0) && (
-              <div className="border-t border-slate-200 p-2 flex items-center justify-between gap-2 bg-white">
+              <div className="border-t border-border p-2 flex items-center justify-between gap-2 bg-card">
                 {selected.size > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={clearAll}
-                    className="text-xs h-7 text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                    className="text-xs h-7 text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                   >
                     Clear all
                   </Button>
@@ -225,7 +216,7 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes, sources
                 <Button
                   size="sm"
                   onClick={() => applySelection()}
-                  className="ml-auto text-xs h-7 bg-slate-900 text-white hover:bg-slate-800"
+                  className="ml-auto text-xs h-7 bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   Apply {selected.size > 0 && `(${selected.size})`}
                 </Button>
@@ -242,12 +233,12 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes, sources
             <Badge
               key={sender}
               variant="secondary"
-              className="max-w-[150px] pl-2 pr-1 py-1 gap-1 bg-slate-100 text-slate-900 border border-slate-300"
+              className="max-w-[150px] pl-2 pr-1 py-1 gap-1 bg-secondary text-secondary-foreground border border-border"
             >
               <span className="truncate text-xs">{sender}</span>
               <button
                 onClick={() => removeSender(sender)}
-                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-slate-200"
+                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-secondary/80"
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove {sender}</span>
@@ -255,7 +246,7 @@ export function SenderSearchCombobox({ selectedSenders, pageSize, codes, sources
             </Badge>
           ))}
           {selected.size > 2 && (
-            <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-900 border border-slate-300">
+            <Badge variant="secondary" className="text-xs bg-secondary text-secondary-foreground border border-border">
               +{selected.size - 2} more
             </Badge>
           )}

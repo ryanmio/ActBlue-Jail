@@ -162,7 +162,7 @@ export function Header({ onScrollToSubmission, isHomepage = false }: HeaderProps
                   <span className="sr-only">Open menu</span>
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 bg-background">
+              <SheetContent side="right" className="bg-background text-foreground">
                 <SheetHeader>
                   <SheetTitle className="text-left text-foreground">Menu</SheetTitle>
                 </SheetHeader>

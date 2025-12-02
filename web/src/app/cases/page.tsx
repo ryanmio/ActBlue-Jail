@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { Breadcrumb } from "@/components/breadcrumb";
-import Footer from "@/components/Footer";
+import { Header } from "@/components/homepage/Header";
+import { Footer } from "@/components/homepage/Footer";
 import { VIOLATION_POLICIES, AUP_HELP_URL } from "@/lib/violation-policies";
-import { PageHeader } from "@/components/PageHeader";
 import { isBotSubmitted } from "@/lib/badge-helpers";
 import {
   HoverCard,
@@ -158,45 +157,152 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   const pageSize = Number(limitParam) || 20;
   const q = (qParam || "").toString();
   const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders, selectedSources, base);
-  return (
-    <main 
-      className="min-h-[calc(100vh+160px)] bg-white"
-      style={{
-        background:
-          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-      }}
-    >
-      <div className="mx-auto max-w-7xl p-6 md:p-8 space-y-8 relative">
-        <PageHeader />
-        
-        <Breadcrumb
-          items={[
-            { label: "Home", href: "/" },
-            { label: "Cases" },
-          ]}
-          className="mb-2"
-        />
+  const activeFilterCount =
+    (q ? 1 : 0) +
+    selectedSenders.length +
+    selectedSources.length +
+    selectedCodes.length;
 
-        <section className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8 mt-16">
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4 md:mb-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">All cases</h1>
-              <div className="text-sm text-slate-600 md:hidden">{total} total</div>
+  return (
+    <div className="flex flex-col min-h-screen bg-background" data-theme="v2">
+      <Header isHomepage={false} />
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="py-12 md:py-16 border-b border-border/40 bg-secondary/20">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+              <div>
+                <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                  <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+                  <span>/</span>
+                  <span className="text-foreground">Cases</span>
+                </nav>
+                <h1 
+                  className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-[1.1]"
+                  style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}
+                >
+                  All Cases
+                </h1>
+                <p className="mt-3 text-muted-foreground">
+                  Browse all submitted fundraising messages and detected violations.
+                </p>
+              </div>
+              <div className="text-sm text-muted-foreground tabular-nums">
+                {total} total cases
+              </div>
             </div>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-3 md:gap-2 md:-mt-8">
+
+            {/* Mobile filters – collapsible panel */}
+            <div className="sm:hidden mb-4">
+              <details className="[&_summary::-webkit-details-marker]:hidden border border-border rounded-md bg-background">
+                <summary className="list-none px-4 py-2.5 text-sm flex items-center justify-between cursor-pointer select-none">
+                  <span>Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="ml-2 rounded-full bg-primary text-primary-foreground text-[11px] px-2 py-0.5">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </summary>
+                <div className="border-t border-border p-4 space-y-6 max-h-[70vh] overflow-y-auto bg-card">
+                  {/* Senders */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Senders
+                    </h3>
+                    <SenderSearchCombobox
+                      selectedSenders={selectedSenders}
+                      pageSize={pageSize}
+                      codes={selectedCodes}
+                      sources={selectedSources}
+                    />
+                  </div>
+
+                  {/* Source */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Source
+                    </h3>
+                    <form action="/cases" method="get" className="space-y-3">
+                      <input type="hidden" name="page" value="1" />
+                      <input type="hidden" name="limit" value={String(pageSize)} />
+                      {q && <input type="hidden" name="q" value={q} />}
+                      {selectedSenders.map((sender) => (
+                        <input key={`m-sender-${sender}`} type="hidden" name="senders" value={sender} />
+                      ))}
+                      {selectedCodes.map((code) => (
+                        <input key={`m-code-${code}`} type="hidden" name="codes" value={code} />
+                      ))}
+                      <div className="grid grid-cols-1 gap-2">
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="sources"
+                            value="user_submitted"
+                            defaultChecked={selectedSources.includes("user_submitted")}
+                            className="accent-primary"
+                          />
+                          <span className="truncate">User Submitted</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="sources"
+                            value="bot_submitted"
+                            defaultChecked={selectedSources.includes("bot_submitted")}
+                            className="accent-primary"
+                          />
+                          <span className="truncate">Bot Captured</span>
+                        </label>
+                      </div>
+                      <div className="flex gap-2 justify-end pt-2">
+                        <a
+                          href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}`}
+                          className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                        >
+                          Clear
+                        </a>
+                        <button
+                          type="submit"
+                          className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Violations */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Violations
+                    </h3>
+                    <CasesFilterForm
+                      pageSize={pageSize}
+                      q={q}
+                      selectedSenders={selectedSenders}
+                      selectedCodes={selectedCodes}
+                      selectedSources={selectedSources}
+                    />
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            {/* Desktop / tablet filters – original layout, hidden on mobile */}
+            <div className="hidden sm:flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <SenderSearchCombobox selectedSenders={selectedSenders} pageSize={pageSize} codes={selectedCodes} sources={selectedSources} />
-              {/* Compact source dropdown */}
+              
+              {/* Source dropdown */}
               <div className="relative">
                 <details className="[&_summary::-webkit-details-marker]:hidden">
-                  <summary className="list-none text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap">
+                  <summary className="list-none text-sm px-4 py-2.5 rounded-md border border-border bg-background text-foreground hover:bg-secondary/50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap transition-colors">
                     <span>Source</span>
                     {selectedSources.length > 0 && (
-                      <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">{selectedSources.length}</span>
+                      <span className="rounded-full bg-primary text-primary-foreground text-xs px-2 py-0.5">{selectedSources.length}</span>
                     )}
                   </summary>
-                  <div className="absolute right-0 mt-2 w-56 z-20 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                  <div className="absolute right-0 mt-2 w-56 z-20 rounded-lg border border-border bg-card p-3 shadow-lg">
                     <form action="/cases" method="get" className="space-y-3">
                       <input type="hidden" name="page" value="1" />
                       <input type="hidden" name="limit" value={String(pageSize)} />
@@ -208,45 +314,46 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                         <input key={`code-${code}`} type="hidden" name="codes" value={code} />
                       ))}
                       <div className="grid grid-cols-1 gap-2">
-                        <label className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
                           <input 
                             type="checkbox" 
                             name="sources" 
                             value="user_submitted" 
                             defaultChecked={selectedSources.includes("user_submitted")} 
-                            className="accent-slate-900"
+                            className="accent-primary"
                           />
                           <span className="truncate">User Submitted</span>
                         </label>
-                        <label className="flex items-center gap-2 text-sm text-slate-800 border border-slate-200 rounded-md px-3 py-2 hover:bg-slate-50">
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
                           <input 
                             type="checkbox" 
                             name="sources" 
                             value="bot_submitted" 
                             defaultChecked={selectedSources.includes("bot_submitted")} 
-                            className="accent-slate-900"
+                            className="accent-primary"
                           />
                           <span className="truncate">Bot Captured</span>
                         </label>
                       </div>
-                      <div className="flex gap-2 justify-end">
-                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50">Clear</a>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800">Apply</button>
+                      <div className="flex gap-2 justify-end pt-2">
+                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">Clear</a>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Apply</button>
                       </div>
                     </form>
                   </div>
                 </details>
               </div>
-              {/* Compact violation filter dropdown */}
+
+              {/* Violations dropdown */}
               <div className="relative">
                 <details className="[&_summary::-webkit-details-marker]:hidden">
-                  <summary className="list-none text-sm px-3 py-1.5 rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap">
+                  <summary className="list-none text-sm px-4 py-2.5 rounded-md border border-border bg-background text-foreground hover:bg-secondary/50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap transition-colors">
                     <span>Violations</span>
                     {selectedCodes.length > 0 && (
-                      <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">{selectedCodes.length}</span>
+                      <span className="rounded-full bg-primary text-primary-foreground text-xs px-2 py-0.5">{selectedCodes.length}</span>
                     )}
                   </summary>
-                  <div className="absolute right-0 mt-2 w-72 z-20 rounded-xl border border-slate-200 bg-white p-3 shadow-xl md:w-80">
+                  <div className="absolute right-0 mt-2 w-72 z-20 rounded-lg border border-border bg-card p-3 shadow-lg md:w-80">
                     <CasesFilterForm
                       pageSize={pageSize}
                       q={q}
@@ -257,139 +364,154 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                   </div>
                 </details>
               </div>
-              <div className="text-sm text-slate-600 hidden md:block">{total} total</div>
             </div>
           </div>
-
-          {items.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-700">No cases yet.</div>
-          ) : (
-            <>
-              <div className="divide-y">
-                {items.map((it) => (
-                  <Link key={it.id} href={`/cases/${it.id}`} className="-mx-6 md:-mx-8 px-6 md:px-8 py-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="min-w-0">
-                      <div className="font-medium text-slate-900 truncate max-w-[60vw]">
-                        {it.senderName || it.senderId || "Unknown sender"}
-                      </div>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-700 md:flex-wrap">
-                        {it.issues.length === 0 ? (
-                          <span className="inline-flex items-center rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-700 border border-cyan-100">
-                            No Violations Detected
-                          </span>
-                        ) : (
-                          <>
-                            {it.issues.map((v, idx) => {
-                              const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
-                              const isVerified = v.actblue_verified === true;
-                              return (
-                                <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
-                                  <HoverCardTrigger asChild>
-                                    <span
-                                      title={v.code}
-                                      className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full px-2 py-0.5 text-[11px] font-medium border max-w-[80%] md:max-w-none min-w-0 cursor-help ${
-                                        isVerified
-                                          ? 'bg-sky-50 text-sky-700 border-sky-200'
-                                          : 'bg-orange-50 text-orange-800 border-orange-200'
-                                      }`}
-                                    >
-                                      <span className="truncate">
-                                        {isVerified ? 'ActBlue Permitted Matching Program' : v.title}
-                                      </span>
-                                    </span>
-                                  </HoverCardTrigger>
-                                  {policy && (
-                                    <HoverCardContent className="w-96 bg-white border-slate-200" side="top">
-                                      <div className="space-y-2">
-                                        <div className="flex items-start justify-between gap-2">
-                                          <div>
-                                            <div className="font-mono text-xs text-slate-500">{policy.code}</div>
-                                            <div className="font-semibold text-sm text-slate-900">
-                                              {isVerified && policy.code === "AB008" ? "Permitted Matching Program" : policy.title}
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
-                                        {isVerified && (
-                                          <div className="text-xs text-sky-700 bg-sky-50 p-2 rounded border border-sky-200">
-                                            ActBlue has determined this matching program meets their standards. However, political committees almost never run genuine donor matching programs and donors should remain skeptical of such claims even when permitted by ActBlue.
-                                          </div>
-                                        )}
-                                        <a
-                                          href={AUP_HELP_URL}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
-                                        >
-                                          View full policy
-                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                          </svg>
-                                        </a>
-                                      </div>
-                                    </HoverCardContent>
-                                  )}
-                                </HoverCard>
-                              );
-                            })}
-                            {it.issues.length > 1 && (
-                              <span className="inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-800 border border-orange-200 md:hidden">+{it.issues.length - 1} more</span>
-                            )}
-                          </>
-                        )}
-                        {/* Desktop-only badges for type and submission source - always show regardless of issues */}
-                        {(() => {
-                          const type = (it.messageType || '').toLowerCase();
-                          const showType = type && type !== 'unknown';
-                          const isBot = isBotSubmitted({
-                            messageType: it.messageType,
-                            imageUrl: it.imageUrl,
-                            senderId: it.senderId,
-                            forwarderEmail: it.forwarderEmail,
-                          });
-                          return (
-                            <>
-                              {showType && (
-                                <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                                  {type === 'email' && 'Email'}
-                                  {type === 'sms' && 'SMS'}
-                                  {type === 'mms' && 'MMS'}
-                                </span>
-                              )}
-                              <span className="hidden md:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 border border-slate-300">
-                                {isBot ? 'Bot Captured' : 'User Submitted'}
-                              </span>
-                              {it.hasReport && (
-                                <span className="hidden md:inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 border border-green-200">
-                                  Reported to ActBlue
-                                </span>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-600 truncate max-w-[70ch]">
-                        {derivePreview(it.rawText) || "(no text)"}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-xs text-slate-700 tabular-nums">{formatWhen(it.createdAt)}</div>
-                      <span className="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white pointer-events-none">
-                        View
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-              <div className="mt-6 flex items-center justify-between">
-                <PaginationControls total={total} pageSize={limit} currentPage={page} hasMore={hasMore} q={q} senders={selectedSenders} codes={selectedCodes} sources={selectedSources} />
-              </div>
-            </>
-          )}
         </section>
-        <Footer />
-      </div>
-    </main>
+
+        {/* Cases List */}
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            {items.length === 0 ? (
+              <div className="py-16 text-center">
+                <p className="text-muted-foreground">No cases found.</p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                  <div className="divide-y divide-border">
+                    {items.map((it) => (
+                      <Link 
+                        key={it.id} 
+                        href={`/cases/${it.id}`} 
+                        className="flex items-center justify-between gap-4 px-6 py-5 hover:bg-secondary/30 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-foreground truncate max-w-[60vw]">
+                            {it.senderName || it.senderId || "Unknown sender"}
+                          </div>
+                          <div className="mt-2 flex items-center gap-2 text-xs flex-wrap">
+                            {it.issues.length === 0 ? (
+                              <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground border border-border">
+                                No Violations Detected
+                              </span>
+                            ) : (
+                              <>
+                                {it.issues.map((v, idx) => {
+                                  const policy = VIOLATION_POLICIES.find((p) => p.code === v.code);
+                                  const isVerified = v.actblue_verified === true;
+                                  return (
+                                    <HoverCard key={`${v.code}-${idx}`} openDelay={200}>
+                                      <HoverCardTrigger asChild>
+                                        <span
+                                          title={v.code}
+                                          className={`${idx > 0 ? "hidden md:inline-flex" : "inline-flex"} items-center rounded-full px-2.5 py-1 text-[11px] font-medium border max-w-[80%] md:max-w-none min-w-0 cursor-help ${
+                                            isVerified
+                                              ? 'bg-accent/50 text-accent-foreground border-accent'
+                                              : 'bg-destructive/10 text-destructive border-destructive/30'
+                                          }`}
+                                        >
+                                          <span className="truncate">
+                                            {isVerified ? 'ActBlue Permitted Matching Program' : v.title}
+                                          </span>
+                                        </span>
+                                      </HoverCardTrigger>
+                                      {policy && (
+                                        <HoverCardContent className="w-96 bg-card border-border" side="top">
+                                          <div className="space-y-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                              <div>
+                                                <div className="font-mono text-xs text-muted-foreground">{policy.code}</div>
+                                                <div className="font-semibold text-sm text-foreground">
+                                                  {isVerified && policy.code === "AB008" ? "Permitted Matching Program" : policy.title}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground leading-relaxed">{policy.policy}</p>
+                                            {isVerified && (
+                                              <div className="text-xs text-accent-foreground bg-accent/30 p-2 rounded border border-accent/50">
+                                                ActBlue has determined this matching program meets their standards. However, political committees almost never run genuine donor matching programs and donors should remain skeptical of such claims even when permitted by ActBlue.
+                                              </div>
+                                            )}
+                                            <a
+                                              href={AUP_HELP_URL}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                                            >
+                                              View full policy
+                                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                              </svg>
+                                            </a>
+                                          </div>
+                                        </HoverCardContent>
+                                      )}
+                                    </HoverCard>
+                                  );
+                                })}
+                                {it.issues.length > 1 && (
+                                  <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-medium text-destructive border border-destructive/30 md:hidden">+{it.issues.length - 1} more</span>
+                                )}
+                              </>
+                            )}
+                            {/* Desktop-only badges for type and submission source */}
+                            {(() => {
+                              const type = (it.messageType || '').toLowerCase();
+                              const showType = type && type !== 'unknown';
+                              const isBot = isBotSubmitted({
+                                messageType: it.messageType,
+                                imageUrl: it.imageUrl,
+                                senderId: it.senderId,
+                                forwarderEmail: it.forwarderEmail,
+                              });
+                              return (
+                                <>
+                                  {showType && (
+                                    <span className="hidden md:inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground border border-border">
+                                      {type === 'email' && 'Email'}
+                                      {type === 'sms' && 'SMS'}
+                                      {type === 'mms' && 'MMS'}
+                                    </span>
+                                  )}
+                                  <span className="hidden md:inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground border border-border">
+                                    {isBot ? 'Bot Captured' : 'User Submitted'}
+                                  </span>
+                                  {it.hasReport && (
+                                    <span className="hidden md:inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary border border-primary/30">
+                                      Reported to ActBlue
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          <div className="mt-2 text-xs text-muted-foreground truncate max-w-[70ch]">
+                            {derivePreview(it.rawText) || "(no text)"}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0">
+                          <div className="text-xs text-muted-foreground tabular-nums hidden sm:block">{formatWhen(it.createdAt)}</div>
+                          <span className="text-sm px-4 py-2 rounded-md bg-primary text-primary-foreground pointer-events-none">
+                            View
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pagination */}
+                <div className="mt-8 flex items-center justify-center">
+                  <PaginationControls total={total} pageSize={limit} currentPage={page} hasMore={hasMore} q={q} senders={selectedSenders} codes={selectedCodes} sources={selectedSources} />
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
   );
 }
 
@@ -414,15 +536,15 @@ function PaginationControls({ total, pageSize, currentPage, hasMore, q, senders,
     <div className="flex items-center gap-3 text-sm">
       <Link
         href={buildUrl(prevPage)}
-        className={`px-3 py-1.5 rounded-md border ${currentPage <= 1 ? "text-slate-400 border-slate-200 pointer-events-none" : "text-slate-800 border-slate-300 hover:bg-slate-50"}`}
+        className={`px-4 py-2 rounded-md border transition-colors ${currentPage <= 1 ? "text-muted-foreground/50 border-border/50 pointer-events-none cursor-not-allowed" : "text-foreground border-border hover:bg-secondary/50"}`}
         aria-disabled={currentPage <= 1}
       >
         Previous
       </Link>
-      <span className="text-slate-600">Page {currentPage} of {totalPages}</span>
+      <span className="text-muted-foreground px-2">Page {currentPage} of {totalPages}</span>
       <Link
         href={buildUrl(nextPage)}
-        className={`px-3 py-1.5 rounded-md border ${!hasMore ? "text-slate-400 border-slate-200 pointer-events-none" : "text-slate-800 border-slate-300 hover:bg-slate-50"}`}
+        className={`px-4 py-2 rounded-md border transition-colors ${!hasMore ? "text-muted-foreground/50 border-border/50 pointer-events-none cursor-not-allowed" : "text-foreground border-border hover:bg-secondary/50"}`}
         aria-disabled={!hasMore}
       >
         Next

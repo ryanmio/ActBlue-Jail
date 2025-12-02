@@ -2,9 +2,8 @@
 
 import { FormEvent, memo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Breadcrumb } from "@/components/breadcrumb";
-import Footer from "@/components/Footer";
-import { PageHeader } from "@/components/PageHeader";
+import { Header } from "@/components/homepage/Header";
+import { Footer } from "@/components/homepage/Footer";
 import {
   HoverCard,
   HoverCardContent,
@@ -312,49 +311,47 @@ export default function StatsPage() {
   const rangeOrder: Array<RangeOption> = ["7", "30", "90", "lifetime"];
 
   return (
-    <main
-      className="min-h-[calc(100vh+160px)] bg-white"
-      style={{
-        background:
-          "radial-gradient(80% 80% at 15% -10%, rgba(4, 156, 219, 0.22), transparent 65%)," +
-          "radial-gradient(80% 80% at 92% 0%, rgba(198, 96, 44, 0.20), transparent 65%)," +
-          "linear-gradient(to bottom, #eef7ff 0%, #ffffff 45%, #fff2e9 100%)",
-      }}
-    >
-      <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6 md:space-y-8 relative">
-        <PageHeader />
+    <div className="flex flex-col min-h-screen" data-theme="v2">
+      <Header isHomepage={false} />
 
-        <div className="mb-4 md:mb-8">
-          <Breadcrumb
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Stats" },
-            ]}
-          />
-        </div>
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="py-12 md:py-20 border-b border-border/40 bg-secondary/20">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl">
+            <h1 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-4" 
+              style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}
+            >
+              Statistics
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
+              Public statistics on captures, violations, and reports
+            </p>
+          </div>
+        </section>
 
-        <section className="space-y-6">
-          {/* Header with range picker */}
+        {/* Stats Content */}
+        <section className="py-12 md:py-20">
+          <div className="container mx-auto px-6 md:px-12 max-w-6xl space-y-8 md:space-y-12">
+          {/* Filters Section */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-xl md:text-3xl font-bold text-slate-900">
-                Statistics
-              </h1>
-              <p className="text-xs md:text-sm text-slate-600 mt-1">
-                Public statistics on captures, violations, and reports
-              </p>
-            </div>
+            <h2 
+              className="text-2xl md:text-3xl font-bold tracking-tight text-foreground"
+              style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}
+            >
+              Filter & Analyze
+            </h2>
             
             {/* Mobile: Single Filters Button */}
             <div className="md:hidden">
               <button
                 onClick={() => setMobileFiltersOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 w-full"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md border border-border bg-card text-foreground hover:bg-accent w-full transition-colors"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>Filters</span>
                 {(selectedViolations.length + selectedSenders.length + selectedSource.length + selectedTypes.length) > 0 && (
-                  <span className="rounded-full bg-slate-900 text-white text-xs px-2 py-0.5">
+                  <span className="rounded-full bg-primary text-primary-foreground text-xs px-2 py-0.5">
                     {selectedViolations.length + selectedSenders.length + selectedSource.length + selectedTypes.length}
                   </span>
                 )}
@@ -366,7 +363,7 @@ export default function StatsPage() {
               <div className="flex flex-wrap gap-2 items-center justify-end md:justify-start ml-auto md:ml-0">
                 {/* Range filter */}
                 <Popover>
-                  <PopoverTrigger asChild>
+                <PopoverTrigger asChild>
                   <button
                     className="inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 min-w-[150px] shrink-0"
                     aria-label="Select date range"
@@ -721,7 +718,7 @@ export default function StatsPage() {
               <div className="flex justify-end">
                 <button
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className="text-xs text-slate-600 hover:text-slate-900 px-1.5 py-0.5 hover:bg-slate-50 rounded transition-colors w-fit"
+                  className="text-xs text-muted-foreground hover:text-foreground px-1.5 py-0.5 hover:bg-accent rounded transition-colors w-fit"
                   title={showAdvancedFilters ? "Hide additional filters" : "Show additional filters"}
                 >
                   {showAdvancedFilters ? "Less Filters" : "More Filters"}
@@ -733,7 +730,7 @@ export default function StatsPage() {
           {/* Active Filter Badges */}
           {(selectedViolations.length > 0 || selectedSenders.length > 0 || selectedSource.length > 0 || selectedTypes.length > 0) && (
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs text-slate-600 font-medium hidden sm:inline">Active filters:</span>
+              <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Active filters:</span>
               
               {/* Violation badges */}
               {selectedViolations.map((v, idx) => (
@@ -744,7 +741,7 @@ export default function StatsPage() {
                       prev.filter((sv) => !(sv.code === v.code && sv.isPermitted === v.isPermitted))
                     );
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
                   title="Click to remove filter"
                 >
                   <span className="truncate max-w-[200px]">
@@ -763,7 +760,7 @@ export default function StatsPage() {
                   onClick={() => {
                     setSelectedSenders((prev) => prev.filter((s) => s !== sender));
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
                   title="Click to remove filter"
                 >
                   <span className="truncate max-w-[200px]">{sender}</span>
@@ -780,7 +777,7 @@ export default function StatsPage() {
                   onClick={() => {
                     setSelectedSource((prev) => prev.filter((s) => s !== source));
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
                   title="Click to remove filter"
                 >
                   <span>{source === "user_upload" ? "User Submitted" : "Bot Captured"}</span>
@@ -797,7 +794,7 @@ export default function StatsPage() {
                   onClick={() => {
                     setSelectedTypes((prev) => prev.filter((t) => t !== type));
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
                   title="Click to remove filter"
                 >
                   <span>{type === "sms" ? "SMS" : type === "email" ? "Email" : "Other"}</span>
@@ -815,7 +812,7 @@ export default function StatsPage() {
                   setSelectedSource([]);
                   setSelectedTypes([]);
                 }}
-                className="text-xs text-slate-600 hover:text-slate-900 underline ml-0 sm:ml-2 mt-2 sm:mt-0 w-full sm:w-auto text-center sm:text-left"
+                className="text-xs text-muted-foreground hover:text-foreground underline ml-0 sm:ml-2 mt-2 sm:mt-0 w-full sm:w-auto text-center sm:text-left transition-colors"
               >
                 Clear all
               </button>
@@ -837,15 +834,15 @@ export default function StatsPage() {
               
               <div className="px-6 pb-6 space-y-1 overflow-y-auto flex-1">
                 {/* Range Filter - Collapsible */}
-                <div className="border-b border-slate-200 pb-1">
+                <div className="border-b border-border pb-1">
                   <button
                     onClick={() => setExpandedSection(expandedSection === 'range' ? null : 'range')}
                     className="w-full flex items-center justify-between py-3 text-left"
                   >
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-foreground">
                       Time Range {range && `(${rangeLabels[range]})`}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'range' ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedSection === 'range' ? 'rotate-180' : ''}`} />
                   </button>
                   {expandedSection === 'range' && (
                     <div className="pb-3">
@@ -854,10 +851,10 @@ export default function StatsPage() {
                           <button
                             key={`mobile-range-${opt}`}
                             onClick={() => setRange(opt)}
-                            className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                              range === opt 
-                                ? "bg-slate-900 text-white" 
-                                : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                            className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                              range === opt
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-background text-foreground hover:bg-accent"
                             }`}
                           >
                             {rangeLabels[opt]}
@@ -869,15 +866,15 @@ export default function StatsPage() {
                 </div>
 
                 {/* Violations Filter - Collapsible */}
-                <div className="border-b border-slate-200 pb-1">
+                <div className="border-b border-border pb-1">
                   <button
                     onClick={() => setExpandedSection(expandedSection === 'violations' ? null : 'violations')}
                     className="w-full flex items-center justify-between py-3 text-left"
                   >
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-foreground">
                       Violations {selectedViolations.length > 0 && `(${selectedViolations.length})`}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'violations' ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedSection === 'violations' ? 'rotate-180' : ''}`} />
                   </button>
                   {expandedSection === 'violations' && (
                     <div className="pb-3">
@@ -886,7 +883,7 @@ export default function StatsPage() {
                         placeholder="Search violations..."
                         value={violationSearchQuery}
                         onChange={(e) => setViolationSearchQuery(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2 placeholder:text-slate-700"
+                        className="w-full px-3 py-2 text-sm border border-border rounded-md mb-2 bg-background text-foreground placeholder:text-muted-foreground"
                       />
                       <div className="space-y-1 max-h-[200px] overflow-y-auto">
                         {VIOLATION_FILTER_OPTIONS
@@ -913,18 +910,18 @@ export default function StatsPage() {
                                     return [...prev, v];
                                   });
                                 }}
-                                className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                                className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-accent rounded-md text-left transition-colors"
                               >
                                 <div
                                   className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${
                                     isSelected
-                                      ? "bg-slate-900 border-slate-900"
-                                      : "border-slate-300"
+                                      ? "bg-primary border-primary"
+                                      : "border-border"
                                   }`}
                                 >
-                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                  {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                                 </div>
-                                <span className="flex-1 text-slate-900 text-left break-words text-xs">{v.label}</span>
+                                <span className="flex-1 text-foreground text-left break-words text-xs">{v.label}</span>
                               </button>
                             );
                           })}
@@ -934,15 +931,15 @@ export default function StatsPage() {
                 </div>
 
                 {/* Senders Filter - Collapsible */}
-                <div className="border-b border-slate-200 pb-1">
+                <div className="border-b border-border pb-1">
                   <button
                     onClick={() => setExpandedSection(expandedSection === 'senders' ? null : 'senders')}
                     className="w-full flex items-center justify-between py-3 text-left"
                   >
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-foreground">
                       Senders {selectedSenders.length > 0 && `(${selectedSenders.length})`}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'senders' ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedSection === 'senders' ? 'rotate-180' : ''}`} />
                   </button>
                   {expandedSection === 'senders' && (
                     <div className="pb-3">
@@ -951,7 +948,7 @@ export default function StatsPage() {
                         placeholder="Search senders..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md mb-2 placeholder:text-slate-700"
+                        className="w-full px-3 py-2 text-sm border border-border rounded-md mb-2 bg-background text-foreground placeholder:text-muted-foreground"
                       />
                       <div className="space-y-1 max-h-[200px] overflow-y-auto">
                         {(allSenders || [])
@@ -970,18 +967,18 @@ export default function StatsPage() {
                                       : [...prev, s]
                                   );
                                 }}
-                                className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                                className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-accent rounded-md text-left transition-colors"
                               >
                                 <div
                                   className={`flex h-4 w-4 items-center justify-center rounded border ${
                                     isSelected
-                                      ? "bg-slate-900 border-slate-900"
-                                      : "border-slate-300"
+                                      ? "bg-primary border-primary"
+                                      : "border-border"
                                   }`}
                                 >
-                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                  {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                                 </div>
-                                <span className="flex-1 truncate text-slate-900 text-sm">{s}</span>
+                                <span className="flex-1 truncate text-foreground text-sm">{s}</span>
                               </button>
                             );
                           })}
@@ -991,15 +988,15 @@ export default function StatsPage() {
                 </div>
 
                 {/* Source Filter - Collapsible */}
-                <div className="border-b border-slate-200 pb-1">
+                <div className="border-b border-border pb-1">
                   <button
                     onClick={() => setExpandedSection(expandedSection === 'source' ? null : 'source')}
                     className="w-full flex items-center justify-between py-3 text-left"
                   >
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-foreground">
                       Source {selectedSource.length > 0 && `(${selectedSource.length})`}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'source' ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedSection === 'source' ? 'rotate-180' : ''}`} />
                   </button>
                   {expandedSection === 'source' && (
                     <div className="space-y-1 pb-3">
@@ -1016,18 +1013,18 @@ export default function StatsPage() {
                                   : [...prev, source]
                               );
                             }}
-                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-accent rounded-md text-left transition-colors"
                           >
                             <div
                               className={`flex h-4 w-4 items-center justify-center rounded border ${
                                 isSelected
-                                  ? "bg-slate-900 border-slate-900"
-                                  : "border-slate-300"
+                                  ? "bg-primary border-primary"
+                                  : "border-border"
                               }`}
                             >
-                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                              {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                             </div>
-                            <span className="flex-1 text-slate-900">{label}</span>
+                            <span className="flex-1 text-foreground">{label}</span>
                           </button>
                         );
                       })}
@@ -1036,15 +1033,15 @@ export default function StatsPage() {
                 </div>
 
                 {/* Type Filter - Collapsible */}
-                <div className="border-b border-slate-200 pb-1">
+                <div className="border-b border-border pb-1">
                   <button
                     onClick={() => setExpandedSection(expandedSection === 'type' ? null : 'type')}
                     className="w-full flex items-center justify-between py-3 text-left"
                   >
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-foreground">
                       Type {selectedTypes.length > 0 && `(${selectedTypes.length})`}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expandedSection === 'type' ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedSection === 'type' ? 'rotate-180' : ''}`} />
                   </button>
                   {expandedSection === 'type' && (
                     <div className="space-y-1 pb-3">
@@ -1064,18 +1061,18 @@ export default function StatsPage() {
                                   : [...prev, value]
                               );
                             }}
-                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-slate-100 rounded-md text-left"
+                            className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-accent rounded-md text-left transition-colors"
                           >
                             <div
                               className={`flex h-4 w-4 items-center justify-center rounded border ${
                                 isSelected
-                                  ? "bg-slate-900 border-slate-900"
-                                  : "border-slate-300"
+                                  ? "bg-primary border-primary"
+                                  : "border-border"
                               }`}
                             >
-                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                              {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                             </div>
-                            <span className="flex-1 text-slate-900">{label}</span>
+                            <span className="flex-1 text-foreground">{label}</span>
                           </button>
                         );
                       })}
@@ -1092,13 +1089,13 @@ export default function StatsPage() {
                       setSelectedSource([]);
                       setSelectedTypes([]);
                     }}
-                    className="flex-1 px-4 py-2.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    className="flex-1 px-4 py-2.5 text-sm rounded-md border border-border text-foreground hover:bg-accent transition-colors"
                   >
                     Clear All
                   </button>
                   <button
                     onClick={() => setMobileFiltersOpen(false)}
-                    className="flex-1 px-4 py-2.5 text-sm rounded-md bg-slate-900 text-white hover:bg-slate-800"
+                    className="flex-1 px-4 py-2.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     Apply
                   </button>
@@ -1112,35 +1109,35 @@ export default function StatsPage() {
               {/* KPI skeletons */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[1,2,3,4].map((i) => (
-                  <div key={`sk-kpi-${i}`} className="bg-white rounded-2xl border border-slate-200 p-6">
-                    <div className="h-4 w-28 bg-slate-200 rounded mb-4" />
-                    <div className="h-10 w-16 bg-slate-200 rounded mb-2" />
-                    <div className="h-3 w-40 bg-slate-200 rounded" />
+                  <div key={`sk-kpi-${i}`} className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+                    <div className="h-4 w-28 bg-muted rounded mb-4" />
+                    <div className="h-10 w-16 bg-muted rounded mb-2" />
+                    <div className="h-3 w-40 bg-muted rounded" />
                   </div>
                 ))}
               </div>
               {/* Chart skeleton */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
-                <div className="h-4 md:h-5 w-48 md:w-64 bg-slate-200 rounded mb-3 md:mb-4" />
-                <div className="h-36 md:h-48 w-full bg-slate-100 rounded" />
+              <div className="bg-card rounded-2xl border border-border p-4 md:p-6 shadow-sm">
+                <div className="h-4 md:h-5 w-48 md:w-64 bg-muted rounded mb-3 md:mb-4" />
+                <div className="h-36 md:h-48 w-full bg-muted/50 rounded" />
               </div>
               {/* Pie skeletons */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 {[1,2].map((i) => (
-                  <div key={`sk-pie-${i}`} className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
-                    <div className="h-4 md:h-5 w-32 md:w-40 bg-slate-200 rounded mb-3 md:mb-4" />
+                  <div key={`sk-pie-${i}`} className="bg-card rounded-2xl border border-border p-4 md:p-6 shadow-sm">
+                    <div className="h-4 md:h-5 w-32 md:w-40 bg-muted rounded mb-3 md:mb-4" />
                     <div className="h-[200px] md:h-[260px] flex items-center justify-center">
-                      <div className="h-32 w-32 md:h-40 md:w-40 rounded-full bg-slate-100" />
+                      <div className="h-32 w-32 md:h-40 md:w-40 rounded-full bg-muted/50" />
                     </div>
                   </div>
                 ))}
               </div>
               {/* Table skeleton */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
-                <div className="h-4 md:h-5 w-32 md:w-40 bg-slate-200 rounded mb-3 md:mb-4" />
+              <div className="bg-card rounded-2xl border border-border p-4 md:p-6 shadow-sm">
+                <div className="h-4 md:h-5 w-32 md:w-40 bg-muted rounded mb-3 md:mb-4" />
                 <div className="space-y-2 md:space-y-3">
                   {[1,2,3,4].map((r) => (
-                    <div key={`sk-row-${r}`} className="h-12 md:h-4 w-full bg-slate-100 rounded" />
+                    <div key={`sk-row-${r}`} className="h-12 md:h-4 w-full bg-muted/50 rounded" />
                   ))}
                 </div>
               </div>
@@ -1148,8 +1145,8 @@ export default function StatsPage() {
           )}
 
           {error && (
-            <div className="bg-white rounded-2xl border border-red-200 p-4 md:p-6 text-center">
-              <p className="text-xs md:text-sm text-red-700">Error: {error}</p>
+            <div className="bg-card rounded-2xl border border-destructive p-4 md:p-6 text-center">
+              <p className="text-xs md:text-sm text-destructive">Error: {error}</p>
             </div>
           )}
 
@@ -1203,7 +1200,7 @@ export default function StatsPage() {
                 onPageChange={setSendersPage}
               />
 
-              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto">
+              <section className="bg-card rounded-2xl border border-border shadow-sm max-w-3xl mx-auto">
                 <button
                   type="button"
                   onClick={() => {
@@ -1211,17 +1208,17 @@ export default function StatsPage() {
                     setDataRequestError(null);
                     if (dataRequestBanner) setDataRequestBanner(null);
                   }}
-                  className="w-full p-4 md:p-6 text-left hover:bg-slate-50 transition-colors rounded-2xl"
+                  className="w-full p-4 md:p-6 text-left hover:bg-accent transition-colors rounded-2xl"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base md:text-lg font-semibold text-slate-900">Request Data Export</h3>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1">
+                      <h3 className="text-base md:text-lg font-semibold text-foreground">Request Data Export</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground mt-1">
                         Researchers can request an export of AB Jail data for analysis.
                       </p>
                     </div>
                     <svg 
-                      className={`w-5 h-5 text-slate-600 transition-transform shrink-0 ml-4 ${dataRequestExpanded ? 'rotate-180' : ''}`}
+                      className={`w-5 h-5 text-muted-foreground transition-transform shrink-0 ml-4 ${dataRequestExpanded ? 'rotate-180' : ''}`}
                       fill="none" 
                       stroke="currentColor" 
                       viewBox="0 0 24 24"
@@ -1237,7 +1234,7 @@ export default function StatsPage() {
                       className={`rounded-md border px-4 py-3 text-sm ${
                         dataRequestBanner.type === "success"
                           ? "border-green-200 bg-green-50 text-green-700"
-                          : "border-red-200 bg-red-50 text-red-700"
+                          : "border-destructive bg-destructive/10 text-destructive"
                       }`}
                     >
                       {dataRequestBanner.message}
@@ -1246,10 +1243,10 @@ export default function StatsPage() {
                 )}
 
                 {dataRequestExpanded && (
-                  <form onSubmit={handleDataRequestSubmit} className="px-4 md:px-6 pb-4 md:pb-6 space-y-4 border-t border-slate-200 pt-4 md:pt-6">
+                  <form onSubmit={handleDataRequestSubmit} className="px-4 md:px-6 pb-4 md:pb-6 space-y-4 border-t border-border pt-4 md:pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-sm font-medium text-slate-700" htmlFor="data-request-name">
+                        <label className="text-sm font-medium text-foreground" htmlFor="data-request-name">
                           Name
                         </label>
                         <input
@@ -1257,14 +1254,14 @@ export default function StatsPage() {
                           type="text"
                           value={dataRequestName}
                           onChange={(e) => setDataRequestName(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                          className="w-full rounded-md border border-border px-3 py-2 text-sm text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                           placeholder="Your full name"
                           required
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-sm font-medium text-slate-700" htmlFor="data-request-email">
+                        <label className="text-sm font-medium text-foreground" htmlFor="data-request-email">
                           Email
                         </label>
                         <input
@@ -1272,7 +1269,7 @@ export default function StatsPage() {
                           type="email"
                           value={dataRequestEmail}
                           onChange={(e) => setDataRequestEmail(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                          className="w-full rounded-md border border-border px-3 py-2 text-sm text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                           placeholder="you@example.com"
                           required
                         />
@@ -1280,22 +1277,22 @@ export default function StatsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <span className="text-sm font-medium text-slate-700">Include:</span>
+                      <span className="text-sm font-medium text-foreground">Include:</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {DATA_REQUEST_FIELD_OPTIONS.map((option) => {
                           const checked = dataRequestFields.includes(option.value);
                           return (
                             <label
                               key={option.value}
-                              className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 cursor-pointer"
+                              className="flex items-center gap-2 rounded-md border border-border px-3 py-2 hover:bg-accent cursor-pointer transition-colors"
                             >
                               <input
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => toggleDataRequestField(option.value)}
-                                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+                                className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
                               />
-                              <span className="text-sm text-slate-700">{option.label}</span>
+                              <span className="text-sm text-foreground">{option.label}</span>
                             </label>
                           );
                         })}
@@ -1303,21 +1300,21 @@ export default function StatsPage() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-sm font-medium text-slate-700" htmlFor="data-request-description">
+                      <label className="text-sm font-medium text-foreground" htmlFor="data-request-description">
                         How will you use this data?
                       </label>
                       <textarea
                         id="data-request-description"
                         value={dataRequestDescription}
                         onChange={(e) => setDataRequestDescription(e.target.value)}
-                        className="min-h-[100px] w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                        className="min-h-[100px] w-full rounded-md border border-border px-3 py-2 text-sm text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                         placeholder="Brief description of your research or intended use"
                         required
                       />
                     </div>
 
                     {dataRequestError && (
-                      <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      <div className="rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive">
                         {dataRequestError}
                       </div>
                     )}
@@ -1330,14 +1327,14 @@ export default function StatsPage() {
                           resetDataRequestForm();
                         }}
                         disabled={dataRequestSubmitting}
-                        className="px-4 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+                        className="px-4 py-2 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 transition-colors"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={dataRequestSubmitting}
-                        className="px-4 py-2 bg-slate-900 text-white text-sm rounded-md hover:bg-slate-800 disabled:opacity-50"
+                        className="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
                       >
                         {dataRequestSubmitting ? "Sending..." : "Submit Request"}
                       </button>
@@ -1347,11 +1344,12 @@ export default function StatsPage() {
               </section>
             </>
           )}
+          </div>
         </section>
+      </main>
 
-        <Footer />
-      </div>
-    </main>
+      <Footer />
+    </div>
   );
 }
 
@@ -1365,10 +1363,10 @@ function KpiCard({
   description: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
-      <div className="text-xs md:text-sm text-slate-600 mb-1">{label}</div>
-      <div className="text-2xl md:text-3xl font-semibold text-slate-900 mb-1">{value}</div>
-      <div className="text-xs text-slate-500">{description}</div>
+    <div className="bg-card rounded-2xl border border-border p-4 md:p-6 shadow-sm">
+      <div className="text-xs md:text-sm text-muted-foreground mb-1">{label}</div>
+      <div className="text-2xl md:text-3xl font-semibold text-foreground mb-1">{value}</div>
+      <div className="text-xs text-muted-foreground">{description}</div>
     </div>
   );
 }
@@ -1472,11 +1470,11 @@ const CombinedTimelineChart = memo(function CombinedTimelineChart({
 
   if (mergedData.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
-        <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4">
+      <div className="bg-card rounded-2xl border border-border p-4 md:p-6 shadow-sm">
+        <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
           {showingPermittedOnly ? "Captures & Reports Over Time" : "Violations & Reports Over Time"}
         </h3>
-        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-slate-500">
+        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-muted-foreground">
           No data available
         </div>
       </div>
@@ -1495,8 +1493,8 @@ const CombinedTimelineChart = memo(function CombinedTimelineChart({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
-      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4">
+    <div className="bg-card rounded-2xl border border-border p-4 md:p-6 shadow-sm">
+      <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
         {showingPermittedOnly ? "Captures & Reports Over Time" : "Violations & Reports Over Time"}
       </h3>
       <div className="-ml-2 md:ml-0">
@@ -1520,7 +1518,7 @@ const CombinedTimelineChart = memo(function CombinedTimelineChart({
             content={
               <ChartTooltipContent
                 labelFormatter={(label: unknown) => (useWeeks ? `Week of ${String(label)}` : String(label))}
-                labelClassName="text-slate-900"
+                labelClassName="text-foreground"
               />
             }
           />
@@ -1580,11 +1578,11 @@ const ViolationMixPieChart = memo(function ViolationMixPieChart({
 
   if (violations.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-        <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3">
+      <div className="bg-card rounded-2xl border border-border p-4 md:p-5 shadow-sm">
+        <h3 className="text-base md:text-lg font-semibold text-foreground mb-3">
           Violation Mix
         </h3>
-        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-slate-500">
+        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-muted-foreground">
           No violations yet
         </div>
       </div>
@@ -1599,8 +1597,8 @@ const ViolationMixPieChart = memo(function ViolationMixPieChart({
   }));
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3">
+    <div className="bg-card rounded-2xl border border-border p-4 md:p-5 shadow-sm">
+      <h3 className="text-base md:text-lg font-semibold text-foreground mb-3">
         Violation Mix
       </h3>
       <div className="h-[220px] md:h-[260px]">
@@ -1625,18 +1623,18 @@ const ViolationMixPieChart = memo(function ViolationMixPieChart({
                   const data = payload[0].payload;
                   const policy = VIOLATION_POLICIES.find((p) => p.code === data.name);
                   return (
-                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl">
-                      <div className="font-semibold text-slate-900 mb-1">
+                    <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-xl">
+                      <div className="font-semibold text-foreground mb-1">
                         {data.name} {policy && `- ${policy.title}`}
                       </div>
-                      <div className="text-slate-700">
+                      <div className="text-foreground">
                         Count: <span className="font-mono font-medium">{data.value}</span>
                       </div>
-                      <div className="text-slate-700">
+                      <div className="text-foreground">
                         Share: <span className="font-mono font-medium">{data.percentage}%</span>
                       </div>
                       {policy && (
-                        <div className="mt-2 text-slate-600 max-w-xs">
+                        <div className="mt-2 text-muted-foreground max-w-xs">
                           {policy.policy}
                         </div>
                       )}
@@ -1656,32 +1654,32 @@ const ViolationMixPieChart = memo(function ViolationMixPieChart({
           return (
             <HoverCard key={v.code} openDelay={200}>
               <HoverCardTrigger asChild>
-                <div className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-50 cursor-help">
+                <div className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-help transition-colors">
                   <div
                     className="w-3 h-3 rounded-sm"
                     style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
                   />
-                  <span className="text-xs font-mono text-slate-700">{v.code}</span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs font-mono text-foreground">{v.code}</span>
+                  <span className="text-xs text-muted-foreground">
                     ({v.count})
                   </span>
                 </div>
               </HoverCardTrigger>
               {policy && (
-                <HoverCardContent className="w-96 bg-white border-slate-200" side="top">
+                <HoverCardContent className="w-96 bg-card border-border" side="top">
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="font-mono text-xs text-slate-500">{policy.code}</div>
-                        <div className="font-semibold text-sm text-slate-900">{policy.title}</div>
+                        <div className="font-mono text-xs text-muted-foreground">{policy.code}</div>
+                        <div className="font-semibold text-sm text-foreground">{policy.title}</div>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-700 leading-relaxed">{policy.policy}</p>
+                    <p className="text-xs text-foreground leading-relaxed">{policy.policy}</p>
                     <a
                       href={AUP_HELP_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                     >
                       View full policy
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1729,8 +1727,8 @@ const SourceSplitPieChart = memo(function SourceSplitPieChart({
   }));
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3">Source Split</h3>
+    <div className="bg-card rounded-2xl border border-border p-4 md:p-5 shadow-sm">
+      <h3 className="text-base md:text-lg font-semibold text-foreground mb-3">Source Split</h3>
       <div className="h-[220px] md:h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
@@ -1752,12 +1750,12 @@ const SourceSplitPieChart = memo(function SourceSplitPieChart({
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
-                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl">
-                      <div className="font-semibold text-slate-900">{data.name}</div>
-                      <div className="text-slate-700">
+                    <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-xl">
+                      <div className="font-semibold text-foreground">{data.name}</div>
+                      <div className="text-foreground">
                         Count: <span className="font-mono font-medium">{data.value}</span>
                       </div>
-                      <div className="text-slate-700">
+                      <div className="text-foreground">
                         Share: <span className="font-mono font-medium">{data.percentage}%</span>
                       </div>
                     </div>
@@ -1773,8 +1771,8 @@ const SourceSplitPieChart = memo(function SourceSplitPieChart({
         {chartData.map((s) => (
           <div key={s.name} className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: s.fill }} />
-            <span className="text-xs text-slate-700">{s.name}</span>
-            <span className="text-xs text-slate-500">({s.value})</span>
+            <span className="text-xs text-foreground">{s.name}</span>
+            <span className="text-xs text-muted-foreground">({s.value})</span>
           </div>
         ))}
       </div>
@@ -1837,10 +1835,10 @@ const TopSendersTable = memo(function TopSendersTable({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
-      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4">Most Frequent Senders</h3>
+    <div className="bg-card rounded-2xl border border-border p-4 md:p-6 shadow-sm">
+      <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">Most Frequent Senders</h3>
       {senders.length === 0 ? (
-        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-slate-500">
+        <div className="py-8 md:py-12 text-center text-xs md:text-sm text-muted-foreground">
           No senders yet
         </div>
       ) : (
@@ -1850,7 +1848,7 @@ const TopSendersTable = memo(function TopSendersTable({
             {displayedSenders.map((s, idx) => (
               <div
                 key={idx}
-                className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                className="bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
                 role="button"
                 tabIndex={0}
                 aria-label={`View cases for ${s.sender}`}
@@ -1865,21 +1863,21 @@ const TopSendersTable = memo(function TopSendersTable({
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-slate-900 text-sm leading-tight">{s.sender}</div>
+                      <div className="font-semibold text-foreground text-sm leading-tight">{s.sender}</div>
                     </div>
                     {s.is_repeat_offender && (
                       <span
-                        className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-0.5"
+                        className="inline-block w-2.5 h-2.5 rounded-full bg-destructive shrink-0 mt-0.5"
                         title="Repeat offender (≥3 violations)"
                       />
                     )}
                   </div>
-                  <div className="flex items-center gap-4 pt-2 border-t border-slate-100">
-                    <div className="text-xs text-slate-600">
-                      <span className="font-semibold text-slate-900">{s.total_captures}</span> captures
+                  <div className="flex items-center gap-4 pt-2 border-t border-border">
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">{s.total_captures}</span> captures
                     </div>
-                    <div className="text-xs text-slate-600">
-                      <span className="font-semibold text-slate-900">{s.captures_with_violations}</span> w/ violations
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">{s.captures_with_violations}</span> w/ violations
                     </div>
                   </div>
                 </div>
@@ -1890,25 +1888,25 @@ const TopSendersTable = memo(function TopSendersTable({
           {/* Desktop: Table Layout */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left border-b border-slate-200">
+              <thead className="text-left border-b border-border">
                 <tr>
-                  <th className="py-2 pr-4 font-medium text-slate-700">Sender</th>
-                  <th className="py-2 pr-4 font-medium text-slate-700 text-right">
+                  <th className="py-2 pr-4 font-medium text-muted-foreground">Sender</th>
+                  <th className="py-2 pr-4 font-medium text-muted-foreground text-right">
                     Captures
                   </th>
-                  <th className="py-2 pr-4 font-medium text-slate-700 text-right">
+                  <th className="py-2 pr-4 font-medium text-muted-foreground text-right">
                     w/ Violations
                   </th>
-                  <th className="py-2 font-medium text-slate-700 text-center">
+                  <th className="py-2 font-medium text-muted-foreground text-center">
                     Repeat Offender
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {displayedSenders.map((s, idx) => (
                   <tr
                     key={idx}
-                    className="hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    className="hover:bg-accent cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                     role="button"
                     tabIndex={0}
                     aria-label={`View cases for ${s.sender}`}
@@ -1920,19 +1918,19 @@ const TopSendersTable = memo(function TopSendersTable({
                       }
                     }}
                   >
-                    <td className="py-2 pr-4 text-slate-900 truncate max-w-[250px]">
-                      <span className="text-slate-900">{s.sender}</span>
+                    <td className="py-2 pr-4 text-foreground truncate max-w-[250px]">
+                      <span className="text-foreground">{s.sender}</span>
                     </td>
-                    <td className="py-2 pr-4 text-slate-900 tabular-nums text-right">
+                    <td className="py-2 pr-4 text-foreground tabular-nums text-right">
                       {s.total_captures}
                     </td>
-                    <td className="py-2 pr-4 text-slate-900 tabular-nums text-right">
+                    <td className="py-2 pr-4 text-foreground tabular-nums text-right">
                       {s.captures_with_violations}
                     </td>
                     <td className="py-2 text-center">
                       {s.is_repeat_offender && (
                         <span
-                          className="inline-block w-2 h-2 rounded-full bg-red-500"
+                          className="inline-block w-2 h-2 rounded-full bg-destructive"
                           title="Repeat offender (≥3 violations)"
                         />
                       )}
@@ -1945,7 +1943,7 @@ const TopSendersTable = memo(function TopSendersTable({
 
           {totalPages > 1 && (
             <div className="mt-4 md:mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <p className="text-xs md:text-sm text-slate-700">
+              <p className="text-xs md:text-sm text-foreground">
                 Showing {startIndex + 1}-{Math.min(endIndex, senders.length)} of {senders.length} senders
               </p>
               <Pagination>
@@ -1958,7 +1956,7 @@ const TopSendersTable = memo(function TopSendersTable({
                         e.preventDefault();
                         if (currentPage > 1) onPageChange(currentPage - 1);
                       }}
-                      className={(currentPage === 1 ? "pointer-events-none opacity-50 " : "") + "cursor-pointer text-slate-800 hover:text-slate-900"}
+                      className={(currentPage === 1 ? "pointer-events-none opacity-50 " : "") + "cursor-pointer text-foreground hover:text-foreground"}
                     />
                   </PaginationItem>
                   
@@ -1975,7 +1973,9 @@ const TopSendersTable = memo(function TopSendersTable({
                             onPageChange(page);
                           }}
                           isActive={currentPage === page}
-                          className={`cursor-pointer ${currentPage === page ? "!text-white" : "text-slate-800 hover:text-slate-900"}`}
+                          className={`cursor-pointer ${
+                            currentPage === page ? "" : "text-foreground hover:bg-accent"
+                          }`}
                         >
                           {page}
                         </PaginationLink>
@@ -1991,7 +1991,7 @@ const TopSendersTable = memo(function TopSendersTable({
                         e.preventDefault();
                         if (currentPage < totalPages) onPageChange(currentPage + 1);
                       }}
-                      className={(currentPage === totalPages ? "pointer-events-none opacity-50 " : "") + "cursor-pointer text-slate-800 hover:text-slate-900"}
+                      className={(currentPage === totalPages ? "pointer-events-none opacity-50 " : "") + "cursor-pointer text-foreground hover:text-foreground"}
                     />
                   </PaginationItem>
                 </PaginationContent>

@@ -2,12 +2,27 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 
 interface FooterProps {
   onScrollToSubmission?: () => void;
 }
 
 export function Footer({ onScrollToSubmission }: FooterProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const isHomepage = pathname === "/";
+
+  const handleSubmitEvidenceClick = () => {
+    if (isHomepage) {
+      // On homepage, just scroll to dropzone
+      onScrollToSubmission?.();
+    } else {
+      // On other pages, navigate to home with scroll parameter
+      router.push("/?scroll=submission");
+    }
+  };
+
   return (
     <footer className="border-t border-border py-12 md:py-16 bg-background">
       <div className="container mx-auto px-6">
@@ -33,12 +48,12 @@ export function Footer({ onScrollToSubmission }: FooterProps) {
               or any PACs.
             </p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 md:gap-14">
+          <div className="grid grid-cols-3 gap-8 md:gap-14">
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-foreground">Platform</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <button onClick={onScrollToSubmission} className="hover:text-foreground transition-colors text-left">
+                  <button onClick={handleSubmitEvidenceClick} className="hover:text-foreground transition-colors text-left">
                     Submit Evidence
                   </button>
                 </li>

@@ -33,6 +33,21 @@ function OnboardingHandler({ onOpen }: { onOpen: () => void }) {
   return null;
 }
 
+function ScrollHandler({ scrollToSubmission }: { scrollToSubmission: () => void }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams?.get("scroll") === "submission") {
+      // Use setTimeout to ensure ref is available
+      setTimeout(() => {
+        scrollToSubmission();
+      }, 100);
+    }
+  }, [searchParams, scrollToSubmission]);
+
+  return null;
+}
+
 export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -209,6 +224,11 @@ export default function Home() {
         <OnboardingHandler onOpen={handleOnboardingOpen} />
       </Suspense>
 
+      {/* Handle ?scroll=submission query param */}
+      <Suspense fallback={null}>
+        <ScrollHandler scrollToSubmission={scrollToSubmission} />
+      </Suspense>
+
       {/* Onboarding toast */}
       {shouldShowToast && (
         <OnboardingToast
@@ -364,7 +384,7 @@ export default function Home() {
                     <span className="sr-only">Open menu</span>
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 bg-background">
+                <SheetContent side="right" className="bg-background text-foreground">
                   <SheetHeader>
                     <SheetTitle className="text-left text-foreground">Menu</SheetTitle>
                   </SheetHeader>
@@ -710,6 +730,14 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  const day = String(d.getDate());
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 type RecentCase = {
   id: string;
   created_at: string;
@@ -809,18 +837,40 @@ function RecentActivitySection() {
   const router = useRouter();
 
   return (
-    <section className="py-16 md:py-24">
+    <section className="py-16 md:py-24 overflow-hidden">
       <div className="container mx-auto px-6">
         <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
           {/* Main Feed */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="flex items-end justify-between border-b border-border pb-4">
-              <div>
-                <h2 className="text-2xl font-medium mb-1" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Recent Activity</h2>
-                <p className="text-sm text-muted-foreground">Latest verified reports from the community.</p>
+          <div className="lg:col-span-2 space-y-8 overflow-hidden">
+            <div className="border-b border-border pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2
+                    className="text-2xl font-medium"
+                    style={{ fontFamily: "var(--font-playfair), ui-serif, Georgia, serif" }}
+                  >
+                    Recent Activity
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Latest reports from the community.
+                  </p>
+                </div>
+                {/* Desktop / tablet link (right-aligned) */}
+                <Link
+                  href="/cases"
+                  className="hidden sm:inline-flex text-sm font-medium text-foreground hover:text-primary items-center gap-1 transition-colors shrink-0"
+                >
+                  View full archive
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
-              <Link href="/cases" className="text-sm font-medium hover:text-primary flex items-center gap-1 transition-colors">
-                View full archive <ArrowRight className="w-3 h-3" />
+              {/* Mobile link, full-width row */}
+              <Link
+                href="/cases"
+                className="mt-2 inline-flex sm:hidden text-sm font-medium text-foreground hover:text-primary items-center gap-1 transition-colors"
+              >
+                View all
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -848,7 +898,7 @@ function RecentActivitySection() {
                 return (
                   <div
                     key={item.id}
-                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-transparent hover:border-border hover:bg-secondary/20 transition-all cursor-pointer"
+                    className="group p-4 rounded-lg border border-transparent hover:border-border hover:bg-secondary/20 transition-all cursor-pointer overflow-hidden"
                     onClick={() => router.push(`/cases/${item.id}`)}
                     role="button"
                     tabIndex={0}
@@ -859,25 +909,54 @@ function RecentActivitySection() {
                       }
                     }}
                   >
-                    <div className="space-y-1 mb-3 sm:mb-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-foreground">{item.sender_name || item.sender_id || "Unknown sender"}</h3>
+                    {/* Desktop layout */}
+                    <div className="hidden sm:flex sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <h3 className="font-medium text-foreground truncate">{item.sender_name || item.sender_id || "Unknown sender"}</h3>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{violationType}</span>
+                          </span>
+                          <span className="w-1 h-1 rounded-full bg-border shrink-0" />
+                          <span className="shrink-0">{messageType === 'email' ? 'Email' : messageType === 'sms' ? 'SMS' : messageType === 'mms' ? 'MMS' : 'Unknown'}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          {violationType}
-                        </span>
-                        <span className="w-1 h-1 rounded-full bg-border hidden sm:block" />
-                        <span>{messageType === 'email' ? 'Email' : messageType === 'sms' ? 'SMS' : messageType === 'mms' ? 'MMS' : 'Unknown'}</span>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="text-right">
+                          <div className="text-xs font-medium text-foreground">{isBot ? 'Bot Captured' : 'User Submitted'}</div>
+                          <div className="text-xs text-muted-foreground">{formatWhen(item.created_at)}</div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-4 min-w-[140px]">
-                      <div className="text-right">
-                        <div className="text-xs font-medium text-foreground">{isBot ? 'Bot Captured' : 'User Submitted'}</div>
-                        <div className="text-xs text-muted-foreground">{formatWhen(item.created_at)}</div>
+
+                    {/* Mobile layout - single-column, no horizontal pressure */}
+                    <div className="sm:hidden space-y-2">
+                      <h3 className="font-medium text-foreground leading-tight break-words">
+                        {item.sender_name || item.sender_id || "Unknown sender"}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{violationType}</span>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                          {messageType === "email"
+                            ? "Email"
+                            : messageType === "sms"
+                            ? "SMS"
+                            : messageType === "mms"
+                            ? "MMS"
+                            : "Unknown"}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                          {isBot ? "Bot Captured" : "User Submitted"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatWhen(item.created_at)}
+                      </div>
                     </div>
                   </div>
                 );
@@ -891,12 +970,25 @@ function RecentActivitySection() {
           {/* Sidebar / Leaderboard */}
           <div className="space-y-12">
             <div className="bg-card/50 rounded-xl p-5 border border-border/50">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-medium text-lg" style={{ fontFamily: 'var(--font-playfair), ui-serif, Georgia, serif' }}>Repeat Offenders</h3>
-                <span className="text-xs text-muted-foreground">Last 90 days</span>
+              <div className="flex items-center justify-between mb-1">
+                <h3
+                  className="font-medium text-lg"
+                  style={{ fontFamily: "var(--font-playfair), ui-serif, Georgia, serif" }}
+                >
+                  Repeat Offenders
+                </h3>
+                <span className="hidden sm:inline text-xs text-muted-foreground">Last 90 days</span>
               </div>
+              <span className="block sm:hidden text-xs text-muted-foreground mb-4">Last 90 days</span>
 
               <div className="space-y-3">
+                {/* Desktop column headers */}
+                <div className="hidden sm:grid grid-cols-[1fr_auto_auto] gap-3 pb-2 border-b border-border/50">
+                  <span className="text-xs font-medium text-muted-foreground">Organization</span>
+                  <span className="text-xs font-medium text-muted-foreground text-right">Violations</span>
+                  <span className="text-xs font-medium text-muted-foreground text-right w-20">Latest</span>
+                </div>
+
                 {loading && (
                   [...Array(5)].map((_, idx) => (
                     <div key={`offender-skeleton-${idx}`} className="animate-pulse flex items-center justify-between gap-3 py-2">
@@ -905,27 +997,48 @@ function RecentActivitySection() {
                     </div>
                   ))
                 )}
-                {!loading && offenders.slice(0, 5).map((org) => (
-                  <div
-                    key={org.sender_name}
-                    className="flex items-center justify-between gap-3 group hover:bg-muted/30 -mx-2 px-2 py-2.5 rounded-lg transition-colors cursor-pointer"
-                    onClick={() => router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`);
-                      }
-                    }}
-                  >
-                    <span className="text-sm font-medium text-foreground truncate">{org.sender_name}</span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm font-semibold text-foreground tabular-nums">{org.violation_count}</span>
-                      <span className="text-xs text-muted-foreground w-12 text-right">{formatWhen(org.latest_violation_at)}</span>
+                {!loading &&
+                  offenders.slice(0, 5).map((org) => (
+                    <div
+                      key={org.sender_name}
+                      className="group -mx-2 px-2 py-2.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(`/cases?senders=${encodeURIComponent(org.sender_name)}`);
+                        }
+                      }}
+                    >
+                      {/* Desktop / tablet layout: table-style with headers */}
+                      <div className="hidden sm:grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                        <span className="text-sm font-medium text-foreground truncate min-w-0">{org.sender_name}</span>
+                        <span className="text-sm font-semibold text-foreground tabular-nums text-right">
+                          {org.violation_count}
+                        </span>
+                        <span className="text-xs text-muted-foreground text-right w-20 shrink-0">
+                          {formatShortDate(org.latest_violation_at)}
+                        </span>
+                      </div>
+
+                      {/* Mobile layout: stacked with clear labels */}
+                      <div className="sm:hidden space-y-1">
+                        <span className="text-sm font-medium text-foreground break-words">
+                          {org.sender_name}
+                        </span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground tabular-nums">
+                            {org.violation_count}
+                          </span>
+                          <span>violations</span>
+                          <span className="w-1 h-1 rounded-full bg-border" />
+                          <span>latest: {formatWhen(org.latest_violation_at)}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 {!loading && offenders.length === 0 && (
                   <div className="py-4 text-center text-sm text-muted-foreground">No offenders yet.</div>
                 )}
