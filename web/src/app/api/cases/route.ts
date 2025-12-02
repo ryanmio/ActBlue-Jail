@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
   const multiSources = searchParams.getAll("sources");
   const singleSources = (searchParams.get("sources") || "").split(",").map((s) => s.trim()).filter(Boolean);
   const sources = Array.from(new Set([...(multiSources || []), ...(singleSources || [])])).filter(Boolean);
+  // Support filtering by message type (sms, email, mms, etc.)
+  const multiTypes = searchParams.getAll("types");
+  const singleTypes = (searchParams.get("types") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const types = Array.from(new Set([...(multiTypes || []), ...(singleTypes || [])])).filter(Boolean);
 
   try {
     const supabase = getSupabaseServer();
@@ -44,6 +48,7 @@ export async function GET(req: NextRequest) {
     const applyCommonFilters = <T extends {
       eq: (column: string, value: unknown) => T;
       or: (filters: string) => T;
+      in: (column: string, values: unknown[]) => T;
     }>(builder: T): T => {
       let next = builder.eq("public", true);
       if (sanitizedQuery) {
@@ -66,6 +71,11 @@ export async function GET(req: NextRequest) {
           next = next.or(`image_url.like.supabase://*,and(message_type.eq.email,forwarder_email.not.is.null),and(message_type.eq.sms,sender_id.is.null),message_type.not.in.(email,sms)`);
         }
         // If both are selected, don't filter (show all)
+      }
+
+      // Apply message type filtering (e.g., email vs sms)
+      if (types.length > 0) {
+        next = next.in("message_type", types);
       }
       return next;
     };

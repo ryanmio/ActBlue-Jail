@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
@@ -1135,17 +1136,6 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
         : null;
       // summary intentionally omitted from preview
       const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
-      let vioText: string;
-      if (violationsOverride.trim().length > 0) {
-        const ovLines = violationsOverride
-          .split(/\r?\n/)
-          .map((l) => l.trim())
-          .filter((l) => l.length > 0)
-          .map((l) => l.replace(/^[-\u2022]\s*/, ""));
-        vioText = ovLines.length > 1 ? ovLines.map((l) => `- ${l}`).join("\n") : (ovLines[0] || "");
-      } else {
-        vioText = vios.length > 0 ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(none detected)";
-      }
       const landing = normalizeUrl(landingUrl || existingLandingUrl);
       // Prefer primary submission screenshot via the image-url endpoint
       let shot: string | null = null;
@@ -1744,13 +1734,15 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt, mediaUrls }: 
                       height="768"
                     >
                       {({ ref, open }) => (
-                        <img
-                          ref={ref as React.Ref<HTMLImageElement>}
-                          onClick={open}
-                          src={media.url}
-                          alt={`Media attachment ${idx + 1}`}
-                          className="w-full cursor-pointer hover:opacity-90 transition-opacity"
-                        />
+                        <div ref={ref as React.Ref<HTMLDivElement>} onClick={open} className="cursor-pointer hover:opacity-90 transition-opacity">
+                          <NextImage
+                            src={media.url}
+                            alt={`Media attachment ${idx + 1}`}
+                            width={1024}
+                            height={768}
+                            className="w-full"
+                          />
+                        </div>
                       )}
                     </Item>
                   </Gallery>

@@ -14,9 +14,10 @@ interface CasesFilterFormProps {
   selectedSenders: string[];
   selectedCodes: string[];
   selectedSources: string[];
+  selectedTypes: string[];
 }
 
-export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, selectedSources }: CasesFilterFormProps) {
+export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, selectedSources, selectedTypes }: CasesFilterFormProps) {
   return (
     <form action="/cases" method="get" className="space-y-3">
       <input type="hidden" name="page" value="1" />
@@ -27,6 +28,9 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, s
       ))}
       {selectedSources.map((source) => (
         <input key={`source-${source}`} type="hidden" name="sources" value={source} />
+      ))}
+      {selectedTypes.map((type) => (
+        <input key={`type-${type}`} type="hidden" name="types" value={type} />
       ))}
       <div className="grid grid-cols-1 gap-2">
         {/* Special violation status filters */}
@@ -101,7 +105,7 @@ export function CasesFilterForm({ pageSize, q, selectedSenders, selectedCodes, s
         })}
       </div>
       <div className="flex gap-2 justify-end">
-        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedSources.length > 0 ? `&sources=${selectedSources.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">Clear</a>
+        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedSources.length > 0 ? `&sources=${selectedSources.join(",")}` : ""}${selectedTypes.length > 0 ? `&types=${selectedTypes.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">Clear</a>
         <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Apply</button>
       </div>
     </form>
