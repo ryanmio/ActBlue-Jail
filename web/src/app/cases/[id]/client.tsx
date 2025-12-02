@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { Gallery, Item } from "react-photoswipe-gallery";
 import LocalTime from "@/components/LocalTime";
@@ -1735,7 +1735,7 @@ export function InboundSMSViewer({ rawText, fromNumber, createdAt, mediaUrls }: 
                     >
                       {({ ref, open }) => (
                         <div ref={ref as React.Ref<HTMLDivElement>} onClick={open} className="cursor-pointer hover:opacity-90 transition-opacity">
-                          <Image
+                          <NextImage
                             src={media.url}
                             alt={`Media attachment ${idx + 1}`}
                             width={1024}
