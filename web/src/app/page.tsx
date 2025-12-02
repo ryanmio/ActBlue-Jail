@@ -33,6 +33,21 @@ function OnboardingHandler({ onOpen }: { onOpen: () => void }) {
   return null;
 }
 
+function ScrollHandler({ scrollToSubmission }: { scrollToSubmission: () => void }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams?.get("scroll") === "submission") {
+      // Use setTimeout to ensure ref is available
+      setTimeout(() => {
+        scrollToSubmission();
+      }, 100);
+    }
+  }, [searchParams, scrollToSubmission]);
+
+  return null;
+}
+
 export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -43,7 +58,6 @@ export default function Home() {
   const [copied, setCopied] = useState<boolean>(false);
   const copiedTimeoutRef = useRef<number | null>(null);
   const submissionRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
 
   // Onboarding state
   const { shouldShowToast, markDismissed, markClicked } = useOnboardingState();
@@ -58,16 +72,6 @@ export default function Home() {
   const scrollToSubmission = useCallback(() => {
     submissionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, []);
-
-  // Handle scroll parameter from footer navigation
-  useEffect(() => {
-    if (searchParams?.get("scroll") === "submission") {
-      // Use setTimeout to ensure ref is available
-      setTimeout(() => {
-        scrollToSubmission();
-      }, 100);
-    }
-  }, [searchParams, scrollToSubmission]);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file || isUploading) return;
@@ -218,6 +222,11 @@ export default function Home() {
       {/* Handle ?onboarding=open query param */}
       <Suspense fallback={null}>
         <OnboardingHandler onOpen={handleOnboardingOpen} />
+      </Suspense>
+
+      {/* Handle ?scroll=submission query param */}
+      <Suspense fallback={null}>
+        <ScrollHandler scrollToSubmission={scrollToSubmission} />
       </Suspense>
 
       {/* Onboarding toast */}
