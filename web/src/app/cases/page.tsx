@@ -50,7 +50,7 @@ function derivePreview(text?: string | null): string {
 
   for (const raw of lines) {
     // normalize: drop quote markers and leading whitespace
-    let line = raw.replace(/^[>\s]+/, "").trim();
+    const line = raw.replace(/^[>\s]+/, "").trim();
     if (!line) continue;
 
     // Skip metadata headers
