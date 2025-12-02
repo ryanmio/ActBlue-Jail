@@ -37,24 +37,80 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString();
 }
 
-// Derive a clean one-line preview that skips email metadata headers
+// Derive a clean one-line preview that skips email metadata headers and PII redaction noise,
+// and prefers the first legitimate sentence of content.
 function derivePreview(text?: string | null): string {
   if (!text) return "";
+
   const lines = text.split(/\r?\n/);
   const headerRegex = /^(From|Date|Subject|To|Cc|Bcc|Reply-To):/i;
+  const forwardedDividerRegex = /^-+\s*(Forwarded message|Original Message)\s*-+$/i;
+
+  const contentLines: string[] = [];
+
   for (const raw of lines) {
     // normalize: drop quote markers and leading whitespace
-    const line = raw.replace(/^[>\s]+/, "").trim();
+    let line = raw.replace(/^[>\s]+/, "").trim();
     if (!line) continue;
+
+    // Skip metadata headers
     if (headerRegex.test(line)) continue;
-    // Skip the common Gmail divider too
-    if (/^-+\s*Forwarded message\s*-+$/i.test(line)) continue;
-    return line;
+
+    // Skip common forward dividers
+    if (forwardedDividerRegex.test(line)) continue;
+
+    const lower = line.toLowerCase();
+
+    // Skip common unsubscribe / footer boilerplate that sometimes appears at the top
+    if (
+      lower.startsWith("click here to unsubscribe") ||
+      lower.startsWith("to unsubscribe") ||
+      lower.includes("unsubscribe from this email") ||
+      lower.includes("unsubscribe from these emails") ||
+      lower.includes("unsubscribe or update your preferences") ||
+      (lower.includes("unsubscribe") && lower.length <= 80)
+    ) {
+      continue;
+    }
+
+    // Skip bare bracketed markers like "[LINK]" or "[IMAGE]"
+    if (/^\[[A-Z0-9 _-]+\]$/i.test(line)) continue;
+
+    // Skip lines that are mostly asterisks (PII redaction) or punctuation
+    const withoutStars = line.replace(/\*/g, "");
+    const nonPunct = withoutStars.replace(/[.,;:!?'"`~\-–—\s]/g, "");
+    const starRatio = 1 - withoutStars.length / Math.max(line.length, 1);
+    if (!nonPunct && starRatio > 0.3) continue;
+
+    contentLines.push(line);
   }
-  return text.slice(0, 160);
+
+  if (contentLines.length === 0) {
+    return text.slice(0, 160);
+  }
+
+  // Join a few leading lines to reconstruct a natural sentence flow.
+  const joined = contentLines.slice(0, 5).join(" ").replace(/\s+/g, " ").trim();
+
+  // Remove long runs of asterisks from redaction so we don't lead with "*******".
+  const cleaned = joined.replace(/\*{3,}/g, "").replace(/\s{2,}/g, " ").trim();
+  if (!cleaned) {
+    return text.slice(0, 160);
+  }
+
+  // Extract the first sentence-ish chunk.
+  const sentenceMatch = cleaned.match(/^(.+?[.!?])(?:\s+|$)/);
+  const firstSentence = (sentenceMatch ? sentenceMatch[1] : cleaned).trim();
+
+  // Truncate to a reasonable preview length.
+  const MAX_LEN = 200;
+  if (firstSentence.length <= MAX_LEN) {
+    return firstSentence;
+  }
+  return `${firstSentence.slice(0, MAX_LEN - 1)}…`;
 }
 
-async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], senders: string[] = [], sources: string[] = [], base = ""): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
+async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], senders: string[] = [], sources: string[] = [], types: string[] = [], base = ""): Promise<{ items: SubmissionRow[]; page: number; limit: number; total: number; hasMore: boolean; offset: number; }>
 {
   try {
     const usp = new URLSearchParams();
@@ -73,6 +129,10 @@ async function loadCases(page = 1, limit = 20, q = "", codes: string[] = [], sen
     if (sources && sources.length > 0) {
       // Send as comma-separated list for brevity
       usp.set("sources", sources.join(","));
+    }
+    if (types && types.length > 0) {
+      // Send as comma-separated list for brevity
+      usp.set("types", types.join(","));
     }
     const res = await fetch(`${base}/api/cases?${usp.toString()}`, { cache: "no-store" });
     if (!res.ok) return { items: [], page, limit, total: 0, hasMore: false, offset: 0 };
@@ -153,14 +213,27 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
     : typeof sourcesParam === "string" && sourcesParam.length > 0
       ? String(sourcesParam).split(",")
       : [];
+  // Parse message types from query (supports both repeated and comma-separated)
+  const typesParam = sp["types"];
+  const rawSelectedTypes: string[] = Array.isArray(typesParam)
+    ? typesParam.flatMap((v) => String(v).split(","))
+    : typeof typesParam === "string" && typesParam.length > 0
+      ? String(typesParam).split(",")
+      : [];
+  // Only allow known types we expose in the UI
+  const selectedTypes: string[] = rawSelectedTypes.filter((t) => {
+    const v = t.toLowerCase();
+    return v === "email" || v === "sms";
+  });
   const page = Number(pageParam) || 1;
   const pageSize = Number(limitParam) || 20;
   const q = (qParam || "").toString();
-  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders, selectedSources, base);
+  const { items, total, limit, hasMore } = await loadCases(page, pageSize, q, selectedCodes, selectedSenders, selectedSources, selectedTypes, base);
   const activeFilterCount =
     (q ? 1 : 0) +
     selectedSenders.length +
     selectedSources.length +
+    selectedTypes.length +
     selectedCodes.length;
 
   return (
@@ -233,6 +306,9 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       {selectedCodes.map((code) => (
                         <input key={`m-code-${code}`} type="hidden" name="codes" value={code} />
                       ))}
+                      {selectedTypes.map((type) => (
+                        <input key={`m-type-${type}`} type="hidden" name="types" value={type} />
+                      ))}
                       <div className="grid grid-cols-1 gap-2">
                         <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
                           <input
@@ -257,7 +333,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       </div>
                       <div className="flex gap-2 justify-end pt-2">
                         <a
-                          href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}`}
+                          href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}${selectedTypes.length > 0 ? `&types=${selectedTypes.join(",")}` : ""}`}
                           className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
                         >
                           Clear
@@ -283,6 +359,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       selectedSenders={selectedSenders}
                       selectedCodes={selectedCodes}
                       selectedSources={selectedSources}
+                      selectedTypes={selectedTypes}
                     />
                   </div>
                 </div>
@@ -293,6 +370,70 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
             <div className="hidden sm:flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <SenderSearchCombobox selectedSenders={selectedSenders} pageSize={pageSize} codes={selectedCodes} sources={selectedSources} />
               
+              {/* Channel (message type) dropdown – matches other filters, desktop only */}
+              <div className="relative">
+                <details className="[&_summary::-webkit-details-marker]:hidden">
+                  <summary className="list-none text-sm px-4 py-2.5 rounded-md border border-border bg-background text-foreground hover:bg-secondary/50 inline-flex items-center gap-2 cursor-pointer select-none whitespace-nowrap transition-colors">
+                    <span>Channel</span>
+                    {selectedTypes.length > 0 && (
+                      <span className="rounded-full bg-primary text-primary-foreground text-xs px-2 py-0.5">{selectedTypes.length}</span>
+                    )}
+                  </summary>
+                  <div className="absolute right-0 mt-2 w-56 z-20 rounded-lg border border-border bg-card p-3 shadow-lg">
+                    <form action="/cases" method="get" className="space-y-3">
+                      <input type="hidden" name="page" value="1" />
+                      <input type="hidden" name="limit" value={String(pageSize)} />
+                      {q && <input type="hidden" name="q" value={q} />}
+                      {selectedSenders.map((sender) => (
+                        <input key={`type-sender-${sender}`} type="hidden" name="senders" value={sender} />
+                      ))}
+                      {selectedCodes.map((code) => (
+                        <input key={`type-code-${code}`} type="hidden" name="codes" value={code} />
+                      ))}
+                      {selectedSources.map((source) => (
+                        <input key={`type-source-${source}`} type="hidden" name="sources" value={source} />
+                      ))}
+                      <div className="grid grid-cols-1 gap-2">
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="types"
+                            value="email"
+                            defaultChecked={selectedTypes.includes("email")}
+                            className="accent-primary"
+                          />
+                          <span className="truncate">Email</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="types"
+                            value="sms"
+                            defaultChecked={selectedTypes.includes("sms")}
+                            className="accent-primary"
+                          />
+                          <span className="truncate">SMS</span>
+                        </label>
+                      </div>
+                      <div className="flex gap-2 justify-end pt-2">
+                        <a
+                          href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}${selectedSources.length > 0 ? `&sources=${selectedSources.join(",")}` : ""}`}
+                          className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                        >
+                          Clear
+                        </a>
+                        <button
+                          type="submit"
+                          className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </details>
+              </div>
+
               {/* Source dropdown */}
               <div className="relative">
                 <details className="[&_summary::-webkit-details-marker]:hidden">
@@ -312,6 +453,9 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       ))}
                       {selectedCodes.map((code) => (
                         <input key={`code-${code}`} type="hidden" name="codes" value={code} />
+                      ))}
+                      {selectedTypes.map((type) => (
+                        <input key={`type-${type}`} type="hidden" name="types" value={type} />
                       ))}
                       <div className="grid grid-cols-1 gap-2">
                         <label className="flex items-center gap-2 text-sm text-foreground border border-border rounded-md px-3 py-2 hover:bg-secondary/50 cursor-pointer transition-colors">
@@ -336,7 +480,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                         </label>
                       </div>
                       <div className="flex gap-2 justify-end pt-2">
-                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">Clear</a>
+                        <a href={`/cases?page=1&limit=${pageSize}${q ? `&q=${encodeURIComponent(q)}` : ""}${selectedSenders.length > 0 ? `&senders=${selectedSenders.join(",")}` : ""}${selectedCodes.length > 0 ? `&codes=${selectedCodes.join(",")}` : ""}${selectedTypes.length > 0 ? `&types=${selectedTypes.join(",")}` : ""}`} className="text-sm px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">Clear</a>
                         <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Apply</button>
                       </div>
                     </form>
@@ -360,6 +504,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
                       selectedSenders={selectedSenders}
                       selectedCodes={selectedCodes}
                       selectedSources={selectedSources}
+                      selectedTypes={selectedTypes}
                     />
                   </div>
                 </details>
@@ -502,7 +647,17 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
 
                 {/* Pagination */}
                 <div className="mt-8 flex items-center justify-center">
-                  <PaginationControls total={total} pageSize={limit} currentPage={page} hasMore={hasMore} q={q} senders={selectedSenders} codes={selectedCodes} sources={selectedSources} />
+                  <PaginationControls
+                    total={total}
+                    pageSize={limit}
+                    currentPage={page}
+                    hasMore={hasMore}
+                    q={q}
+                    senders={selectedSenders}
+                    codes={selectedCodes}
+                    sources={selectedSources}
+                    types={selectedTypes}
+                  />
                 </div>
               </>
             )}
@@ -515,7 +670,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Promi
   );
 }
 
-function PaginationControls({ total, pageSize, currentPage, hasMore, q, senders, codes, sources }: { total: number; pageSize: number; currentPage: number; hasMore: boolean; q?: string; senders?: string[]; codes?: string[]; sources?: string[] }) {
+function PaginationControls({ total, pageSize, currentPage, hasMore, q, senders, codes, sources, types }: { total: number; pageSize: number; currentPage: number; hasMore: boolean; q?: string; senders?: string[]; codes?: string[]; sources?: string[]; types?: string[] }) {
   const base = "/cases";
   const prevPage = Math.max(1, currentPage - 1);
   const nextPage = currentPage + 1;
@@ -529,6 +684,7 @@ function PaginationControls({ total, pageSize, currentPage, hasMore, q, senders,
     if (senders && senders.length > 0) params.set("senders", senders.join(","));
     if (codes && codes.length > 0) params.set("codes", codes.join(","));
     if (sources && sources.length > 0) params.set("sources", sources.join(","));
+    if (types && types.length > 0) params.set("types", types.join(","));
     return `${base}?${params.toString()}`;
   };
   
