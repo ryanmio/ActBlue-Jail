@@ -247,10 +247,16 @@ export async function POST(req: NextRequest) {
 
   // If rate limited, queue the report and send alert email
   if (alreadySentToday) {
+    console.log("/api/report-violation:rate_limited", { 
+      caseId: sub.id, 
+      shortId,
+      dataRequestEmail: env.DATA_REQUEST_EMAIL || "(not set)"
+    });
+    
     const sendToken = randomBytes(32).toString("base64url");
     
     // Save queued report
-    const { data: queuedReport } = await supabase.from("reports").insert({
+    const { data: queuedReport, error: queueError } = await supabase.from("reports").insert({
       case_id: sub.id,
       to_email: env.REPORT_EMAIL_TO,
       cc_email: ccEmail,
@@ -263,8 +269,18 @@ export async function POST(req: NextRequest) {
       send_token: sendToken,
     }).select("id").single();
 
+    if (queueError) {
+      console.error("/api/report-violation:queue_insert_failed", { error: queueError });
+    } else {
+      console.log("/api/report-violation:queued_report_created", { reportId: queuedReport?.id });
+    }
+
     // Send alert email to admin
-    if (env.DATA_REQUEST_EMAIL) {
+    if (!env.DATA_REQUEST_EMAIL) {
+      console.warn("/api/report-violation:no_data_request_email", { 
+        message: "DATA_REQUEST_EMAIL env var not set, skipping admin alert" 
+      });
+    } else {
       const sendNowUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/send-queued-report?token=${encodeURIComponent(sendToken)}`;
       const caseUrl = `${env.NEXT_PUBLIC_SITE_URL}/cases/${sub.id}`;
       
@@ -347,19 +363,33 @@ View Case: ${caseUrl}
 
 Report ID: ${queuedReport?.id || "unknown"}`;
 
+      console.log("/api/report-violation:sending_alert_email", { 
+        to: env.DATA_REQUEST_EMAIL,
+        reportId: queuedReport?.id 
+      });
+      
       try {
-        await resend.emails.send({
+        const alertResult = await resend.emails.send({
           to: env.DATA_REQUEST_EMAIL,
           from: "notifications@abjail.org",
           subject: `[Rate Limited] Report Queued - Case #${shortId}`,
           text: alertText,
           html: alertHtml,
         });
+        console.log("/api/report-violation:alert_email_sent", { 
+          emailId: alertResult?.data?.id,
+          to: env.DATA_REQUEST_EMAIL 
+        });
       } catch (e) {
-        console.error("Failed to send rate limit alert email:", e);
+        console.error("/api/report-violation:alert_email_failed", { 
+          error: String(e),
+          errorMessage: e instanceof Error ? e.message : String(e),
+          to: env.DATA_REQUEST_EMAIL
+        });
       }
     }
 
+    console.log("/api/report-violation:returning_queued_response", { caseId: sub.id });
     return NextResponse.json({ ok: true, queued: true, reason: "rate_limited" });
   }
 
