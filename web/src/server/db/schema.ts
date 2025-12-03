@@ -138,9 +138,11 @@ export const reports = pgTable(
     ccEmail: text("cc_email"),
     subject: text("subject").notNull(),
     body: text("body").notNull(),
+    htmlBody: text("html_body"), // HTML version for re-sending queued reports
     screenshotUrl: text("screenshot_url"),
     landingUrl: text("landing_url").notNull(),
-    status: text("status").notNull(), // enum in SQL: sent, failed, responded
+    status: text("status").notNull(), // enum in SQL: sent, failed, responded, queued
+    sendToken: text("send_token"), // secure token for manual sending of queued reports
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => {

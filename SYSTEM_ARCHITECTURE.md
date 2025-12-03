@@ -60,9 +60,11 @@ to_email text
 cc_email text
 subject text
 body text
+html_body text -- HTML version for re-sending queued reports
 screenshot_url text
 landing_url text
-status text -- sent, failed, responded
+status text -- sent, failed, responded, queued
+send_token text -- secure token for manual sending of queued reports
 created_at timestamptz
 ```
 
@@ -358,14 +360,30 @@ created_at timestamptz
 ### POST /api/report-violation
 **Purpose:** Submit violation report to ActBlue
 **Input:** {caseId: string, landingUrl?: string, ccEmail?: string, note?: string, violationsOverride?: string}
-**Output:** {ok: true}
+**Output:** {ok: true} or {ok: true, queued: true, reason: "rate_limited"}
+**Rate Limiting:**
+- Only one report can be sent to ActBlue per day
+- If a report was already sent today, new reports are queued (status='queued')
+- Admin receives alert email with "Send Now" button to DATA_REQUEST_EMAIL
 **Side Effects:**
 - Fetches submission + violations
 - Creates signed URLs for screenshots
 - Builds email body (text + HTML)
-- Sends email via Resend to REPORT_EMAIL_TO
-- Inserts into reports table
+- If rate limited: inserts into reports with status='queued' and send_token, sends alert to admin
+- If not rate limited: sends email via Resend to REPORT_EMAIL_TO, inserts with status='sent'
 - Inserts comment with timestamp
+
+### GET /api/send-queued-report?token={token}
+**Purpose:** Manually send a queued report (admin action from email)
+**Input:** Query param: token (send_token from queued report)
+**Output:** HTML page (success, error, or info)
+**Validation:**
+- Token must exist and match a queued report
+- Report status must be 'queued' (not already sent)
+**Side Effects:**
+- Sends email via Resend to REPORT_EMAIL_TO
+- Updates report status to 'sent' and clears send_token
+- Inserts comment with timestamp noting manual send
 
 ### POST /api/upload
 **Purpose:** Handle screenshot upload from web UI
@@ -731,6 +749,7 @@ User receives email explaining only fundraising emails are supported
 - /web/src/app/api/send-non-fundraising-notice/route.ts (NEW)
 - /web/src/app/api/submit-report-via-email/route.ts (NEW)
 - /web/src/app/api/report-violation/route.ts
+- /web/src/app/api/send-queued-report/route.ts (NEW) - handles "Send Now" for rate-limited reports
 - /web/src/app/api/upload/route.ts
 - /web/src/app/api/ocr/route.ts
 - /web/src/app/api/cases/route.ts

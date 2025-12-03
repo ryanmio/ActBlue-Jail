@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 import { Resend } from "resend";
+import { randomBytes } from "crypto";
 import { env } from "@/lib/env";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
@@ -219,20 +220,151 @@ export async function POST(req: NextRequest) {
 </body>
 </html>`;
 
-  // Send email using Resend
+  // Check rate limit: only one report to ActBlue per day
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  
+  const { data: sentTodayRows } = await supabase
+    .from("reports")
+    .select("id")
+    .eq("status", "sent")
+    .gte("created_at", todayStart.toISOString())
+    .limit(1);
+  
+  const alreadySentToday = (sentTodayRows?.length ?? 0) > 0;
+
+  // Build attachments for email
+  const attachments: Array<{ filename: string; content: string; type?: string }> = [];
+  if (sub.email_body) {
+    const base64 = Buffer.from(String(sub.email_body), "utf8").toString("base64");
+    attachments.push({ filename: "original_email.html", content: base64, type: "text/html" });
+  } else if (sub.raw_text) {
+    const base64 = Buffer.from(String(sub.raw_text), "utf8").toString("base64");
+    attachments.push({ filename: "original_text.txt", content: base64, type: "text/plain" });
+  }
+
   const fromEmail = "reports@abjail.org"; // under verified domain
-  try {
-    const attachments: Array<{ filename: string; content: string; type?: string }> = [];
+
+  // If rate limited, queue the report and send alert email
+  if (alreadySentToday) {
+    const sendToken = randomBytes(32).toString("base64url");
     
-    // Attach email HTML if available, otherwise attach raw text
-    if (sub.email_body) {
-      const base64 = Buffer.from(String(sub.email_body), "utf8").toString("base64");
-      attachments.push({ filename: "original_email.html", content: base64, type: "text/html" });
-    } else if (sub.raw_text) {
-      const base64 = Buffer.from(String(sub.raw_text), "utf8").toString("base64");
-      attachments.push({ filename: "original_text.txt", content: base64, type: "text/plain" });
+    // Save queued report
+    const { data: queuedReport } = await supabase.from("reports").insert({
+      case_id: sub.id,
+      to_email: env.REPORT_EMAIL_TO,
+      cc_email: ccEmail,
+      subject,
+      body,
+      html_body: html,
+      screenshot_url: evidenceUrl,
+      landing_url: landingUrl,
+      status: "queued",
+      send_token: sendToken,
+    }).select("id").single();
+
+    // Send alert email to admin
+    if (env.DATA_REQUEST_EMAIL) {
+      const sendNowUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/send-queued-report?token=${encodeURIComponent(sendToken)}`;
+      const caseUrl = `${env.NEXT_PUBLIC_SITE_URL}/cases/${sub.id}`;
+      
+      const alertHtml = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.5;color:#0f172a;margin:0;padding:0;background-color:#f8fafc">
+  <div style="max-width:600px;margin:0 auto;padding:20px">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+      <h1 style="margin:0;font-size:24px;font-weight:700">Report Queued - Rate Limit</h1>
+      <p style="margin:8px 0 0 0;opacity:0.9;font-size:14px">Case #${esc(shortId)}</p>
+    </div>
+    
+    <!-- Content -->
+    <div style="background:white;padding:24px;border-radius:0 0 12px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+      <p style="margin:0 0 20px 0;color:#475569;font-size:15px">
+        A report to ActBlue has been queued because a report was already sent today. Click the button below to send it now.
+      </p>
+
+      <!-- Campaign/Org -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Campaign/Organization</h2>
+        <p style="margin:0;font-size:16px;font-weight:500;color:#0f172a">${esc(campaign)}</p>
+      </div>
+
+      <!-- Violations -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Violations</h2>
+        ${vioHtml}
+      </div>
+
+      <!-- Landing Page -->
+      <div style="margin-bottom:20px">
+        <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Landing Page</h2>
+        <p style="margin:0;font-size:14px"><a href="${esc(landingUrl)}" style="color:#3b82f6;text-decoration:underline">${esc(landingUrl)}</a></p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="margin-top:32px;text-align:center">
+        <a href="${sendNowUrl}" style="display:inline-block;background:#f59e0b;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px;margin:8px">
+          Send Now
+        </a>
+        <a href="${caseUrl}" style="display:inline-block;background:white;color:#3b82f6;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px;border:2px solid #3b82f6;margin:8px">
+          View Case
+        </a>
+      </div>
+
+      <!-- Footer Note -->
+      <div style="margin-top:32px;padding-top:20px;border-top:1px solid #e2e8f0">
+        <p style="margin:0;font-size:13px;color:#64748b">
+          This report is queued and will need manual approval to send.
+        </p>
+        <p style="margin:8px 0 0 0;font-size:12px;color:#94a3b8">
+          Report ID: ${queuedReport?.id || "unknown"}
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      const alertText = `Report Queued - Rate Limit Hit
+
+A report to ActBlue has been queued because a report was already sent today.
+
+Campaign/Org: ${campaign}
+Case #${shortId}
+
+Violations:
+${vioText}
+
+Landing Page: ${landingUrl}
+
+Send Now: ${sendNowUrl}
+View Case: ${caseUrl}
+
+Report ID: ${queuedReport?.id || "unknown"}`;
+
+      try {
+        await resend.emails.send({
+          to: env.DATA_REQUEST_EMAIL,
+          from: "notifications@abjail.org",
+          subject: `[Rate Limited] Report Queued - Case #${shortId}`,
+          text: alertText,
+          html: alertHtml,
+        });
+      } catch (e) {
+        console.error("Failed to send rate limit alert email:", e);
+      }
     }
 
+    return NextResponse.json({ ok: true, queued: true, reason: "rate_limited" });
+  }
+
+  // Normal flow: Send email using Resend
+  try {
     await resend.emails.send({
       to: env.REPORT_EMAIL_TO as string,
       from: fromEmail,
@@ -251,6 +383,7 @@ export async function POST(req: NextRequest) {
       cc_email: ccEmail,
       subject,
       body,
+      html_body: html,
       screenshot_url: evidenceUrl,
       landing_url: landingUrl,
       status: "failed",
@@ -265,6 +398,7 @@ export async function POST(req: NextRequest) {
     cc_email: ccEmail,
     subject,
     body,
+    html_body: html,
     screenshot_url: evidenceUrl,
     landing_url: landingUrl,
     status: "sent",
