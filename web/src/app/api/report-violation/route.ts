@@ -14,7 +14,13 @@ function parseSupabaseUrl(u: string | null | undefined) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!env.RESEND_API_KEY) return NextResponse.json({ error: "resend_key_missing" }, { status: 400 });
+  const startTime = Date.now();
+  console.log("/api/report-violation:start", { timestamp: new Date().toISOString() });
+
+  if (!env.RESEND_API_KEY) {
+    console.error("/api/report-violation:error resend_key_missing");
+    return NextResponse.json({ error: "resend_key_missing" }, { status: 400 });
+  }
   const resend = new Resend(env.RESEND_API_KEY);
   const supabase = getSupabaseServer();
 
@@ -223,15 +229,33 @@ export async function POST(req: NextRequest) {
   // Check rate limit: only one report to ActBlue per day
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+  const todayStartISO = todayStart.toISOString();
   
-  const { data: sentTodayRows } = await supabase
+  console.log("/api/report-violation:checking_rate_limit", { 
+    caseId: sub.id,
+    todayStartISO,
+    now: new Date().toISOString()
+  });
+  
+  const { data: sentTodayRows, error: rateLimitError } = await supabase
     .from("reports")
-    .select("id")
+    .select("id, created_at, status")
     .eq("status", "sent")
-    .gte("created_at", todayStart.toISOString())
-    .limit(1);
+    .gte("created_at", todayStartISO)
+    .limit(5);
+  
+  if (rateLimitError) {
+    console.error("/api/report-violation:rate_limit_query_error", { error: rateLimitError });
+  }
   
   const alreadySentToday = (sentTodayRows?.length ?? 0) > 0;
+  
+  console.log("/api/report-violation:rate_limit_check_result", { 
+    caseId: sub.id,
+    alreadySentToday,
+    sentTodayCount: sentTodayRows?.length ?? 0,
+    sentTodayRows: sentTodayRows?.map(r => ({ id: r.id, created_at: r.created_at, status: r.status }))
+  });
 
   // Build attachments for email
   const attachments: Array<{ filename: string; content: string; type?: string }> = [];
@@ -247,10 +271,16 @@ export async function POST(req: NextRequest) {
 
   // If rate limited, queue the report and send alert email
   if (alreadySentToday) {
+    console.log("/api/report-violation:rate_limited", { 
+      caseId: sub.id, 
+      shortId,
+      dataRequestEmail: env.DATA_REQUEST_EMAIL || "(not set)"
+    });
+    
     const sendToken = randomBytes(32).toString("base64url");
     
     // Save queued report
-    const { data: queuedReport } = await supabase.from("reports").insert({
+    const { data: queuedReport, error: queueError } = await supabase.from("reports").insert({
       case_id: sub.id,
       to_email: env.REPORT_EMAIL_TO,
       cc_email: ccEmail,
@@ -263,8 +293,18 @@ export async function POST(req: NextRequest) {
       send_token: sendToken,
     }).select("id").single();
 
+    if (queueError) {
+      console.error("/api/report-violation:queue_insert_failed", { error: queueError });
+    } else {
+      console.log("/api/report-violation:queued_report_created", { reportId: queuedReport?.id });
+    }
+
     // Send alert email to admin
-    if (env.DATA_REQUEST_EMAIL) {
+    if (!env.DATA_REQUEST_EMAIL) {
+      console.warn("/api/report-violation:no_data_request_email", { 
+        message: "DATA_REQUEST_EMAIL env var not set, skipping admin alert" 
+      });
+    } else {
       const sendNowUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/send-queued-report?token=${encodeURIComponent(sendToken)}`;
       const caseUrl = `${env.NEXT_PUBLIC_SITE_URL}/cases/${sub.id}`;
       
@@ -347,25 +387,45 @@ View Case: ${caseUrl}
 
 Report ID: ${queuedReport?.id || "unknown"}`;
 
+      console.log("/api/report-violation:sending_alert_email", { 
+        to: env.DATA_REQUEST_EMAIL,
+        reportId: queuedReport?.id 
+      });
+      
       try {
-        await resend.emails.send({
+        const alertResult = await resend.emails.send({
           to: env.DATA_REQUEST_EMAIL,
           from: "notifications@abjail.org",
           subject: `[Rate Limited] Report Queued - Case #${shortId}`,
           text: alertText,
           html: alertHtml,
         });
+        console.log("/api/report-violation:alert_email_sent", { 
+          emailId: alertResult?.data?.id,
+          to: env.DATA_REQUEST_EMAIL 
+        });
       } catch (e) {
-        console.error("Failed to send rate limit alert email:", e);
+        console.error("/api/report-violation:alert_email_failed", { 
+          error: String(e),
+          errorMessage: e instanceof Error ? e.message : String(e),
+          to: env.DATA_REQUEST_EMAIL
+        });
       }
     }
 
+    console.log("/api/report-violation:returning_queued_response", { caseId: sub.id });
     return NextResponse.json({ ok: true, queued: true, reason: "rate_limited" });
   }
 
-  // Normal flow: Send email using Resend
+  // Normal flow: Send email using Resend (not rate limited)
+  console.log("/api/report-violation:normal_flow_sending", { 
+    caseId: sub.id, 
+    to: env.REPORT_EMAIL_TO,
+    elapsedMs: Date.now() - startTime
+  });
+  
   try {
-    await resend.emails.send({
+    const sendResult = await resend.emails.send({
       to: env.REPORT_EMAIL_TO as string,
       from: fromEmail,
       replyTo: env.REPORT_EMAIL_FROM as string,
@@ -375,7 +435,16 @@ Report ID: ${queuedReport?.id || "unknown"}`;
       html,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
-  } catch {
+    console.log("/api/report-violation:normal_flow_sent", { 
+      caseId: sub.id, 
+      emailId: sendResult?.data?.id 
+    });
+  } catch (e) {
+    console.error("/api/report-violation:normal_flow_send_failed", { 
+      caseId: sub.id, 
+      error: String(e),
+      errorMessage: e instanceof Error ? e.message : String(e)
+    });
     // Save failed report for audit
     await supabase.from("reports").insert({
       case_id: sub.id,
@@ -405,6 +474,8 @@ Report ID: ${queuedReport?.id || "unknown"}`;
   });
   await supabase.from("comments").insert({ submission_id: sub.id, content: `Report filed with ActBlue on ${new Date().toISOString()}.`, kind: "landing_page" });
 
+  const elapsed = Date.now() - startTime;
+  console.log("/api/report-violation:success", { caseId: sub.id, elapsedMs: elapsed });
   return NextResponse.json({ ok: true });
 }
 
