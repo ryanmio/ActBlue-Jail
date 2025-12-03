@@ -1,10 +1,11 @@
 -- Add rate limiting support for reports
 -- Adds 'queued' status and send_token for manual sending
 
--- Extend the report_status enum to include 'queued'
--- If using text type, no change needed (schema.sql shows text not enum)
--- Just add the send_token column
+-- Add 'queued' to the report_status enum
+-- PostgreSQL requires ALTER TYPE to add enum values
+ALTER TYPE report_status ADD VALUE IF NOT EXISTS 'queued';
 
+-- Add new columns
 alter table reports add column if not exists send_token text;
 alter table reports add column if not exists html_body text;
 
