@@ -86,10 +86,15 @@ export async function POST(req: NextRequest) {
   // Load violations for this case
   const { data: vioRows } = await supabase
     .from("violations")
-    .select("code, title, description, severity, confidence")
+    .select("code, title, description, severity, confidence, actblue_verified")
     .eq("submission_id", sub.id)
     .order("severity", { ascending: false });
-  const violationsList = Array.isArray(vioRows) ? vioRows : [];
+  const allViolations = Array.isArray(vioRows) ? vioRows : [];
+  const filteredViolations = (violationsOverride ? allViolations : allViolations.filter(
+    (v) => !(v.code === "AB008" && v.actblue_verified === true)
+  ));
+  const removedVerifiedAb008 = allViolations.length - filteredViolations.length;
+  const violationsList = filteredViolations;
 
   // No summary in email/report body per product decision
 
@@ -126,6 +131,9 @@ export async function POST(req: NextRequest) {
     vioText = (violationsList.length > 0
       ? violationsList.map((v: { code: string; title: string; description?: string | null }) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
       : "(none detected)");
+    if (!violationsOverride && removedVerifiedAb008 > 0) {
+      vioText += `\nNote: ActBlue-verified matching program items (AB008) were excluded and will not be reported.`;
+    }
   }
   sections.push(`Violations\n----------\n${vioText}`);
   sections.push(`Landing page URL\n-----------------\n${landingUrl}`);
@@ -153,9 +161,15 @@ export async function POST(req: NextRequest) {
       }
       return `<p style="margin:0">${esc(ovLines[0] || "")}</p>`;
     }
-    return (violationsList.length > 0)
+    const base = (violationsList.length > 0)
       ? `<ul style="margin:0;padding-left:20px">${violationsList.map((v: { code: string; title: string; description?: string | null }) => `<li style="margin:4px 0"><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
       : `<p style="margin:0;color:#64748b">(No violations detected)</p>`;
+    const note = (!violationsOverride && removedVerifiedAb008 > 0)
+      ? `<p style="margin:8px 0 0 0;color:#1e3a8a;font-size:13px;background:#e0e7ff;border:1px solid #c7d2fe;padding:10px;border-radius:8px">
+          ActBlue-verified matching program items (AB008) were excluded and will not be reported.
+        </p>`
+      : "";
+    return `${base}${note}`;
   })();
   const html = `<!doctype html>
 <html>

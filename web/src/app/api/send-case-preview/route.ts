@@ -79,11 +79,16 @@ export async function POST(req: NextRequest) {
   console.log("/api/send-case-preview:loading_violations", { submissionId });
   const { data: vioRows } = await supabase
     .from("violations")
-    .select("code, title, description")
+    .select("code, title, description, actblue_verified")
     .eq("submission_id", sub.id)
     .order("severity", { ascending: false });
 
-  const violations = Array.isArray(vioRows) ? vioRows : [];
+  const allViolations = Array.isArray(vioRows) ? vioRows : [];
+  const filteredViolations = allViolations.filter(
+    (v) => !(v.code === "AB008" && v.actblue_verified === true)
+  );
+  const removedVerifiedAb008 = allViolations.length - filteredViolations.length;
+  const violations = filteredViolations;
   console.log("/api/send-case-preview:violations_loaded", { submissionId, count: violations.length });
 
   // Get campaign name
@@ -133,6 +138,11 @@ export async function POST(req: NextRequest) {
   const vioHtml = violations.length > 0
     ? `<ul style="margin:0;padding-left:20px">${violations.map((v) => `<li style="margin:4px 0"><strong>${esc(v.code)}</strong> ${esc(v.title)}${v.description ? `: ${esc(v.description)}` : ""}</li>`).join("")}</ul>`
     : `<p style="margin:0;color:#64748b">(No violations detected)</p>`;
+  const exemptNoticeHtml = removedVerifiedAb008 > 0
+    ? `<p style="margin:8px 0 0 0;color:#1e3a8a;font-size:13px;background:#e0e7ff;border:1px solid #c7d2fe;padding:10px;border-radius:8px">
+        We excluded ActBlue-verified matching program items (AB008) for this sender. Those will not be reported.
+      </p>`
+    : "";
 
   // Normalize landing URL (strip query params)
   const landingUrl = sub.landing_url ? (() => {
@@ -175,6 +185,7 @@ export async function POST(req: NextRequest) {
       <div style="margin-bottom:20px">
         <h2 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Detected Violations</h2>
         ${vioHtml}
+        ${exemptNoticeHtml}
       </div>
 
       <!-- Landing Page -->
@@ -224,7 +235,7 @@ Campaign/Organization
 ${campaign}
 
 Detected Violations
-${violations.length > 0 ? violations.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(No violations detected)"}
+${violations.length > 0 ? violations.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n") : "(No violations detected)"}${removedVerifiedAb008 > 0 ? `\n\nNote: ActBlue-verified matching program items (AB008) were excluded and will not be reported.` : ""}
 
 ${landingUrl ? `Landing Page\n${landingUrl}\n` : ""}
 ${evidenceUrl ? `${evidenceLabel}\n${evidenceUrl}\n` : ""}
