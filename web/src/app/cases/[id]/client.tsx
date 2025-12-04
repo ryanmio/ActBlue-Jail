@@ -1135,7 +1135,9 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
           })
         : null;
       // summary intentionally omitted from preview
-      const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
+      const vios = ((data.violations || []) as Array<{ code: string; title: string; description?: string | null; actblue_verified?: boolean | null }>).filter(
+        (v) => !(v.code === "AB008" && v.actblue_verified === true)
+      );
       const landing = normalizeUrl(landingUrl || existingLandingUrl);
       // Prefer primary submission screenshot via the image-url endpoint
       let shot: string | null = null;
@@ -1214,7 +1216,9 @@ export function ReportingCard({ id, existingLandingUrl = null, processingStatus 
         const res = await fetch(`/api/cases/${id}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        const vios = (data.violations || []) as Array<{ code: string; title: string; description?: string | null }>;
+        const vios = ((data.violations || []) as Array<{ code: string; title: string; description?: string | null; actblue_verified?: boolean | null }>).filter(
+          (v) => !(v.code === "AB008" && v.actblue_verified === true)
+        );
         if (!cancelled && Array.isArray(vios)) {
           const text = vios.length > 0
             ? vios.map((v) => `- ${v.code} ${v.title}${v.description ? `: ${v.description}` : ""}`).join("\n")
