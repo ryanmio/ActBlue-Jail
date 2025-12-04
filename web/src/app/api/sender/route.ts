@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { truncateForAI } from "@/server/ai/constants";
 
 export async function POST(req: NextRequest) {
   console.log("[/api/sender] start");
@@ -77,7 +78,8 @@ export async function POST(req: NextRequest) {
   let parsedOut: SenderResult = { sender_name: null, sender_type: "unknown", confidence: 0.2, notes: "init" };
   try {
     const system = `You are reviewing a political fundraising appeal to extract the sending entity.\n\nGoals:\n- Identify the organization, PAC, or candidate that sent the message or is responsible for the messaging.\n- Prefer explicit disclosures, headers/footers, sender lines, or signature blocks.\n- If the message ends with a PAC or organization name, use that.\n- Use the screenshot image (logos/branding) to corroborate when available.\n- If none is provided, return sender_name = null and sender_type = "unknown".\n\nOutput JSON only (no markdown), with keys:\n{\n  "sender_name": string | null,\n  "sender_type": "org" | "pac" | "candidate" | "unknown",\n  "confidence": number (0..1),\n  "notes": string\n}`;
-    const userContent: ContentPart[] = [ { type: "text", text: String(sub.raw_text || "").trim() || "(none)" } ];
+    const rawText = truncateForAI(String(sub.raw_text || "").trim() || "(none)");
+    const userContent: ContentPart[] = [ { type: "text", text: rawText } ];
     if (signedUrl) userContent.push({ type: "image_url", image_url: { url: signedUrl } });
     if (landingSignedUrl) userContent.push({ type: "image_url", image_url: { url: landingSignedUrl } });
     const messages: Message[] = [
