@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { truncateForAI } from "./constants";
 
 function parseSupabaseUrl(u?: string | null) {
   if (!u || !u.startsWith("supabase://")) return null;
@@ -87,6 +88,9 @@ export async function runClassification(submissionId: string, opts: RunClassific
     messageText += `\n`;
   }
   messageText += String(sub.raw_text || "").trim() || "(none)";
+  
+  // Apply character limit to prevent abuse (rarely triggered in normal usage)
+  messageText = truncateForAI(messageText);
   
   const messages: Message[] = [
     { role: "system", content: system },

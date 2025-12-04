@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { truncateForAI } from "./constants";
 
 export interface PIIDetectionResult {
   strings_to_redact: string[];
@@ -64,12 +65,13 @@ Be conservative with confidence. Only return high confidence (≥0.7) when you f
 
   type Message = { role: "system" | "user"; content: string };
   
-  // Build message text
+  // Build message text and apply character limit to prevent abuse
   let messageText = "";
   if (emailFrom) {
     messageText += `From: ${emailFrom}\n\n`;
   }
   messageText += String(rawText || "").trim() || "(none)";
+  messageText = truncateForAI(messageText);
   
   const messages: Message[] = [
     { role: "system", content: system },
